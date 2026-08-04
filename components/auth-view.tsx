@@ -3,6 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 interface AuthViewProps {
   defaultTab?: "login" | "signup"
@@ -10,11 +12,58 @@ interface AuthViewProps {
 
 export function AuthView({ defaultTab = "login" }: AuthViewProps) {
   const [activeTab, setActiveTab] = useState<"login" | "signup">(defaultTab)
+  const [fullName, setFullName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
+  const { toast } = useToast()
+  const supabase = createClient()
 
-  const handleAuthAction = (e: React.FormEvent | React.MouseEvent) => {
+  const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault()
-    router.push('/profile')
+    setSubmitting(true)
+
+    if (activeTab === "signup") {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      })
+      setSubmitting(false)
+      if (error) {
+        toast({ variant: "destructive", title: "Couldn't create account", description: error.message })
+        return
+      }
+      toast({ title: "Welcome to Boliwala!", description: "5 free credits added to your account." })
+      router.push("/profile")
+      router.refresh()
+      return
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    setSubmitting(false)
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't log in", description: error.message })
+      return
+    }
+    router.push("/profile")
+    router.refresh()
+  }
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({ variant: "destructive", title: "Enter your email first", description: "Type your email above, then click Forgot password?." })
+      return
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't send reset email", description: error.message })
+      return
+    }
+    toast({ title: "Check your email", description: `Password reset link sent to ${email}.` })
   }
 
   return (
@@ -124,9 +173,12 @@ export function AuthView({ defaultTab = "login" }: AuthViewProps) {
             {activeTab === "signup" && (
               <div className="flex flex-col gap-2">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Full Name</label>
-                <input 
-                  type="text" 
-                  placeholder="John Doe" 
+                <input
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
                   className="h-12 px-4 rounded-xl border border-border bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm"
                 />
               </div>
@@ -134,9 +186,12 @@ export function AuthView({ defaultTab = "login" }: AuthViewProps) {
 
             <div className="flex flex-col gap-2">
               <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Email Address</label>
-              <input 
-                type="email" 
-                placeholder="you@email.com" 
+              <input
+                type="email"
+                placeholder="you@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 className="h-12 px-4 rounded-xl border border-border bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm"
               />
             </div>
@@ -145,18 +200,22 @@ export function AuthView({ defaultTab = "login" }: AuthViewProps) {
               <div className="flex justify-between items-center">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Password</label>
                 {activeTab === "login" && (
-                  <Link href="#" className="text-[11px] font-bold text-blue-600 hover:text-blue-700">Forgot password?</Link>
+                  <button type="button" onClick={handleForgotPassword} className="text-[11px] font-bold text-blue-600 hover:text-blue-700">Forgot password?</button>
                 )}
               </div>
-              <input 
-                type="password" 
-                placeholder="••••••••" 
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
                 className="h-12 px-4 rounded-xl border border-border bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm tracking-widest"
               />
             </div>
 
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl mt-2 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5">
-              {activeTab === "login" ? "Log In" : "Create Account"}
+            <button disabled={submitting} className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-12 rounded-xl mt-2 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5">
+              {submitting ? "Please wait…" : activeTab === "login" ? "Log In" : "Create Account"}
             </button>
 
             <div className="relative flex items-center py-4">
@@ -165,7 +224,10 @@ export function AuthView({ defaultTab = "login" }: AuthViewProps) {
               <div className="flex-grow border-t border-border"></div>
             </div>
 
-            <button type="button" onClick={handleAuthAction} className="w-full flex items-center justify-center gap-3 bg-background border border-border hover:bg-secondary/50 text-foreground font-semibold h-12 rounded-xl transition-colors text-sm">
+            {/* Google OAuth is deferred to Sprint 2.5 — no client ID configured yet.
+                Kept visible to match the shipped design, disabled so it doesn't
+                silently no-op. */}
+            <button type="button" disabled title="Coming soon" className="w-full flex items-center justify-center gap-3 bg-background border border-border text-foreground font-semibold h-12 rounded-xl transition-colors text-sm opacity-50 cursor-not-allowed">
               <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>

@@ -2,12 +2,56 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Bookmark, Bell, Briefcase, User, LogOut, Search, MapPin, Scale, MessageCircle, FileText, CheckCircle2, CircleDashed } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 type Tab = "saved" | "alerts" | "services" | "info"
 
-export function ProfileView() {
+interface Profile {
+  fullName: string | null
+  email: string
+  phone: string | null
+  creditsBalance: number
+  memberSince: string
+}
+
+export function ProfileView({ profile }: { profile: Profile }) {
   const [activeTab, setActiveTab] = useState<Tab>("saved")
+  const [fullName, setFullName] = useState(profile.fullName ?? "")
+  const [phone, setPhone] = useState(profile.phone ?? "")
+  const [savingDetails, setSavingDetails] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
+  const supabase = createClient()
+
+  const displayName = profile.fullName?.trim() || profile.email
+  const firstName = displayName.split(" ")[0]
+  const initial = displayName.charAt(0).toUpperCase()
+  const memberSince = new Date(profile.memberSince).toLocaleDateString("en-IN", { month: "long", year: "numeric" })
+
+  const handleLogOut = async () => {
+    await supabase.auth.signOut()
+    router.push("/")
+    router.refresh()
+  }
+
+  const handleSaveDetails = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingDetails(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase
+      .from("profiles")
+      .update({ fullName, phone })
+      .eq("id", user?.id)
+    setSavingDetails(false)
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't save changes", description: error.message })
+      return
+    }
+    toast({ title: "Details saved" })
+  }
 
   return (
     <div className="w-full flex flex-col pt-32 pb-20 bg-background min-h-screen">
@@ -16,7 +60,7 @@ export function ProfileView() {
       <section className="bg-secondary/30 py-12 mb-8 border-b border-border">
         <div className="container mx-auto px-6">
           <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight font-display">
-            Welcome back, <span className="text-blue-600">Rajesh!</span>
+            Welcome back, <span className="text-blue-600">{firstName}!</span>
           </h1>
         </div>
       </section>
@@ -30,13 +74,19 @@ export function ProfileView() {
             {/* User Info Header */}
             <div className="p-6 border-b border-border flex items-center gap-4 bg-secondary/20">
               <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold font-display shrink-0">
-                R
+                {initial}
               </div>
               <div className="overflow-hidden">
-                <div className="font-bold text-foreground truncate">Rajesh Kumar</div>
-                <div className="text-xs text-muted-foreground truncate">rajesh.k@gmail.com</div>
+                <div className="font-bold text-foreground truncate">{displayName}</div>
+                <div className="text-xs text-muted-foreground truncate">{profile.email}</div>
               </div>
             </div>
+
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Credits</span>
+              <span className="text-lg font-extrabold text-blue-600 font-display">{profile.creditsBalance}</span>
+            </div>
+            <div className="px-6 pb-4 text-xs text-muted-foreground">Member since {memberSince}</div>
 
             {/* Navigation */}
             <div className="p-2 flex flex-col gap-1">
@@ -90,7 +140,7 @@ export function ProfileView() {
             </div>
 
             <div className="p-4 border-t border-border mt-2">
-              <button className="w-full flex items-center gap-3 px-4 py-2 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
+              <button onClick={handleLogOut} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
                 <LogOut className="w-4 h-4" />
                 Log Out
               </button>
@@ -332,28 +382,29 @@ export function ProfileView() {
                 </div>
 
                 <div className="bg-background rounded-2xl border border-border shadow-sm p-6 sm:p-8">
-                  <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
-                    
+                  <form className="flex flex-col gap-6" onSubmit={handleSaveDetails}>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Full Name</label>
-                        <input type="text" defaultValue="Rajesh Kumar" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                        <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
                       </div>
-                      
+
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Email Address</label>
-                        <input type="email" defaultValue="rajesh.k@gmail.com" disabled className="h-12 px-4 rounded-xl border border-border bg-secondary/10 text-muted-foreground outline-none text-sm cursor-not-allowed" />
+                        <input type="email" defaultValue={profile.email} disabled className="h-12 px-4 rounded-xl border border-border bg-secondary/10 text-muted-foreground outline-none text-sm cursor-not-allowed" />
                         <span className="text-xs text-muted-foreground">Contact support to change email.</span>
                       </div>
-                      
+
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Phone Number</label>
-                        <input type="tel" defaultValue="+91 98765 43210" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                        <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
                       </div>
-                      
+
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">City</label>
-                        <input type="text" defaultValue="Mumbai" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                        <input type="text" placeholder="Mumbai" disabled className="h-12 px-4 rounded-xl border border-border bg-secondary/10 text-muted-foreground outline-none text-sm cursor-not-allowed" />
+                        <span className="text-xs text-muted-foreground">Coming soon.</span>
                       </div>
                     </div>
                     
@@ -374,8 +425,8 @@ export function ProfileView() {
                     </div>
 
                     <div className="border-t border-border pt-6 mt-2 flex justify-end">
-                      <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 px-8 rounded-xl transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5">
-                        Save Changes
+                      <button disabled={savingDetails} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-12 px-8 rounded-xl transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5">
+                        {savingDetails ? "Saving…" : "Save Changes"}
                       </button>
                     </div>
                   </form>

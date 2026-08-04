@@ -1,9 +1,35 @@
 "use client"
 
-import { Bell, Mail, Smartphone, ArrowRight } from "lucide-react"
+import { useState } from "react"
+import { Bell, Mail, Smartphone, ArrowRight, Check } from "lucide-react"
 import { HighlightedText } from "./highlighted-text"
+import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 export function AlertsSection() {
+  const [email, setEmail] = useState("")
+  const [whatsapp, setWhatsapp] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const { toast } = useToast()
+  const supabase = createClient()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    const { error } = await supabase.from("alert_subscriptions").insert({
+      email,
+      whatsapp: whatsapp || null,
+      filters: {},
+    })
+    setSubmitting(false)
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't set up alerts", description: error.message })
+      return
+    }
+    setSubmitted(true)
+  }
+
   return (
     <section className="py-24 md:py-32 bg-foreground text-primary-foreground relative overflow-hidden">
       {/* Background decoration */}
@@ -39,42 +65,54 @@ export function AlertsSection() {
 
           <div className="bg-background/5 border border-primary-foreground/10 p-8 md:p-10 backdrop-blur-sm">
             <h3 className="text-2xl font-medium mb-6">Set Up Free Alerts</h3>
-            
-            <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-              <div>
-                <label className="block text-sm text-primary-foreground/70 mb-2 uppercase tracking-wider">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
-                  <input 
-                    type="email" 
-                    placeholder="you@example.com" 
-                    className="w-full bg-background/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/30 pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400 transition-colors"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-sm text-primary-foreground/70 mb-2 uppercase tracking-wider">WhatsApp Number</label>
-                <div className="relative">
-                  <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
-                  <input 
-                    type="tel" 
-                    placeholder="+91 98765 43210" 
-                    className="w-full bg-background/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/30 pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400 transition-colors"
-                  />
+            {submitted ? (
+              <div className="flex items-center gap-3 text-primary-foreground/90 py-4">
+                <Check className="w-5 h-5 text-orange-400 shrink-0" />
+                You're subscribed — we'll email you when a matching auction goes live.
+              </div>
+            ) : (
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                <div>
+                  <label className="block text-sm text-primary-foreground/70 mb-2 uppercase tracking-wider">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
+                    <input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="w-full bg-background/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/30 pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400 transition-colors"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="pt-2">
-                <button className="w-full bg-orange-500 text-white font-medium py-4 px-6 hover:bg-orange-600 transition-colors flex justify-center items-center gap-2 group">
-                  Subscribe to Alerts
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </button>
-              </div>
-              <p className="text-xs text-primary-foreground/50 text-center mt-4">
-                We respect your privacy. Unsubscribe at any time.
-              </p>
-            </form>
+                <div>
+                  <label className="block text-sm text-primary-foreground/70 mb-2 uppercase tracking-wider">WhatsApp Number</label>
+                  <div className="relative">
+                    <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
+                    <input
+                      type="tel"
+                      placeholder="+91 98765 43210"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
+                      className="w-full bg-background/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/30 pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button disabled={submitting} className="w-full bg-orange-500 text-white font-medium py-4 px-6 hover:bg-orange-600 disabled:opacity-60 transition-colors flex justify-center items-center gap-2 group">
+                    {submitting ? "Subscribing…" : "Subscribe to Alerts"}
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </button>
+                </div>
+                <p className="text-xs text-primary-foreground/50 text-center mt-4">
+                  We respect your privacy. Unsubscribe at any time.
+                </p>
+              </form>
+            )}
           </div>
         </div>
       </div>

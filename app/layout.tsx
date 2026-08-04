@@ -4,6 +4,7 @@ import { Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { SmoothScrolling } from "@/components/smooth-scrolling"
+import { Toaster } from "@/components/ui/toaster"
 
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
@@ -42,6 +43,7 @@ export default function RootLayout({
         <SmoothScrolling>
           {children}
         </SmoothScrolling>
+        <Toaster />
         <Analytics />
       </body>
     </html>
