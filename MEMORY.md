@@ -11,12 +11,14 @@ context window fills up, open a new session and point it at this file first.
 > 4. `plans/boliwala-phase1-sprint-plan.md` (master plan — **includes Sprint
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
-**Last updated:** 2026-08-04. Auth/signup-credit/alerts work is committed and
-pushed (`0b51a5f`). **Sprint 2.1 is now fully built and verified this
-session (see §8) — deliberately uncommitted**, same as before: the user
-reviews locally first. If you're picking this up fresh: read §8 first (what
-actually got built, what was found, what's still open), then §6 only if you
-want the original plan for context — §8 supersedes it where they differ.
+**Last updated:** 2026-08-04. Sprint 2.1 is committed and pushed (`5f6f771`).
+**Sprint 2.7 (RLS/grant bug fixes, §8.6) is done this session — migration
+`0007` applied live but not yet committed**, same review-first pattern as
+always. **Sprint 3 has been split into 3 (executable now) and 3.5 (blocked
+on Razorpay credentials) — see §9** — nothing in §9 is built yet, it's
+planning only, done at the user's request before starting execution. If
+you're picking this up fresh: read §8 (Sprint 2.1 + 2.7 completion record),
+then §9 (the Sprint 3/3.5 split and blockers) before touching Sprint 3 work.
 
 ---
 
@@ -497,3 +499,123 @@ column exists and `alerts-section.tsx` already shows the insert pattern, so
 it's a small follow-up whenever it's wanted. WhatsApp button number is
 unchanged (already an open question in §7). Alerts/Services tabs on
 `/profile` are still mock — only "Saved Properties" was in scope.
+
+### 8.6 Sprint 2.7 — RLS/grant bug fixes (2026-08-04, same day)
+
+The two tables flagged-not-fixed in §8.1 (`listing_images`,
+`bulk_upload_batches`/`admin_audit_log`) closed out as their own sprint,
+plus two more issues a full `get_advisors` security scan turned up that
+weren't on anyone's radar. Migration `0007_lock_down_images_admin_tables_
+rls.sql`, applied live, **not yet committed**.
+
+- **`listing_images`, `bulk_upload_batches`, `admin_audit_log`** — all
+  three had RLS disabled *and* the default Supabase blanket grant
+  (`SELECT`/`INSERT`/`UPDATE`/`DELETE` for `anon`+`authenticated`), so
+  anyone with the anon key had full CRUD — could deface listing photos,
+  fabricate audit log rows, or tamper with bulk-upload batches. Fixed:
+  `listing_images` gets RLS + a public `SELECT` policy scoped to images on
+  `status = 'live'` listings (same visibility boundary as `listings`
+  itself), no client writes. The other two get RLS + zero policies
+  (deny-all), same as `listing_views` — nothing reads/writes them yet;
+  Sprint 3's admin backend will use the service-role client.
+- **`public._prisma_migrations` — found by `get_advisors`, not by the
+  earlier manual RLS check, and had been missed in both Sprint 2.1 and the
+  first pass of 2.7.** Same blanket-grant problem, vestigial from before
+  Prisma was dropped. RLS enabled, no policies — not dropped, just locked
+  down (nothing uses it, no reason to delete it either).
+- **`handle_new_user()` and `increment_listing_view_count()` were callable
+  directly via `/rest/v1/rpc/<name>`** by anon/authenticated even though
+  both are trigger-only functions — `get_advisors` flagged this too.
+  `EXECUTE` revoked from `public`/`anon`/`authenticated` on both; verified
+  the triggers themselves still fire correctly afterward (trigger
+  invocation goes through table/function ownership, not the caller's
+  `EXECUTE` grant — signup still grants 5 credits, view-count still
+  increments). `unlock_field_group` still shows a `get_advisors` WARN for
+  `authenticated` — that one's correct and intentional, it's designed to be
+  called directly by signed-in users; not a bug.
+- **Verification:** real anon-key attack attempts (`SELECT`/`INSERT` on all
+  three newly-locked tables) — reads return `[]`, writes 401 with an RLS
+  violation. `get_advisors` re-run clean afterward except the expected
+  `rls_enabled_no_policy` INFO-level notices (intentional, deny-all by
+  design) and the one intentional `unlock_field_group` WARN.
+
+---
+
+## 9. Sprint 3 — split into 3 (executable) and 3.5 (blocked), 2026-08-04
+
+Done at the user's request, before any Sprint 3 code — planning only,
+nothing in this section is built yet. Original Sprint 3 scope, from
+`plans/boliwala-phase1-sprint-plan.md` line 218: Razorpay payments, admin
+shell, Listings Management, bulk Excel upload.
+
+### 9.1 The actual blocker: Razorpay only
+
+Checked `.env.local` — `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`,
+`RAZORPAY_WEBHOOK_SECRET` are all empty (not even test-mode keys). This is
+the one genuinely external blocker: order → checkout → webhook
+verification → entitlement can't be built or tested without at least test
+credentials (self-serve on Razorpay's dashboard, no KYC needed for test
+mode — live-mode KYC is a separate, slower thing that R5 in the sprint plan
+already correctly says isn't needed until Sprint 5).
+
+Two things the original plan flagged as blockers **turned out not to be**:
+
+- **R2 ("missing admin prototype")** — false alarm. `components/
+  admin-view.tsx` already exists, 770 lines, a full static mockup covering
+  essentially all of `boliwala_features.txt` §5 (Dashboard, Listings,
+  Add/Edit, Bulk Upload, Callbacks, Packages, Payments, Users, Settings,
+  Success Fees, Partners, Alerts/Engagement/Campaigns) — same situation as
+  `property-results.tsx`/`listing-view.tsx` before Sprint 2.1: a real
+  design already sitting in the codebase, zero data-fetching wired to it.
+  No design pass needed, no client sign-off needed — same playbook as 2.1.
+- **Open question #11 ("sample bulk-upload Excel")** — not a hard blocker.
+  Building the parser against a fixed template the client hasn't confirmed
+  yet would just be guessing at their format. Better approach, no client
+  input needed: a generic column-mapping step (upload → detect headers →
+  map each to a `listings` field → preview → validate → commit), which is
+  more robust anyway and doesn't assume one fixed template.
+
+### 9.2 Sprint 3 (executable now, no external blocker)
+
+- Admin auth guard — `profiles.role` already has an `admin` enum value,
+  just needs a real check + redirect (same pattern as `/profile`'s session
+  guard).
+- Dashboard — wire the real KPI cards `admin-view.tsx` already has:
+  active listings, registered users, callback requests, shortlisters. The
+  revenue/subscribers/success-fee KPIs correctly show ₹0/empty until 3.5 —
+  don't fake them.
+- Listings Management — real CRUD against `listings` (list/search/filter,
+  add/edit form with the gated-field toggles, publish/status control,
+  view-count column already real from Sprint 2.1).
+- Image upload — needs a new Supabase Storage bucket (checked: **none
+  exist yet**, `storage.buckets` is empty — this is just setup work, not
+  externally blocked). Public read (matches `listing_images`' new RLS
+  policy from 2.7), admin/service-role-only write.
+- Bulk Excel upload — the column-mapping approach from §9.1, backed by
+  `bulk_upload_batches` (already RLS-locked in 2.7, service-role only).
+
+### 9.3 Sprint 3.5 (blocked on Razorpay credentials)
+
+- Razorpay integration itself: ₹999 subscription + ₹9,999 package,
+  order → checkout → webhook verification → entitlement, signature
+  validation, failure/retry, idempotent webhooks.
+- Admin "Payments" page, "Packages" page, Success Fee Tracker (§5.4/5.7 in
+  `boliwala_features.txt`) — all downstream of real transaction data,
+  currently fake stat cards in `admin-view.tsx` (`₹21,44,000`, `47`
+  packages, etc.) that need replacing with real queries once real payments
+  exist.
+- **Unblocks with:** `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET` (test mode)
+  in `.env.local`, and `RAZORPAY_WEBHOOK_SECRET` once a webhook endpoint is
+  registered in the Razorpay dashboard pointing at this app.
+
+### 9.4 Sequence after Sprint 2.7
+
+Sprint 2.7 (done) → **Sprint 3** (admin shell, listings management, image
+upload, bulk upload — no blocker) → **Sprint 3.5** (Razorpay, whenever
+credentials arrive — can run in parallel with Sprint 4 work that doesn't
+depend on payments) → Sprint 4 (admin completion: Callback Requests,
+Package Purchases [needs 3.5], Settings pricing controls, remaining public
+pages, Resend email — Resend is also currently unconfigured, same empty-env
+pattern as Razorpay, flagged for whoever picks up Sprint 4) → Sprint 5
+(QA/SEO/launch). Sprint 2.5 (Google OAuth) still sits wherever it sits,
+still blocked on Google credentials, doesn't block anything above.
