@@ -2,6 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { ListingsPanel } from "./admin/listings-panel"
+import { ListingFormPanel } from "./admin/listing-form-panel"
+import { BulkUploadPanel } from "./admin/bulk-upload-panel"
+import type { DashboardKpis, AdminListingRow } from "@/lib/data/admin"
 
 const pageMap: Record<string, { title: string; crumb: string }> = {
   'dashboard': { title: 'Dashboard', crumb: 'Boliwala Admin › Overview' },
@@ -26,11 +30,26 @@ const pageMap: Record<string, { title: string; crumb: string }> = {
   'settings': { title: 'Settings', crumb: 'Boliwala Admin › Settings' },
 }
 
-export function AdminView() {
+export function AdminView({
+  adminName,
+  kpis,
+  initialListings,
+  banks,
+}: {
+  adminName: string
+  kpis: DashboardKpis
+  initialListings: AdminListingRow[]
+  banks: { id: string; name: string }[]
+}) {
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [editingListingId, setEditingListingId] = useState<string | null>(null)
 
   const currentPage = pageMap[activePage] || pageMap['dashboard']
+
+  const goToAddListing = () => { setEditingListingId(null); setActivePage('add-listing') }
+  const goToEditListing = (id: string) => { setEditingListingId(id); setActivePage('listing-detail') }
+  const goToBulkUpload = () => setActivePage('bulk-upload')
 
   const NavItem = ({ id, icon, label, badge, badgeColor = "bg-red-500" }: any) => {
     const isActive = activePage === id
@@ -154,7 +173,7 @@ export function AdminView() {
         <div className="flex-1 overflow-y-auto py-2 scrollbar-hide">
           <SectionLabel>Listings</SectionLabel>
           <NavItem id="dashboard" icon="📊" label="Dashboard" />
-          <NavItem id="listings" icon="🏠" label="All Listings" badge="247" badgeColor="bg-amber-500" />
+          <NavItem id="listings" icon="🏠" label="All Listings" badge={String(kpis.activeListings)} badgeColor="bg-amber-500" />
           <NavItem id="add-listing" icon="➕" label="Add Listing" />
           <NavItem id="bulk-upload" icon="📂" label="Bulk Upload Excel" />
           <SectionLabel>Leads & Sales</SectionLabel>
@@ -179,8 +198,8 @@ export function AdminView() {
           <NavItem id="settings" icon="⚙️" label="Settings" />
         </div>
         <div className="p-3.5 border-t border-white/10 flex items-center gap-2.5 mt-auto shrink-0 bg-[#0A0F1C]">
-          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[13px] font-bold text-white shrink-0">D</div>
-          <div><div className="text-[13px] font-semibold text-white leading-tight">Dipak</div><div className="text-[11px] text-white/40">Super Admin</div></div>
+          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[13px] font-bold text-white shrink-0">{adminName.charAt(0).toUpperCase()}</div>
+          <div><div className="text-[13px] font-semibold text-white leading-tight">{adminName}</div><div className="text-[11px] text-white/40">Admin</div></div>
         </div>
       </aside>
 
@@ -204,8 +223,8 @@ export function AdminView() {
             <button className="w-8.5 h-8.5 rounded-lg bg-muted border border-border flex items-center justify-center hover:bg-secondary relative text-[15px]">
               🔔<span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full border-[1.5px] border-card"></span>
             </button>
-            <button onClick={() => setActivePage('add-listing')} className="hidden sm:flex h-8.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg text-[13px] items-center gap-1.5 transition-colors">➕ Add Listing</button>
-            <button onClick={() => setActivePage('bulk-upload')} className="hidden md:flex h-8.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-[13px] items-center gap-1.5 transition-colors">📂 Bulk Upload</button>
+            <button onClick={goToAddListing} className="hidden sm:flex h-8.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg text-[13px] items-center gap-1.5 transition-colors">➕ Add Listing</button>
+            <button onClick={goToBulkUpload} className="hidden md:flex h-8.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-[13px] items-center gap-1.5 transition-colors">📂 Bulk Upload</button>
           </div>
         </header>
 
@@ -215,22 +234,25 @@ export function AdminView() {
           {activePage === 'dashboard' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon="🏠" iconBg="bg-blue-100 dark:bg-blue-500/20" trend="↑ 12%" value="247" label="Active Listings" />
-                <StatCard icon="💰" iconBg="bg-emerald-100 dark:bg-emerald-500/20" trend="↑ 28%" value="₹3,84,000" label="Revenue This Month" />
-                <StatCard icon="📞" iconBg="bg-red-100 dark:bg-red-500/20" trend="↑ 5" value="18" label="Callback Requests" />
-                <StatCard icon="💼" iconBg="bg-amber-100 dark:bg-amber-500/20" trend="↑ 3" value="9" label="Package Purchases" />
+                <StatCard icon="🏠" iconBg="bg-blue-100 dark:bg-blue-500/20" value={kpis.activeListings} label="Active Listings" />
+                <StatCard icon="💰" iconBg="bg-emerald-100 dark:bg-emerald-500/20" value={`₹${kpis.revenueThisMonth.toLocaleString('en-IN')}`} label="Revenue This Month" />
+                <StatCard icon="📞" iconBg="bg-red-100 dark:bg-red-500/20" value={kpis.callbackRequestsUnread} label="Callback Requests (unread)" />
+                <StatCard icon="💼" iconBg="bg-amber-100 dark:bg-amber-500/20" value={kpis.packagePurchases} label="Package Purchases" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon="👥" iconBg="bg-purple-100 dark:bg-purple-500/20" trend="↑ 34%" value="1,842" label="Registered Users" />
-                <StatCard icon="🏆" iconBg="bg-emerald-100 dark:bg-emerald-500/20" trend="↑ 2" value="38" label="Auctions Won" />
-                <StatCard icon="🔔" iconBg="bg-blue-100 dark:bg-blue-500/20" trend="↑ 18%" value="4,291" label="Alert Subscribers" />
-                <StatCard icon="🏆" iconBg="bg-red-100 dark:bg-red-500/20" trend="↑ 4" trendUp={false} value="4" label="Success Fees Pending" />
+                <StatCard icon="👥" iconBg="bg-purple-100 dark:bg-purple-500/20" value={kpis.registeredUsers.toLocaleString('en-IN')} label="Registered Users" />
+                <StatCard icon="🏆" iconBg="bg-emerald-100 dark:bg-emerald-500/20" value={kpis.auctionsClosed} label="Auctions Closed" />
+                <StatCard icon="🔔" iconBg="bg-blue-100 dark:bg-blue-500/20" value={kpis.alertSubscribers.toLocaleString('en-IN')} label="Alert Subscribers" />
+                <StatCard icon="🏆" iconBg="bg-red-100 dark:bg-red-500/20" value={kpis.successFeesPending} label="Success Fees Pending" />
               </div>
 
               <div className="space-y-2.5 pt-1">
-                <AlertStrip type="danger" icon="📞" title="18 callback requests unread — 6 waiting over 2 hours" subtitle="Users have requested a call from Boliwala. Call them back immediately." linkText="View Callback Requests →" linkAction={() => setActivePage('callbacks')} />
-                <AlertStrip type="warning" icon="🏆" title="4 success fees outstanding — ₹1,12,400 due" subtitle="Clients won auctions. Collect 1% success fee." linkText="Collect Fees →" linkAction={() => setActivePage('success-fees')} />
-                <AlertStrip type="info" icon="🤝" title="6 new channel partner applications pending" linkText="Review Applications →" linkAction={() => setActivePage('partners')} />
+                {kpis.callbackRequestsUnread > 0 && (
+                  <AlertStrip type="danger" icon="📞" title={`${kpis.callbackRequestsUnread} callback request(s) unread`} subtitle="Users have requested a call from Boliwala." linkText="View Callback Requests →" linkAction={() => setActivePage('callbacks')} />
+                )}
+                {kpis.pendingPartnerApplications > 0 && (
+                  <AlertStrip type="info" icon="🤝" title={`${kpis.pendingPartnerApplications} new channel partner application(s) pending`} linkText="Review Applications →" linkAction={() => setActivePage('partners')} />
+                )}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2">
@@ -256,7 +278,7 @@ export function AdminView() {
                     <div className="px-5 py-3.5 border-b border-border"><h3 className="font-display text-[15px] font-bold text-foreground">⚡ Quick Actions</h3></div>
                     <div className="p-4.5"><div className="grid grid-cols-4 gap-2.5">
                       {[{ i: "🏠", l: "Add Listing", id: "add-listing" }, { i: "📂", l: "Bulk Upload", id: "bulk-upload" }, { i: "📞", l: "Callbacks", id: "callbacks" }, { i: "💼", l: "Packages", id: "packages" }, { i: "💰", l: "Payments", id: "payments" }, { i: "👥", l: "Users", id: "users" }, { i: "🔔", l: "Alerts", id: "alerts" }, { i: "📈", l: "Analytics", id: "analytics" }].map((qa, i) => (
-                        <div key={i} onClick={() => setActivePage(qa.id)} className="bg-card border border-border rounded-lg p-3 text-center cursor-pointer hover:border-primary hover:-translate-y-0.5 hover:shadow-md transition-all group">
+                        <div key={i} onClick={() => qa.id === 'add-listing' ? goToAddListing() : setActivePage(qa.id)} className="bg-card border border-border rounded-lg p-3 text-center cursor-pointer hover:border-primary hover:-translate-y-0.5 hover:shadow-md transition-all group">
                           <div className="text-[22px] mb-1.5">{qa.i}</div><div className="text-xs font-semibold text-muted-foreground group-hover:text-primary">{qa.l}</div>
                         </div>
                       ))}
@@ -280,83 +302,27 @@ export function AdminView() {
 
           {/* ALL LISTINGS */}
           {activePage === 'listings' && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                <TcHead title={<>🏠 All Listings <span className="text-xs font-normal text-muted-foreground">247 total</span></>} acts={<>
-                  <input type="text" placeholder="City, bank, ID…" className="h-8 px-3 border-2 border-border rounded-lg text-[13px] outline-none focus:border-primary bg-background w-[180px]" />
-                  <TcActionSelect options={['All Banks', 'Bank of Baroda', 'SBI', 'HDFC']} />
-                  <TcActionSelect options={['All Status', 'Active', 'Upcoming', 'Closed', 'Won']} />
-                  <TcActionBtn>⬇️ Export CSV</TcActionBtn>
-                  <TcActionBtn>📂 Bulk Upload</TcActionBtn>
-                  <TcActionBtn primary>➕ Add Listing</TcActionBtn>
-                </>} />
-                <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-muted/50 border-b border-border"><th className="p-3 w-10 text-center"><input type="checkbox" /></th><Th>Property ID</Th><Th>Property</Th><Th>Bank</Th><Th>Reserve Price</Th><Th>EMD</Th><Th>Auction Date</Th><Th>Views</Th><Th>PDF</Th><Th>Status</Th><Th>Actions</Th></tr></thead>
-                  <tbody>
-                    {[
-                      { id: 'BARBNANDY303', t: 'Flat 303, Vithai Apt, Airoli', sub: 'Navi Mumbai', b: 'Bank of Baroda', r: '₹60,12,000', e: '₹6,12,000', d: '07 Jul 2026', v: '342', pdf: true, s: 'Active', color: 'green' },
-                      { id: 'SBI-AND-303', t: '3 BHK Apartment, Andheri West', sub: 'Mumbai', b: 'SBI', r: '₹78,00,000', e: '₹7,80,000', d: '18 Jul 2026', v: '891', pdf: false, s: 'Active', color: 'green' },
-                      { id: 'HDFC-DEL-22', t: 'Commercial Shop, Connaught Place', sub: 'New Delhi', b: 'HDFC Bank', r: '₹1,45,00,000', e: '₹14,50,000', d: '05 Jun 2026', v: '104', pdf: true, s: 'Closed', color: 'gray' }
-                    ].map((row, i) => (
-                      <tr key={i} className="border-b border-border hover:bg-muted/30">
-                        <td className="p-3 text-center"><input type="checkbox" /></td>
-                        <Td className="font-mono text-xs">{row.id}</Td>
-                        <Td><div className="font-semibold text-foreground">{row.t}</div><div className="text-[11px]">{row.sub}</div></Td>
-                        <Td>{row.b}</Td>
-                        <Td className="font-semibold text-foreground">{row.r}</Td>
-                        <Td>{row.e}</Td><Td>{row.d}</Td>
-                        <Td><span className="text-[12px] bg-secondary px-2 py-0.5 rounded-full">👁 {row.v}</span></Td>
-                        <Td><span className={row.pdf ? "text-emerald-500" : "text-red-500"}>{row.pdf ? '✅' : '❌'}</span></Td>
-                        <Td><Pill type={row.color}>• {row.s}</Pill></Td>
-                        <Td><div className="flex gap-1.5"><RaBtn>Edit</RaBtn><RaBtn>📷 Images</RaBtn><RaBtn danger>✕</RaBtn></div></Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table></div>
-              </div>
-            </div>
+            <ListingsPanel
+              initialListings={initialListings}
+              banks={banks}
+              onAddListing={goToAddListing}
+              onEditListing={goToEditListing}
+              onBulkUpload={goToBulkUpload}
+            />
           )}
 
           {/* ADD / EDIT LISTING */}
           {(activePage === 'add-listing' || activePage === 'listing-detail') && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex items-center gap-3 mb-4">
-                <button onClick={() => setActivePage('listings')} className="h-9 px-3.5 bg-background border-2 border-border text-muted-foreground text-[13px] rounded-lg">← Back</button>
-                <div className="font-display text-base font-bold text-foreground">Flat 303, Vithai Apartment, Airoli — Edit Listing</div>
-              </div>
-              <div className="flex border-b-2 border-border mb-4 overflow-x-auto">
-                {['Property Details', 'Bank & Auction', '📷 Images & PDF', 'Gated Fields'].map((t, i) => (
-                  <div key={i} className={`px-4 py-2 text-[13px] cursor-pointer font-medium whitespace-nowrap -mb-[2px] border-b-2 ${i === 2 ? 'text-primary border-primary font-bold' : 'text-muted-foreground border-transparent'}`}>{t}</div>
-                ))}
-              </div>
-              <FormSection title="📷 Property Images" foot={<><button className="h-9 px-3.5 bg-background border-2 border-border text-muted-foreground text-[13px] rounded-lg">Cancel</button><button className="h-9 px-5 bg-primary text-primary-foreground font-semibold text-[13px] rounded-lg">Save Changes</button></>}>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-                  <div className="aspect-square bg-blue-900 rounded-lg flex items-center justify-center text-3xl relative border-2 border-transparent hover:border-primary"><div className="absolute top-1 right-1 w-5 h-5 bg-red-600 rounded-full text-white text-[10px] flex items-center justify-center cursor-pointer">✕</div>🏢</div>
-                  <div className="aspect-square bg-emerald-900 rounded-lg flex items-center justify-center text-3xl relative border-2 border-transparent hover:border-primary"><div className="absolute top-1 right-1 w-5 h-5 bg-red-600 rounded-full text-white text-[10px] flex items-center justify-center cursor-pointer">✕</div>🚪</div>
-                  <div className="aspect-square border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground rounded-lg cursor-pointer hover:bg-muted/50 hover:border-primary hover:text-primary"><span className="text-xl">+</span><span className="text-[11px] mt-1">Add</span></div>
-                </div>
-              </FormSection>
-            </div>
+            <ListingFormPanel
+              listingId={editingListingId}
+              banks={banks}
+              onSaved={(id) => { setEditingListingId(id); setActivePage('listing-detail') }}
+              onCancel={() => setActivePage('listings')}
+            />
           )}
 
           {/* BULK UPLOAD */}
-          {activePage === 'bulk-upload' && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <FormSection title="📂 Bulk Upload Listings via Excel">
-                <AlertStrip type="info" icon="💡" title="How bulk upload works" subtitle="Download the template, fill it in, and upload it below. All listings will be created as drafts." />
-                <div className="flex gap-3 mb-5 mt-4">
-                  <button className="h-10 px-4 bg-primary text-primary-foreground font-semibold rounded-lg text-[13px]">⬇️ Download Excel Template</button>
-                  <button className="h-10 px-4 border-2 border-border bg-background text-foreground font-semibold rounded-lg text-[13px]">📄 Download Sample File</button>
-                </div>
-                <div className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:bg-muted/50 hover:border-primary transition-colors">
-                  <div className="text-3xl mb-1.5">📊</div>
-                  <div className="text-sm font-semibold text-foreground mb-0.5">Click or drag your Excel file here</div>
-                  <div className="text-xs text-muted-foreground">.xlsx or .xls · Max 5MB · Up to 500 rows per upload</div>
-                  <button className="mt-3 h-8.5 px-4 bg-primary text-primary-foreground font-semibold rounded-lg text-[13px]">Choose File</button>
-                </div>
-              </FormSection>
-            </div>
-          )}
+          {activePage === 'bulk-upload' && <BulkUploadPanel banks={banks} />}
 
           {/* CALLBACKS */}
           {activePage === 'callbacks' && (

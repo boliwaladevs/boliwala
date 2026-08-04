@@ -11,14 +11,16 @@ context window fills up, open a new session and point it at this file first.
 > 4. `plans/boliwala-phase1-sprint-plan.md` (master plan — **includes Sprint
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
-**Last updated:** 2026-08-04. Sprint 2.1 is committed and pushed (`5f6f771`).
-**Sprint 2.7 (RLS/grant bug fixes, §8.6) is done this session — migration
-`0007` applied live but not yet committed**, same review-first pattern as
-always. **Sprint 3 has been split into 3 (executable now) and 3.5 (blocked
-on Razorpay credentials) — see §9** — nothing in §9 is built yet, it's
-planning only, done at the user's request before starting execution. If
-you're picking this up fresh: read §8 (Sprint 2.1 + 2.7 completion record),
-then §9 (the Sprint 3/3.5 split and blockers) before touching Sprint 3 work.
+**Last updated:** 2026-08-05. Sprint 2.1 (`5f6f771`), Sprint 2.7 (`2ee35a1`),
+and **Sprint 3 are all committed and pushed — see §10 for what actually got
+built**. **Next session picks up Sprint 2.5 (Google OAuth) and Sprint 3.5
+(Razorpay) — both still blocked on the same thing: the user needs to supply
+credentials** (Google OAuth client ID/secret; Razorpay key ID/secret/webhook
+secret, test-mode is enough to start). If those haven't arrived yet, there's
+no code to write for either — check `.env.local` first before assuming
+you're unblocked. If you're picking this up fresh: read §10 first (Sprint 3
+completion record — what's real now in `/admin`), §9 for the original
+Sprint 3/3.5 split and why, §8 for Sprint 2.1 + 2.7.
 
 ---
 
@@ -619,3 +621,117 @@ pages, Resend email — Resend is also currently unconfigured, same empty-env
 pattern as Razorpay, flagged for whoever picks up Sprint 4) → Sprint 5
 (QA/SEO/launch). Sprint 2.5 (Google OAuth) still sits wherever it sits,
 still blocked on Google credentials, doesn't block anything above.
+
+---
+
+## 10. Sprint 3 — completion record (2026-08-05)
+
+Built and verified end-to-end this session against the live Supabase
+project, real admin test accounts created and cleaned up each time
+(including a leftover-artifact sweep at the end — checked zero test rows,
+zero orphaned Storage objects). **Committed and pushed.**
+
+### 10.1 What's real now
+
+- **`/admin` is auth-gated for real.** `lib/auth/admin.ts`'s `requireAdmin()`
+  — guests redirect to `/login`, signed-in non-admins redirect to `/`,
+  verified both with real accounts. There is **no self-service path to
+  becoming admin** (by design, since Sprint 2.1 revoked client `role`
+  writes) — promote a user via `UPDATE profiles SET role='admin'` through
+  the service-role client/SQL only.
+- **`components/admin-view.tsx`** (the 770-line mockup found already
+  sitting in the repo, see §9.1) is now real for exactly four sections —
+  everything else in it (Callbacks, Packages, Payments, Success Fees,
+  Users, Partners, Alerts, Email Campaigns, WhatsApp, Segments, Engagement,
+  Settings) **is still the original static mockup**, deliberately
+  untouched, Sprint 3.5/4 territory:
+  - **Dashboard** — all 8 KPI cards are real queries (`lib/data/admin.ts`
+    `getDashboardKpis()`), including the money ones (`revenueThisMonth`,
+    `successFeesPending`) which correctly show real current zeros rather
+    than the mockup's fabricated `₹3,84,000`/`38`/etc. No fabricated trend
+    percentages — there's no historical baseline to compute them from yet.
+    Two of the three alert banners are wired to real counts (unread
+    callbacks, pending partner applications); the third (success fees) only
+    shows when non-zero. **Recent Activity feed and the 8-month revenue
+    chart are still static/mock** — a real activity feed needs
+    `admin_audit_log` to actually be written to, which nothing does yet.
+  - **Listings Management** (`components/admin/listings-panel.tsx`) — real
+    table, all 4 statuses (draft/live/closed/cancelled, not just `live`
+    like the public search), search (title/city/slug) + bank + status
+    filters, debounced. "Cancel" (✕) sets `status='cancelled'` rather than
+    hard-deleting — shortlists/unlocks/view history may already reference a
+    listing, soft delete avoids FK issues and `cancelled` was already a
+    real enum value.
+  - **Add/Edit Listing** (`components/admin/listing-form-panel.tsx`) — the
+    mockup only ever rendered the Images tab; the other three (Property
+    Details, Bank & Auction, Gated Fields) had zero content, just tab
+    labels. Built all four for real, tabbed, covering every column on
+    `listings` including the gated ones. New listings save as a draft
+    first, then the panel switches into edit mode for that id so the
+    Images tab becomes usable immediately.
+  - **Image upload** — new public Supabase Storage bucket `listing-images`
+    (5MB limit, jpeg/png/webp only, migration `0008`). Public read (photos
+    aren't gated, matches `listing_images`'s own RLS policy from 2.7); no
+    client-side Storage write policy at all — every upload/delete goes
+    through the service-role client from an admin server action. Verified:
+    real upload, real `listing_images` row, the resulting public URL is
+    fetchable with zero auth headers (200).
+  - **Bulk Excel upload** (`components/admin/bulk-upload-panel.tsx`) — no
+    fixed template (§9.1's reasoning): upload any `.xlsx`/`.xls`/`.csv`,
+    auto-detect + manually remap columns, preview with per-row validation,
+    commit only the valid rows as drafts. **Found and fixed a real bug
+    during testing:** the auto-mapping heuristic was exact-match-only, so a
+    column literally named "Bank" never matched the field label "Bank
+    (name)" and every row failed — fixed to also match after stripping
+    parenthetical qualifiers and by substring containment. Verified with a
+    real 2-row file (one resolvable bank, one deliberately unresolvable) —
+    preview correctly showed 1 valid/1 error, commit created exactly the
+    one valid row.
+- **`xlsx` (SheetJS) pulled in for parsing.** Installed at `0.18.5` (npm's
+  latest) which has two known high-severity advisories (prototype
+  pollution, ReDoS) with no fix on npm — SheetJS moved patched releases
+  (`>=0.20.2`) to their own CDN after an npm publishing dispute. Installed
+  the patched `0.20.3` from `https://cdn.sheetjs.com/xlsx-0.20.3/
+  xlsx-0.20.3.tgz` instead (their documented distribution channel since the
+  npm move) — `pnpm audit` confirms clean. Re-verified the whole bulk
+  upload flow against the new version, no behaviour change.
+
+### 10.2 Data-access pattern used throughout
+
+Same shape as Sprint 2.1's `unlock_field_group`/`listing_views`: every
+admin data function in `lib/data/admin.ts` and every mutation in
+`app/actions/admin-listings.ts` uses `createAdminClient()` (service-role,
+bypasses RLS/column-grants entirely) — **but only ever after
+`requireAdmin()` has verified the caller's own session is a real admin.**
+The authorization boundary is the app-code check, not a new RLS policy;
+`listings` itself still has no INSERT/UPDATE/DELETE policy for any client
+role, unchanged from before this session. This was a deliberate choice over
+adding an admin-scoped RLS policy — avoids touching the existing,
+already-verified public-read security boundary on `listings` at all.
+
+### 10.3 Verification performed
+
+- `tsc --noEmit` and `pnpm build` clean throughout (only the 3 pre-existing
+  unrelated ref-type errors remain).
+- Non-admin authenticated user visiting `/admin` → redirected to `/`.
+  Guest → redirected to `/login`. Real admin → dashboard loads.
+- Full create → search/filter → edit → cancel round-trip on a real listing,
+  verified against the DB at each step, not just the UI.
+- Image upload → real Storage object + DB row → public URL fetchable
+  without auth → delete removes both.
+- Bulk upload → mapping → preview (catches the bad-bank-name row correctly)
+  → commit → verified exactly the valid row landed in `listings` as a
+  draft.
+- Full artifact sweep at the end: zero leftover test listings, images,
+  Storage objects, or admin accounts.
+
+### 10.4 Deliberately left alone (Sprint 3.5/4 territory, not touched)
+
+Callbacks, Packages, Payments, Success Fees, Users, Partners, Alerts, Alert
+Engine, Email Campaigns, WhatsApp Tools, Segments, Engagement Analytics,
+and the Settings tab in `admin-view.tsx` are all still the original static
+mockup — same data (`Priya Mehta`, `₹21,44,000`, `1,842` users, etc.) as
+before this session. `callback_requests` and `channel_partner_applications`
+already have real, queryable schema (used for the two real dashboard alert
+counts) but their full CRUD/workflow tabs are unbuilt. None of this was in
+Sprint 3's scope per §9.2.
