@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { HighlightedText } from "./highlighted-text"
 import { cn } from "@/lib/utils"
+import { formatINR } from "@/lib/format"
+import type { PricingSettings } from "@/lib/access/types"
 
 const services = [
   {
@@ -32,7 +34,10 @@ const services = [
   },
 ]
 
-export function ServicesView() {
+export function ServicesView({ settings }: { settings: PricingSettings }) {
+  const flatFloorCost = settings.creditCost.flat_floor
+  const inspectionCost = settings.creditCost.inspection
+  const officerContactCost = settings.creditCost.officer_contact
   const [visibleItems, setVisibleItems] = useState<number[]>([])
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
 
@@ -100,7 +105,7 @@ export function ServicesView() {
                   <span className="text-6xl font-medium tracking-tight">0</span>
                   <span className="text-muted-foreground font-medium ml-2 text-sm">forever</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-3 font-medium">5 free credits on signup</p>
+                <p className="text-sm text-muted-foreground mt-3 font-medium">{settings.freeSignupCredits} free credits on signup</p>
               </CardHeader>
               <CardContent className="px-8 pb-8 flex-1 flex flex-col">
                 <Button variant="outline" size="lg" className="w-full mb-8 h-12 font-medium">Create Free Account</Button>
@@ -110,7 +115,7 @@ export function ServicesView() {
                     { text: "Full property address always visible", included: true },
                     { text: "Reserve price, EMD & auction dates", included: true },
                     { text: "Property alerts by email", included: true },
-                    { text: <span className="font-semibold text-foreground">5 credits</span>, suffix: " to unlock hidden details", included: true },
+                    { text: <span className="font-semibold text-foreground">{settings.freeSignupCredits} credits</span>, suffix: " to unlock hidden details", included: true },
                     { text: "Unlimited detail unlocking", included: false },
                     { text: "Expert auction support", included: false },
                   ].map((item, i) => (
@@ -146,10 +151,10 @@ export function ServicesView() {
                 </CardDescription>
                 <div className="mt-6 flex items-baseline gap-1">
                   <span className="text-2xl font-bold">₹</span>
-                  <span className="text-6xl font-medium tracking-tight">999</span>
+                  <span className="text-6xl font-medium tracking-tight">{settings.annualPrice.toLocaleString("en-IN")}</span>
                   <span className="text-muted-foreground font-medium ml-2 text-sm">/ year</span>
                 </div>
-                <p className="text-sm text-primary mt-3 font-medium">Less than ₹3 a day</p>
+                <p className="text-sm text-primary mt-3 font-medium">Less than {formatINR(Math.ceil(settings.annualPrice / 365))} a day</p>
               </CardHeader>
               <CardContent className="px-8 pb-8 flex-1 flex flex-col">
                 <Button size="lg" className="w-full mb-8 h-12 font-medium">Get Annual Membership</Button>
@@ -200,10 +205,10 @@ export function ServicesView() {
                 </CardDescription>
                 <div className="mt-6 flex items-baseline gap-1 text-background">
                   <span className="text-2xl font-bold text-background/80">₹</span>
-                  <span className="text-6xl font-medium tracking-tight">9,999</span>
+                  <span className="text-6xl font-medium tracking-tight">{settings.servicePackagePrice.toLocaleString("en-IN")}</span>
                 </div>
                 <div className="inline-flex items-center gap-1.5 bg-amber-600/20 text-amber-500 font-bold text-xs px-3 py-1.5 rounded-lg mt-3 w-fit">
-                  + 1% success fee — only if you win
+                  + {settings.successFeePct}% success fee — only if you win
                 </div>
               </CardHeader>
               <CardContent className="px-8 pb-8 flex-1 flex flex-col relative z-10">
@@ -216,7 +221,7 @@ export function ServicesView() {
                     { text: <span className="font-semibold text-background">Possession Support</span>, suffix: " after you win", included: true },
                     { text: "Loan & funding assistance", included: true },
                     { text: "Dedicated relationship manager", included: true },
-                    { text: <span className="font-semibold text-amber-500">1% success fee</span>, suffix: " — pay nothing extra unless you win", included: true },
+                    { text: <span className="font-semibold text-amber-500">{settings.successFeePct}% success fee</span>, suffix: " — pay nothing extra unless you win", included: true },
                   ].map((item, i) => (
                     <li key={i} className="flex gap-3 items-start text-[14.5px]">
                       <Check className="w-5 h-5 shrink-0 text-emerald-400 mt-0.5" />
@@ -294,11 +299,11 @@ export function ServicesView() {
                   </th>
                   <th className="p-6 border-b border-border/50 bg-secondary/30 w-[22%] text-center">
                     <div className="text-sm font-bold uppercase tracking-wider text-primary">Annual Member</div>
-                    <div className="text-xl font-medium text-primary mt-2">₹999 <span className="text-sm font-normal text-muted-foreground">/ year</span></div>
+                    <div className="text-xl font-medium text-primary mt-2">{formatINR(settings.annualPrice)} <span className="text-sm font-normal text-muted-foreground">/ year</span></div>
                   </th>
                   <th className="p-6 border-b border-border/50 bg-secondary/30 w-[22%] text-center">
                     <div className="text-sm font-bold uppercase tracking-wider text-amber-600">Full Service</div>
-                    <div className="text-xl font-medium text-amber-600 mt-2">₹9,999 <span className="text-sm font-normal text-muted-foreground">+ 1%</span></div>
+                    <div className="text-xl font-medium text-amber-600 mt-2">{formatINR(settings.servicePackagePrice)} <span className="text-sm font-normal text-muted-foreground">+ {settings.successFeePct}%</span></div>
                   </th>
                 </tr>
               </thead>
@@ -349,7 +354,7 @@ export function ServicesView() {
                     <div className="font-medium text-foreground">Credits to unlock details</div>
                     <div className="text-[13px] text-muted-foreground mt-1">Flat no., floor, inspection, officer contact</div>
                   </td>
-                  <td className="p-6 border-b border-border/50 text-center font-medium">5 credits</td>
+                  <td className="p-6 border-b border-border/50 text-center font-medium">{settings.freeSignupCredits} credits</td>
                   <td className="p-6 border-b border-border/50 text-center font-medium text-primary">Unlimited</td>
                   <td className="p-6 border-b border-border/50 text-center font-medium text-amber-600">Unlimited</td>
                 </tr>
@@ -357,7 +362,7 @@ export function ServicesView() {
                   <td className="p-6 border-b border-border/50">
                     <div className="font-medium text-foreground">Flat number & floor</div>
                   </td>
-                  <td className="p-6 border-b border-border/50 text-center font-medium text-muted-foreground">1 credit each</td>
+                  <td className="p-6 border-b border-border/50 text-center font-medium text-muted-foreground">{flatFloorCost} credit{flatFloorCost === 1 ? "" : "s"} each</td>
                   <td className="p-6 border-b border-border/50 text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                   <td className="p-6 border-b border-border/50 text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                 </tr>
@@ -365,7 +370,7 @@ export function ServicesView() {
                   <td className="p-6 border-b border-border/50">
                     <div className="font-medium text-foreground">Inspection date & time</div>
                   </td>
-                  <td className="p-6 border-b border-border/50 text-center font-medium text-muted-foreground">1 credit</td>
+                  <td className="p-6 border-b border-border/50 text-center font-medium text-muted-foreground">{inspectionCost} credit{inspectionCost === 1 ? "" : "s"}</td>
                   <td className="p-6 border-b border-border/50 text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                   <td className="p-6 border-b border-border/50 text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                 </tr>
@@ -373,7 +378,7 @@ export function ServicesView() {
                   <td className="p-6 border-b border-border/50">
                     <div className="font-medium text-foreground">Authorised officer & bank contact</div>
                   </td>
-                  <td className="p-6 border-b border-border/50 text-center font-medium text-muted-foreground">1 credit</td>
+                  <td className="p-6 border-b border-border/50 text-center font-medium text-muted-foreground">{officerContactCost} credit{officerContactCost === 1 ? "" : "s"}</td>
                   <td className="p-6 border-b border-border/50 text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                   <td className="p-6 border-b border-border/50 text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                 </tr>
@@ -431,7 +436,7 @@ export function ServicesView() {
                   </td>
                   <td className="p-6 border-b border-border/50 text-center text-muted-foreground">—</td>
                   <td className="p-6 border-b border-border/50 text-center text-muted-foreground">—</td>
-                  <td className="p-6 border-b border-border/50 text-center font-medium text-amber-600">1% of winning bid</td>
+                  <td className="p-6 border-b border-border/50 text-center font-medium text-amber-600">{settings.successFeePct}% of winning bid</td>
                 </tr>
               </tbody>
             </table>
@@ -447,21 +452,21 @@ export function ServicesView() {
         </div>
         <Accordion type="single" collapsible defaultValue="item-1" className="w-full space-y-4">
           <AccordionItem value="item-1" className="border border-border/50 rounded-2xl bg-card px-6 py-2 data-[state=open]:shadow-sm transition-all">
-            <AccordionTrigger className="text-[17px] font-medium hover:no-underline">Is the ₹9,999 package for all my auctions?</AccordionTrigger>
+            <AccordionTrigger className="text-[17px] font-medium hover:no-underline">Is the {formatINR(settings.servicePackagePrice)} package for all my auctions?</AccordionTrigger>
             <AccordionContent className="text-muted-foreground text-[16px] leading-relaxed pt-2 pb-4">
               No — the Full Service package covers <span className="font-semibold text-foreground">one specific auction property</span>. It includes the title search, auction management, and possession support for that single property. If you want us to handle a second property, you would need a separate package.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-2" className="border border-border/50 rounded-2xl bg-card px-6 py-2 data-[state=open]:shadow-sm transition-all">
-            <AccordionTrigger className="text-[17px] font-medium hover:no-underline">When is the 1% success fee charged?</AccordionTrigger>
+            <AccordionTrigger className="text-[17px] font-medium hover:no-underline">When is the {settings.successFeePct}% success fee charged?</AccordionTrigger>
             <AccordionContent className="text-muted-foreground text-[16px] leading-relaxed pt-2 pb-4">
-              Only if you actually win the auction. The 1% is calculated on your final winning bid amount. If you don't win, you pay nothing beyond the initial ₹9,999 package fee.
+              Only if you actually win the auction. The {settings.successFeePct}% is calculated on your final winning bid amount. If you don't win, you pay nothing beyond the initial {formatINR(settings.servicePackagePrice)} package fee.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-3" className="border border-border/50 rounded-2xl bg-card px-6 py-2 data-[state=open]:shadow-sm transition-all">
             <AccordionTrigger className="text-[17px] font-medium hover:no-underline">What's the difference between credits and the annual membership?</AccordionTrigger>
             <AccordionContent className="text-muted-foreground text-[16px] leading-relaxed pt-2 pb-4">
-              Every free account gets 5 credits, and each credit unlocks the hidden fields on one property. The ₹999 annual membership removes the limit entirely — unlock as many properties as you want for a full year.
+              Every free account gets {settings.freeSignupCredits} credits, and each credit unlocks the hidden fields on one property. The {formatINR(settings.annualPrice)} annual membership removes the limit entirely — unlock as many properties as you want for a full year.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-4" className="border border-border/50 rounded-2xl bg-card px-6 py-2 data-[state=open]:shadow-sm transition-all">

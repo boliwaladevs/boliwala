@@ -5,7 +5,10 @@ import Link from "next/link"
 import { ListingsPanel } from "./admin/listings-panel"
 import { ListingFormPanel } from "./admin/listing-form-panel"
 import { BulkUploadPanel } from "./admin/bulk-upload-panel"
-import type { DashboardKpis, AdminListingRow } from "@/lib/data/admin"
+import { CallbacksPanel } from "./admin/callbacks-panel"
+import { SettingsPanel } from "./admin/settings-panel"
+import type { DashboardKpis, AdminListingRow, AdminCallbackRow } from "@/lib/data/admin"
+import type { PricingSettings } from "@/lib/access/types"
 
 const pageMap: Record<string, { title: string; crumb: string }> = {
   'dashboard': { title: 'Dashboard', crumb: 'Boliwala Admin › Overview' },
@@ -35,11 +38,15 @@ export function AdminView({
   kpis,
   initialListings,
   banks,
+  initialCallbacks,
+  pricingSettings,
 }: {
   adminName: string
   kpis: DashboardKpis
   initialListings: AdminListingRow[]
   banks: { id: string; name: string }[]
+  initialCallbacks: AdminCallbackRow[]
+  pricingSettings: PricingSettings
 }) {
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -177,7 +184,7 @@ export function AdminView({
           <NavItem id="add-listing" icon="➕" label="Add Listing" />
           <NavItem id="bulk-upload" icon="📂" label="Bulk Upload Excel" />
           <SectionLabel>Leads & Sales</SectionLabel>
-          <NavItem id="callbacks" icon="📞" label="Callback Requests" badge="18" />
+          <NavItem id="callbacks" icon="📞" label="Callback Requests" badge={String(kpis.callbackRequestsUnread)} />
           <NavItem id="packages" icon="💼" label="Package Purchases" badge="9" badgeColor="bg-amber-500" />
           <NavItem id="requests" icon="📋" label="Service Pipeline" />
           <SectionLabel>Finance</SectionLabel>
@@ -325,36 +332,7 @@ export function AdminView({
           {activePage === 'bulk-upload' && <BulkUploadPanel banks={banks} />}
 
           {/* CALLBACKS */}
-          {activePage === 'callbacks' && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon="📞" iconBg="bg-red-100 dark:bg-red-500/20" value="18" label="Total Callbacks" />
-                <StatCard icon="🆕" iconBg="bg-red-100 dark:bg-red-500/20" value={<span className="text-red-600">6</span>} label="Unread — Call Now" />
-                <StatCard icon="🕐" iconBg="bg-amber-100 dark:bg-amber-500/20" value="8" label="In Progress" />
-                <StatCard icon="✅" iconBg="bg-emerald-100 dark:bg-emerald-500/20" value="4" label="Converted to Package" />
-              </div>
-              <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                <TcHead title="📞 Callback Requests" acts={<><input className="h-8 px-3 border-2 border-border rounded-lg text-[13px] bg-background w-[180px]" placeholder="Search name, city…" /><TcActionBtn>⬇️ Export</TcActionBtn></>} />
-                <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-muted/50 border-b border-border"><Th>User</Th><Th>Property Interest</Th><Th>City</Th><Th>Budget</Th><Th>Requested</Th><Th>Status</Th><Th>Actions</Th></tr></thead>
-                  <tbody>
-                    <tr className="bg-red-50/50 dark:bg-red-500/5 border-b border-border">
-                      <Td><div className="font-bold text-foreground">Priya Mehta</div><div className="text-[11px]">📞 9765432109</div></Td>
-                      <Td>Flat 303, Vithai Apt — Full package interest</Td><Td>Navi Mumbai</Td><Td>₹50L–1Cr</Td>
-                      <Td className="text-red-600 font-semibold">4 min ago</Td><Td><Pill type="red">New</Pill></Td>
-                      <Td><div className="flex gap-1.5"><RaBtn primary>📞 Call Now</RaBtn><RaBtn>Add Note</RaBtn></div></Td>
-                    </tr>
-                    <tr className="border-b border-border hover:bg-muted/30">
-                      <Td><div className="font-bold text-foreground">Anita Rao</div><div className="text-[11px]">📞 9543210987</div></Td>
-                      <Td>General — First time auction buyer query</Td><Td>Bengaluru</Td><Td>₹30L–60L</Td>
-                      <Td>2 hours ago</Td><Td><Pill type="gold">Called</Pill></Td>
-                      <Td><div className="flex gap-1.5"><RaBtn>📞 Call Again</RaBtn><RaBtn>Convert</RaBtn></div></Td>
-                    </tr>
-                  </tbody>
-                </table></div>
-              </div>
-            </div>
-          )}
+          {activePage === 'callbacks' && <CallbacksPanel initialRows={initialCallbacks} />}
 
           {/* PACKAGES */}
           {activePage === 'packages' && (
@@ -439,24 +417,7 @@ export function AdminView({
           )}
 
           {/* SETTINGS */}
-          {activePage === 'settings' && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <FormSection title="⚙️ General Settings" foot={<button className="h-9 px-5 bg-primary text-primary-foreground font-semibold text-[13px] rounded-lg">Save Settings</button>}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><Flbl>Site Name</Flbl><Finp defaultValue="Boliwala.com" /></div>
-                  <div><Flbl>Base Service Fee (₹)</Flbl><Finp defaultValue="9999" /></div>
-                  <div><Flbl>Contact Email</Flbl><Finp defaultValue="hello@boliwala.com" /></div>
-                  <div><Flbl>WhatsApp</Flbl><Finp defaultValue="+91 98765 43210" /></div>
-                </div>
-              </FormSection>
-              <FormSection title="🔑 API Keys" foot={<button className="h-9 px-5 bg-primary text-primary-foreground font-semibold text-[13px] rounded-lg">Save Keys</button>}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><Flbl>Razorpay Key ID</Flbl><Finp type="password" placeholder="rzp_live_XXXX" /></div>
-                  <div><Flbl>Razorpay Secret</Flbl><Finp type="password" placeholder="••••••••" /></div>
-                </div>
-              </FormSection>
-            </div>
-          )}
+          {activePage === 'settings' && <SettingsPanel initialSettings={pricingSettings} />}
 
           {/* REQUESTS */}
           {activePage === 'requests' && (

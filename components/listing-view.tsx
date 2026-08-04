@@ -421,6 +421,9 @@ export function ListingView({
             <button className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-semibold py-3 rounded-md mb-2 flex items-center justify-center gap-2 transition-colors">
               <MessageSquare className="w-4 h-4" /> WhatsApp Us Now
             </button>
+            <Link href={`/contact?listing=${listing.slug}`} className="w-full bg-transparent border border-border hover:bg-secondary text-foreground font-medium py-3 rounded-md mb-2 flex items-center justify-center gap-2 transition-colors">
+              📞 Request a Callback
+            </Link>
             {listing.noticeUrl && (
               <a href={listing.noticeUrl} target="_blank" rel="noopener noreferrer" className="w-full bg-transparent border border-border hover:bg-secondary text-foreground font-medium py-3 rounded-md flex items-center justify-center gap-2 transition-colors">
                 📄 Download Bank Notice (PDF)

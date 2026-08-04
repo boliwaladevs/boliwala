@@ -139,3 +139,68 @@ export async function getBanksForAdmin(): Promise<{ id: string; name: string }[]
   if (error) throw error
   return data ?? []
 }
+
+export type CallbackStatus = "new" | "contacted" | "closed"
+
+export interface AdminCallbackRow {
+  id: string
+  name: string
+  phone: string
+  email: string | null
+  message: string | null
+  source: string
+  status: CallbackStatus
+  notes: string | null
+  createdAt: string
+  listing: { title: string; slug: string } | null
+}
+
+export interface CallbackFilters {
+  status?: CallbackStatus
+  q?: string
+}
+
+export async function getCallbackRequests(filters: CallbackFilters): Promise<AdminCallbackRow[]> {
+  const admin = createAdminClient()
+  let query = admin
+    .from("callback_requests")
+    .select("id, name, phone, email, message, source, status, notes, createdAt, listing:listings(title, slug)")
+    .order("createdAt", { ascending: false })
+
+  if (filters.status) query = query.eq("status", filters.status)
+  if (filters.q) {
+    const text = filters.q.replace(/[,()%*]/g, " ").trim()
+    if (text) query = query.or(`name.ilike.%${text}%,phone.ilike.%${text}%,email.ilike.%${text}%`)
+  }
+
+  const { data, error } = await query.limit(200)
+  if (error) throw error
+  return (data ?? []) as unknown as AdminCallbackRow[]
+}
+
+export interface EditablePricingSettings {
+  freeSignupCredits: number
+  annualPrice: number
+  servicePackagePrice: number
+  successFeePct: number
+}
+
+const SETTINGS_KEY_MAP: Record<keyof EditablePricingSettings, string> = {
+  freeSignupCredits: "free_signup_credits",
+  annualPrice: "annual_price",
+  servicePackagePrice: "service_package_price",
+  successFeePct: "success_fee_pct",
+}
+
+export async function updatePricingSettings(values: EditablePricingSettings, adminId: string): Promise<void> {
+  const admin = createAdminClient()
+  const now = new Date().toISOString()
+
+  for (const [field, key] of Object.entries(SETTINGS_KEY_MAP) as [keyof EditablePricingSettings, string][]) {
+    const { error } = await admin
+      .from("settings")
+      .update({ value: values[field], updatedAt: now, updatedBy: adminId })
+      .eq("key", key)
+    if (error) throw error
+  }
+}

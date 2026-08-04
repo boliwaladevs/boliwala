@@ -1,10 +1,38 @@
 "use client"
 
+import { useState } from "react"
 import { GraduationCap, Radio, Zap, Palette, Package, IndianRupee, Check, Sprout, Medal, Trophy } from "lucide-react"
+import { submitPartnerApplication } from "@/app/actions/partner"
 
 export function PartnerView() {
   const scrollToEnrol = () => {
     document.getElementById("enrol")?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
+  const [occupation, setOccupation] = useState("Real Estate Agent / Broker")
+  const [state, setState] = useState("Maharashtra")
+  const [city, setCity] = useState("")
+  const [localities, setLocalities] = useState("")
+  const [about, setAbout] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    const experience = [localities && `Localities to cover: ${localities}`, about].filter(Boolean).join(". ")
+    const result = await submitPartnerApplication({ name, phone, email, city, state, occupation, experience })
+    setSubmitting(false)
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+    setSubmitted(true)
   }
 
   return (
@@ -256,23 +284,31 @@ export function PartnerView() {
             <div className="bg-background rounded-3xl border border-border p-8 md:p-10 shadow-lg">
               <h3 className="text-2xl font-bold text-foreground mb-2 font-display">Partner Enrolment</h3>
               <p className="text-sm text-muted-foreground mb-8">Free to join. No fees. No commitments.</p>
-              
+
+              {submitted ? (
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-8 text-center">
+                  <div className="text-3xl mb-3">✅</div>
+                  <h4 className="text-lg font-bold text-foreground mb-2">Application received</h4>
+                  <p className="text-sm text-muted-foreground">Our team will contact you within 24 hours.</p>
+                </div>
+              ) : (
+              <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="flex flex-col gap-2">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Full Name</label>
-                  <input type="text" placeholder="Rajesh Kumar" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                  <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Rajesh Kumar" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">WhatsApp Number</label>
-                  <input type="tel" placeholder="+91 98765 43210" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                  <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
                 </div>
                 <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Email Address</label>
-                  <input type="email" placeholder="you@email.com" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Profession</label>
-                  <select className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%3E%3Cpath%20d%3D%22M1%201l5%205%205-5%22%20stroke%3D%22%236B7280%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_16px_center] pr-10">
+                  <select value={occupation} onChange={(e) => setOccupation(e.target.value)} className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%3E%3Cpath%20d%3D%22M1%201l5%205%205-5%22%20stroke%3D%22%236B7280%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_16px_center] pr-10">
                     <option>Real Estate Agent / Broker</option>
                     <option>Property Lawyer</option>
                     <option>Home Loan DSA</option>
@@ -284,7 +320,7 @@ export function PartnerView() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">State</label>
-                  <select className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%3E%3Cpath%20d%3D%22M1%201l5%205%205-5%22%20stroke%3D%22%236B7280%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_16px_center] pr-10">
+                  <select value={state} onChange={(e) => setState(e.target.value)} className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%3E%3Cpath%20d%3D%22M1%201l5%205%205-5%22%20stroke%3D%22%236B7280%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_16px_center] pr-10">
                     <option>Maharashtra</option>
                     <option>Delhi / NCR</option>
                     <option>Karnataka</option>
@@ -298,24 +334,27 @@ export function PartnerView() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Preferred City</label>
-                  <input type="text" placeholder="e.g. Mumbai, Pune..." className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                  <input type="text" required value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Mumbai, Pune..." className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
                 </div>
                 <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Localities to Cover</label>
-                  <input type="text" placeholder="e.g. Andheri, Bandra, Malad, Borivali" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                  <input type="text" value={localities} onChange={(e) => setLocalities(e.target.value)} placeholder="e.g. Andheri, Bandra, Malad, Borivali" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
                 </div>
                 <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tell Us About Yourself (Optional)</label>
-                  <textarea placeholder="Your experience, existing network, why Boliwala..." className="min-h-[100px] p-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm resize-y"></textarea>
+                  <textarea value={about} onChange={(e) => setAbout(e.target.value)} placeholder="Your experience, existing network, why Boliwala..." className="min-h-[100px] p-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm resize-y"></textarea>
                 </div>
               </div>
-              
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl mt-8 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5">
-                Submit Application &rarr;
+
+              {error && <p className="text-sm text-red-600 mt-4">{error}</p>}
+              <button type="submit" disabled={submitting} className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-12 rounded-xl mt-8 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5">
+                {submitting ? "Submitting…" : "Submit Application →"}
               </button>
               <p className="text-xs text-muted-foreground text-center mt-4">
                 Our team will contact you within 24 hours.
               </p>
+              </form>
+              )}
             </div>
             
           </div>

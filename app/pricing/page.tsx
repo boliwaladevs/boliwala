@@ -1,15 +1,23 @@
+import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Check, X } from "lucide-react"
+import { getPricingSettings } from "@/lib/access/settings"
+import { formatINR } from "@/lib/format"
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const settings = await getPricingSettings()
+  const flatFloorCost = settings.creditCost.flat_floor
+  const inspectionCost = settings.creditCost.inspection
+  const officerContactCost = settings.creditCost.officer_contact
+
   return (
     <main className="min-h-screen bg-background">
       <Header />
-      
+
       {/* Hero Section */}
       <section className="pt-32 pb-16 px-4 max-w-4xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-500 font-bold text-xs px-3 py-1.5 rounded-full uppercase tracking-wider mb-6">
@@ -43,17 +51,19 @@ export default function PricingPage() {
               <span className="text-5xl font-extrabold tracking-tighter">0</span>
               <span className="text-muted-foreground font-medium ml-1">forever</span>
             </div>
-            <p className="text-sm text-muted-foreground min-h-[1.5rem] mt-1">5 free credits on signup</p>
+            <p className="text-sm text-muted-foreground min-h-[1.5rem] mt-1">{settings.freeSignupCredits} free credits on signup</p>
           </CardHeader>
           <CardContent className="flex-1">
-            <Button variant="outline" className="w-full mb-6">Create Free Account</Button>
+            <Button variant="outline" className="w-full mb-6" asChild>
+              <Link href="/signup">Create Free Account</Link>
+            </Button>
             <ul className="space-y-3">
               {[
                 { text: "Unlimited property listings & search", included: true },
                 { text: "Full property address always visible", included: true },
                 { text: "Reserve price, EMD & auction dates", included: true },
                 { text: "Property alerts by email", included: true },
-                { text: <span className="font-semibold text-foreground">5 credits</span>, suffix: " to unlock hidden details", included: true },
+                { text: <span className="font-semibold text-foreground">{settings.freeSignupCredits} credits</span>, suffix: " to unlock hidden details", included: true },
                 { text: "Unlimited detail unlocking", included: false },
                 { text: "Expert auction support", included: false },
               ].map((item, i) => (
@@ -82,13 +92,15 @@ export default function PricingPage() {
             <CardDescription className="min-h-[3rem]">Unlock every detail on every property, as many as you like.</CardDescription>
             <div className="mt-4 flex items-baseline gap-1">
               <span className="text-2xl font-bold">₹</span>
-              <span className="text-5xl font-extrabold tracking-tighter">999</span>
+              <span className="text-5xl font-extrabold tracking-tighter">{settings.annualPrice.toLocaleString("en-IN")}</span>
               <span className="text-muted-foreground font-medium ml-1">/ year</span>
             </div>
-            <p className="text-sm text-muted-foreground min-h-[1.5rem] mt-1">Less than ₹3 a day</p>
+            <p className="text-sm text-muted-foreground min-h-[1.5rem] mt-1">Less than {formatINR(Math.ceil(settings.annualPrice / 365))} a day</p>
           </CardHeader>
           <CardContent className="flex-1">
-            <Button className="w-full mb-6">Get Annual Membership</Button>
+            <Button className="w-full mb-6" asChild>
+              <Link href="/signup">Get Annual Membership</Link>
+            </Button>
             <ul className="space-y-3">
               {[
                 { text: "Everything in Free, plus:", included: true, bold: true },
@@ -124,15 +136,17 @@ export default function PricingPage() {
             <CardDescription className="text-slate-300 min-h-[3rem]">Found the one? Our experts handle the entire auction, end to end.</CardDescription>
             <div className="mt-4 flex items-baseline gap-1">
               <span className="text-2xl font-bold">₹</span>
-              <span className="text-5xl font-extrabold tracking-tighter">9,999</span>
+              <span className="text-5xl font-extrabold tracking-tighter">{settings.servicePackagePrice.toLocaleString("en-IN")}</span>
             </div>
             <p className="text-sm text-slate-400 min-h-[1.5rem] mt-1">Per auction — one specific property</p>
             <div className="inline-flex items-center gap-1.5 bg-amber-600/20 text-amber-500 font-bold text-xs px-3 py-1.5 rounded-lg mt-3 w-fit">
-              + 1% success fee — only if you win
+              + {settings.successFeePct}% success fee — only if you win
             </div>
           </CardHeader>
           <CardContent className="flex-1">
-            <Button className="w-full mb-6 bg-amber-600 hover:bg-amber-700 text-white border-0">Hire Boliwala</Button>
+            <Button className="w-full mb-6 bg-amber-600 hover:bg-amber-700 text-white border-0" asChild>
+              <Link href="/services">Hire Boliwala</Link>
+            </Button>
             <ul className="space-y-3">
               {[
                 { text: "Everything in Annual, plus:", included: true, bold: true },
@@ -141,7 +155,7 @@ export default function PricingPage() {
                 { text: <span className="font-semibold text-white">Possession Support</span>, suffix: " after you win", included: true },
                 { text: "Loan & funding assistance", included: true },
                 { text: "Dedicated relationship manager", included: true },
-                { text: <span className="font-semibold text-white">1% success fee</span>, suffix: " — pay nothing extra unless you win", included: true },
+                { text: <span className="font-semibold text-white">{settings.successFeePct}% success fee</span>, suffix: " — pay nothing extra unless you win", included: true },
               ].map((item, i) => (
                 <li key={i} className="flex gap-3 items-start text-sm">
                   <Check className="w-5 h-5 shrink-0 text-emerald-400" />
@@ -161,7 +175,7 @@ export default function PricingPage() {
           <h2 className="text-3xl font-extrabold mb-3">Compare every plan</h2>
           <p className="text-muted-foreground text-lg">From free browsing to a fully managed auction win — see exactly what's included.</p>
         </div>
-        
+
         <div className="overflow-x-auto">
           <div className="min-w-[700px] border rounded-xl bg-card shadow-sm">
             <table className="w-full text-left border-collapse">
@@ -174,11 +188,11 @@ export default function PricingPage() {
                   </th>
                   <th className="p-4 border-b bg-muted/30 w-[22%] text-center">
                     <div className="text-base font-extrabold text-primary">Annual Member</div>
-                    <div className="text-xs font-medium text-muted-foreground mt-1">₹999 / year</div>
+                    <div className="text-xs font-medium text-muted-foreground mt-1">{formatINR(settings.annualPrice)} / year</div>
                   </th>
                   <th className="p-4 border-b bg-muted/30 w-[22%] text-center">
                     <div className="text-base font-extrabold text-amber-600">Full Service</div>
-                    <div className="text-xs font-medium text-muted-foreground mt-1">₹9,999 + 1%</div>
+                    <div className="text-xs font-medium text-muted-foreground mt-1">{formatINR(settings.servicePackagePrice)} + {settings.successFeePct}%</div>
                   </th>
                 </tr>
               </thead>
@@ -229,7 +243,7 @@ export default function PricingPage() {
                     <div className="font-semibold text-[15px]">Credits to unlock details</div>
                     <div className="text-xs text-muted-foreground mt-0.5">Flat no., floor, inspection, officer contact</div>
                   </td>
-                  <td className="p-4 border-b text-center font-semibold">5 credits</td>
+                  <td className="p-4 border-b text-center font-semibold">{settings.freeSignupCredits} credits</td>
                   <td className="p-4 border-b text-center font-bold text-primary">Unlimited</td>
                   <td className="p-4 border-b text-center font-bold text-amber-600">Unlimited</td>
                 </tr>
@@ -237,7 +251,7 @@ export default function PricingPage() {
                   <td className="p-4 border-b">
                     <div className="font-semibold text-[15px]">Flat number & floor</div>
                   </td>
-                  <td className="p-4 border-b text-center font-medium text-muted-foreground">1 credit each</td>
+                  <td className="p-4 border-b text-center font-medium text-muted-foreground">{flatFloorCost} credit{flatFloorCost === 1 ? "" : "s"}</td>
                   <td className="p-4 border-b text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                   <td className="p-4 border-b text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                 </tr>
@@ -245,7 +259,7 @@ export default function PricingPage() {
                   <td className="p-4 border-b">
                     <div className="font-semibold text-[15px]">Inspection date & time</div>
                   </td>
-                  <td className="p-4 border-b text-center font-medium text-muted-foreground">1 credit</td>
+                  <td className="p-4 border-b text-center font-medium text-muted-foreground">{inspectionCost} credit{inspectionCost === 1 ? "" : "s"}</td>
                   <td className="p-4 border-b text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                   <td className="p-4 border-b text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                 </tr>
@@ -253,7 +267,7 @@ export default function PricingPage() {
                   <td className="p-4 border-b">
                     <div className="font-semibold text-[15px]">Authorised officer & bank contact</div>
                   </td>
-                  <td className="p-4 border-b text-center font-medium text-muted-foreground">1 credit</td>
+                  <td className="p-4 border-b text-center font-medium text-muted-foreground">{officerContactCost} credit{officerContactCost === 1 ? "" : "s"}</td>
                   <td className="p-4 border-b text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                   <td className="p-4 border-b text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>
                 </tr>
@@ -311,7 +325,7 @@ export default function PricingPage() {
                   </td>
                   <td className="p-4 border-b text-center text-muted-foreground">—</td>
                   <td className="p-4 border-b text-center text-muted-foreground">—</td>
-                  <td className="p-4 border-b text-center font-bold text-amber-600">1% of winning bid</td>
+                  <td className="p-4 border-b text-center font-bold text-amber-600">{settings.successFeePct}% of winning bid</td>
                 </tr>
               </tbody>
             </table>
@@ -324,21 +338,21 @@ export default function PricingPage() {
         <h2 className="text-3xl font-extrabold text-center mb-8">Pricing questions</h2>
         <Accordion type="single" collapsible defaultValue="item-1" className="w-full space-y-3">
           <AccordionItem value="item-1" className="border rounded-lg bg-card px-4">
-            <AccordionTrigger className="text-[15px] font-semibold hover:no-underline">Is the ₹9,999 package for all my auctions?</AccordionTrigger>
+            <AccordionTrigger className="text-[15px] font-semibold hover:no-underline">Is the {formatINR(settings.servicePackagePrice)} package for all my auctions?</AccordionTrigger>
             <AccordionContent className="text-muted-foreground text-[15px] leading-relaxed">
               No — the Full Service package covers <span className="font-bold text-foreground">one specific auction property</span>. It includes the title search, auction management, and possession support for that property. If you want us to handle a second property, you'd take a separate package for it.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-2" className="border rounded-lg bg-card px-4">
-            <AccordionTrigger className="text-[15px] font-semibold hover:no-underline">When is the 1% success fee charged?</AccordionTrigger>
+            <AccordionTrigger className="text-[15px] font-semibold hover:no-underline">When is the {settings.successFeePct}% success fee charged?</AccordionTrigger>
             <AccordionContent className="text-muted-foreground text-[15px] leading-relaxed">
-              Only if you actually win the auction. The 1% is calculated on your winning bid amount. If you don't win, you pay nothing beyond the ₹9,999 package fee.
+              Only if you actually win the auction. The {settings.successFeePct}% is calculated on your winning bid amount. If you don't win, you pay nothing beyond the {formatINR(settings.servicePackagePrice)} package fee.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-3" className="border rounded-lg bg-card px-4">
             <AccordionTrigger className="text-[15px] font-semibold hover:no-underline">What's the difference between credits and the annual membership?</AccordionTrigger>
             <AccordionContent className="text-muted-foreground text-[15px] leading-relaxed">
-              Every free account gets 5 credits, and each credit unlocks the hidden fields on one property. The ₹999 annual membership removes the limit entirely — unlock as many properties as you want for a full year.
+              Every free account gets {settings.freeSignupCredits} credits, and each credit unlocks the hidden fields on one property. The {formatINR(settings.annualPrice)} annual membership removes the limit entirely — unlock as many properties as you want for a full year.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-4" className="border rounded-lg bg-card px-4">
@@ -358,11 +372,11 @@ export default function PricingPage() {
             Browse thousands of bank auction properties across India. Upgrade only when you find one worth pursuing.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button variant="secondary" size="lg" className="font-semibold">
-              Create Free Account
+            <Button variant="secondary" size="lg" className="font-semibold" asChild>
+              <Link href="/signup">Create Free Account</Link>
             </Button>
-            <Button variant="outline" size="lg" className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground font-semibold">
-              Talk to Our Team
+            <Button variant="outline" size="lg" className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground font-semibold" asChild>
+              <Link href="/contact">Talk to Our Team</Link>
             </Button>
           </div>
         </div>

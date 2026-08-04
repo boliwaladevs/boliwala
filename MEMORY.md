@@ -12,14 +12,15 @@ context window fills up, open a new session and point it at this file first.
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
 **Last updated:** 2026-08-05. Sprint 2.1 (`5f6f771`), Sprint 2.7 (`2ee35a1`),
-and **Sprint 3 are all committed and pushed — see §10 for what actually got
-built**. **Next session picks up Sprint 2.5 (Google OAuth) and Sprint 3.5
-(Razorpay) — both still blocked on the same thing: the user needs to supply
-credentials** (Google OAuth client ID/secret; Razorpay key ID/secret/webhook
-secret, test-mode is enough to start). If those haven't arrived yet, there's
-no code to write for either — check `.env.local` first before assuming
-you're unblocked. If you're picking this up fresh: read §10 first (Sprint 3
-completion record — what's real now in `/admin`), §9 for the original
+Sprint 3 (`74ba69a`), and **Sprint 4 are all committed and pushed — see §11
+for what Sprint 4 actually built**. **Next session picks up three blocked
+items together: Sprint 2.5 (Google OAuth), Sprint 3.5 (Razorpay), and
+Sprint 4.5 (Resend email + the C5 headline-stats sign-off) — all still
+blocked on the user supplying something** (credentials for the first two,
+content sign-off for the third). Check `.env.local` and with the user
+before assuming any of the three are unblocked — there's no code to write
+until then. If you're picking this up fresh: read §11 first (Sprint 4
+completion record), then §10 (Sprint 3), §9 for the original
 Sprint 3/3.5 split and why, §8 for Sprint 2.1 + 2.7.
 
 ---
@@ -734,4 +735,157 @@ mockup — same data (`Priya Mehta`, `₹21,44,000`, `1,842` users, etc.) as
 before this session. `callback_requests` and `channel_partner_applications`
 already have real, queryable schema (used for the two real dashboard alert
 counts) but their full CRUD/workflow tabs are unbuilt. None of this was in
-Sprint 3's scope per §9.2.
+Sprint 3's scope per §9.2. **Superseded by §11/§12: Callbacks and Settings
+are now real as of Sprint 4 (2026-08-05). Packages, Payments, Success Fees,
+Users, Partners, and the Engagement group are still mock — see §12.4.**
+
+---
+
+## 11. Sprint 4 — split into 4 (executable) and 4.5 (blocked), 2026-08-05
+
+Same exercise as §9, one sprint later. Original Sprint 4 scope, from
+`plans/boliwala-phase1-sprint-plan.md` line 229: admin Callback Requests
+workflow, admin Package Purchases, admin Settings (pricing controls),
+verifying settings propagate everywhere, public Pricing/Services/Channel
+Partner enrolment/Contact/About, transactional email via Resend.
+
+### 11.1 Two gaps found while scoping, not in the original plan text
+
+- **No customer-facing callback capture existed anywhere.** `callback_
+  requests` had real schema and a real client `INSERT` policy since before
+  this session, but zero UI ever wrote to it — the admin workflow tab was
+  planned as if leads would just show up. Folded into Sprint 4: had to
+  build the capture (a `/contact` page + a listing-page CTA) before the
+  admin workflow had anything real to manage.
+- **`/contact` didn't exist, but was already linked from two places**
+  (`services-view.tsx`'s "Talk to Our Team", and the header's "Free
+  Consultation" button — which pointed at `/login`, making no sense for a
+  lead-gen CTA). Building `/contact` fixed both dangling/wrong links at
+  once, not just added a new page.
+
+### 11.2 The actual blockers: Resend (hard) and C5 sign-off (soft)
+
+- **Resend** — `RESEND_API_KEY`/`RESEND_FROM_EMAIL` both empty in
+  `.env.local`, confirmed before starting. Same category of blocker as
+  Razorpay was for 3.5: nothing to build against without at least a key,
+  and the original plan's R1 risk (DNS verification needed for the sending
+  domain) still applies for production, though Resend's sandbox domain
+  could unblock dev-only testing without DNS.
+- **C5 headline statistics** — confirmed still present and still
+  fabricated: `about-view.tsx` (`₹2,100Cr won`, `840+ auctions`) and
+  `hero.tsx` (`12,400+ Live Auctions`). This is a content sign-off blocker,
+  not a technical one — moved here at the user's request rather than left
+  as a caveat inside Sprint 4, since it's genuinely the same shape as the
+  other two blockers (waiting on the user/client for something), not a
+  simpler in-sprint caveat.
+- **Package Purchases admin page** — still soft-blocked on Sprint 3.5 for
+  the same reason as before: nothing real to show until real
+  `service_packages` data exists.
+
+### 11.3 Sprint 4 (executed 2026-08-05, see §12 for the completion record)
+
+Customer-facing callback capture, admin Callback Requests workflow, admin
+Settings (pricing controls) with live propagation, Channel Partner
+enrolment form, Services page pricing wiring, Pricing page wiring. About
+page left untouched (pure static copy plus the blocked C5 numbers).
+
+### 11.4 Sprint 4.5 (blocked)
+
+| Item | Blocked on |
+|---|---|
+| Transactional email (Resend) — signup, payment receipt, callback ack | `RESEND_API_KEY`/`RESEND_FROM_EMAIL` + DNS verification for production |
+| Headline statistics (C5) — `about-view.tsx`, `hero.tsx` | Client sign-off: real numbers, or explicit approval to ship placeholder/aspirational figures |
+| Admin: Package Purchases page | Real `service_packages` data — waits on Sprint 3.5 (Razorpay) |
+
+---
+
+## 12. Sprint 4 — completion record (2026-08-05)
+
+Built and verified end-to-end this session, real accounts and real
+submissions, cleaned up after (checked zero leftover test rows). **Committed
+and pushed.**
+
+### 12.1 New: the callback-request pipeline, end to end
+
+- **`app/actions/callback.ts`** — `submitCallbackRequest()`, real client
+  (RLS-permitted insert, same as `alerts-section.tsx`'s pattern — no
+  service-role needed here, `callback_requests` already had a working
+  anon+authenticated `INSERT` policy).
+- **`/contact`** (`app/contact/page.tsx` + `components/contact-form.tsx`)
+  — accepts an optional `?listing=<slug>` param; when present, resolves
+  the real listing (public columns only) server-side, shows "Regarding:
+  {title}" context, and sets `source: 'listing'` + the real `listingId` on
+  submit. Without the param, `source: 'contact'`.
+- **Listing page** — new "📞 Request a Callback" button in the action card,
+  links to `/contact?listing={slug}`.
+- **Header** — "Free Consultation" now points at `/contact` instead of
+  `/login` on both the desktop and mobile nav (same fix, both were
+  `href="/login"`).
+- Verified: guest submits from `/contact` directly → real row, `source:
+  'contact'`. Guest clicks through from a listing page → real row with the
+  correct `listingId` and `source: 'listing'`, join to the listing's title
+  confirmed working in the admin panel.
+
+### 12.2 Admin: Callback Requests and Settings are now real
+
+- **`components/admin/callbacks-panel.tsx`** — real list, search
+  (name/phone/email) + status filter, status transitions (New → Contacted
+  → Closed) that write `assignedTo` as the acting admin's own id. The
+  mockup's status set (New/Called/In Progress/Converted/Closed) didn't
+  match the real `CallbackStatus` enum (`new`/`contacted`/`closed` only,
+  no "in progress" or "converted") — built against the real enum, not the
+  mockup's invented one. Dropped the mockup's "City"/"Budget" columns —
+  neither is a real column on `callback_requests` and the new capture form
+  doesn't collect them either.
+- **`components/admin/settings-panel.tsx`** — the 4 real editable fields
+  from `boliwala_features.txt` §5.12 (Free Credits, Annual Price, Service
+  Package Price, Success Fee %), writing to the real `settings` table.
+  **Replaced, not adapted, the mockup's Settings tab** — it had "Site
+  Name"/"Contact Email"/"WhatsApp"/Razorpay-key fields that don't
+  correspond to any real `settings` row, and a UI for editing Razorpay
+  secrets through a database-backed form would be a real security
+  anti-pattern, not just an inaccuracy — secrets belong in env vars, never
+  in a table a web form writes to.
+- Verified: changed `annual_price` via the real admin panel → confirmed in
+  the DB → confirmed live on `/pricing` and `/services` within the same
+  request cycle (via `revalidatePath`) → reverted back to 999 as part of
+  cleanup, confirmed reverted.
+
+### 12.3 Public pages wired to live settings
+
+- **`/pricing`** (374 lines) and **`components/services-view.tsx`** (500
+  lines, via `app/services/page.tsx`) — both converted from fully
+  hardcoded (`₹999`, `₹9,999`, `1%`, `5 credits`, in headings, pricing
+  cards, the comparison table, *and* the FAQ prose) to reading
+  `getPricingSettings()` live, including the per-field-group unlock costs
+  (`flat_floor`/`inspection`/`officer_contact`) in the comparison table.
+  Per the user's decision in the previous turn: kept as two separate
+  pages, not merged.
+- **`components/partner-view.tsx`** — the enrolment form had zero submit
+  handler before this session (pure mockup). Wired to
+  `channel_partner_applications` via a new `app/actions/partner.ts`. One
+  schema gap: the form's "Localities to Cover" field has no matching
+  column — folded into the real `experience` text column alongside "Tell
+  Us About Yourself" rather than dropping the field or fabricating a
+  column, so no user input is silently lost.
+
+### 12.4 Still mock, unchanged (confirmed, not just assumed)
+
+Packages, Payments, Success Fees, Users, Partners, Alerts, Alert Engine,
+Email Campaigns, WhatsApp Tools, Segments, and Engagement Analytics tabs in
+`admin-view.tsx` — all Sprint 3.5/4.5 territory, none of it touched. About
+page untouched (still has the blocked C5 headline stats).
+
+### 12.5 A recurring environment problem worth knowing about
+
+Multiple `pnpm dev`/`next dev` background launches accumulated as real
+**native Windows processes** across this session that `kill`/`lsof -ti`
+from the Bash tool (git-bash/MSYS) could not actually terminate — they'd
+silently "succeed" and the process would keep holding its port. Symptom:
+a new dev server binds an unexpected port ("Port 3000 is in use..."), or
+`.next/dev/lock` refuses to release even after an apparent kill. Fix: use
+the **PowerShell tool**, not Bash, to actually kill them —
+`Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object
+{ $_.CommandLine -match 'next|pnpm.*dev' } | Stop-Process -Force`. Cost
+some time mid-session chasing a phantom 404/500 on the new `/contact`
+route that turned out to be three stale dev servers, not a real bug.
