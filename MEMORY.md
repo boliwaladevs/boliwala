@@ -1,267 +1,246 @@
 # BOLIWALA.COM — PROJECT MEMORY & HANDOFF
 
-## ⚠️ REPO RESET — 2026-08-04
-
-**Everything below this notice describes the pre-reset build and is now
-historical, not current state.** On 2026-08-04 the client offered to supply
-the exact zipped source (or GitHub link) actually deployed on
-`boliwala.netlify.app`, so this project was cleared to start fresh from that
-source instead of the from-scratch replica documented below — no point
-maintaining a hand-built approximation once the real code is available.
-
-**What happened:**
-- `demo/` (the static-export reference mirror) and the entire `project/`
-  Next.js app (`src/`, `node_modules/`, config files, `.git` history) were
-  deleted from disk.
-- A full zip backup of the pre-reset `project/` (incl. its `.git` history)
-  and `demo/` was made to the session scratchpad before deletion — ask if
-  you need anything recovered from it.
-- `project/` was reinitialized as an empty git repo containing only this
-  file and `CLAUDE.md`, then force-pushed to `origin/main` on
-  `github.com/boliwaladevs/boliwala`, replacing the old commit history
-  there too (old commits are not reachable from `main` anymore).
-- `.env.local` (Supabase `DATABASE_URL`/`DIRECT_URL`, keys) was preserved —
-  moved to the repo **root** (`../.env.local`, i.e. *outside* `project/`) so
-  it survived the wipe. Move it back into `project/.env.local` once the new
-  app is scaffolded — **same Supabase project/database will be reused.**
-- `plans/` (including the master sprint plan and `UI_replication.md`) was
-  kept intact at the repo root and was not touched.
-
-**Next action for a fresh session:** once the client's zip/link arrives,
-scaffold `project/` from that source, move `../.env.local` back into
-`project/`, and re-verify against `plans/boliwala-phase1-sprint-plan.md`
-before resuming feature work. The gotchas in §5 below (Prisma v6 pin,
-percent-encoded DB password, `gh` account drift, RLS/GRANTs re-run after
-migrations, etc.) are still likely to apply to the new codebase if it uses
-the same stack — worth a skim even though the code itself is gone.
-
----
-
-# Historical — pre-reset state (superseded, kept for reference)
-
 **Purpose:** single source of truth for project state across sessions. If a
 context window fills up, open a new session and point it at this file first.
 
 > **Read order for a fresh session:**
 > 1. This file (state, gotchas, next action)
 > 2. `CLAUDE.md` (behavioural rules — surgical changes, verify everything)
-> 3. `plans/boliwala-phase1-sprint-plan.md` (the master plan)
-> 4. `project/README.md` (how to run and verify)
+> 3. `boliwala_features.txt` (the real Product Feature List / URD v2.0 — this
+>    is the actual scope document, supersedes guesses in the old sprint plan)
+> 4. `plans/boliwala-phase1-sprint-plan.md` (the old sprint plan — **stale in
+>    places**, see §4 below before trusting it)
 
-**Last updated:** after the Vercel import prep (commit `122ba99`).
+**Last updated:** 2026-08-04, after committing the client's real source
+(commit `c42670d`) and handing off for a fresh session.
 
 ---
 
-## 1. Where things are
+## 1. Quick answers (asked at handoff)
+
+**Is Supabase integrated?** No — not in code. A Supabase project (ref
+`rimyttphaidvlytefvil`, ap-south-1) exists and its schema/RLS/seed data from
+the earlier build attempt are still live in Supabase's cloud (deleting the
+local repo didn't touch it). But **zero application code references it right
+now** — grepped the whole `project/` tree for `supabase|prisma|DATABASE_URL`
+and the only hit is this file. The client's shell has no
+`@supabase/supabase-js`, no Prisma, no data-fetching of any kind — every page
+renders from hardcoded arrays in the components (e.g.
+`components/property-results.tsx:22`). Credentials are sitting ready in
+`project/.env.local` for whenever wiring resumes.
+
+**How many phases, and what's our status?** Only **one** plan document
+exists: `plans/boliwala-phase1-sprint-plan.md`, a 6-week internal sprint
+breakdown (Sprints 0–5) for what the client calls "Phase 1." There is no
+project-wide multi-phase plan.md. The word "Phase 2" appears exactly twice in
+the real features doc (`boliwala_features.txt` — WhatsApp Business API
+automation, and Channel Partner portal approval workflow), both as deferred
+line-items inside the Phase 1 scope, not as a separate roadmap. If the
+client's engagement is genuinely multi-phase beyond that, it hasn't been
+written down anywhere in this repo — worth asking them directly.
+
+**Do we have a plan for the whole project or just Phase 1?** Just Phase 1,
+and even that plan predates this session's two big changes (repo reset, then
+real source import) — see §4 for what in it is now stale.
+
+**Current status, one line:** the client's real frontend is imported,
+builds clean, and is the new UI source of truth. Everything below the UI
+layer — auth, the credit/access-gating logic, Supabase wiring, admin
+backend, payments — does not exist in this codebase yet and needs to be
+built fresh against these new components.
+
+---
+
+## 2. Where things are
 
 | | |
 |---|---|
 | Project root | `C:\Users\hrida\Documents\AA A\boliwala` |
-| App | `project/` — Next.js 14, App Router, TS |
-| Master plan | `plans/boliwala-phase1-sprint-plan.md` |
-| Design reference | `demo/` — compiled Next.js static export of 7 public pages |
+| App | `project/` — Next.js 16 (Turbopack), React 19, TypeScript, Tailwind v4, pnpm |
+| Real feature spec | `project/boliwala_features.txt` — Product Feature List / URD v2.0 |
+| Reference assets | `project/refrence/` (6 screenshots + `Boliwala-Features-v2.docx`), plus 3 standalone static-export HTML files at `project/` root (`boliwala-admin-v3.html`, `channel-partner-dashboard.html`, `pricing.html`) — useful as pixel reference alongside the live `app/` routes |
+| Old sprint plan | `plans/boliwala-phase1-sprint-plan.md` — **stale, see §4** |
+| UI gap analysis | `plans/UI_replication.md` — **moot**, was comparing our old hand-built replica to the prototype; irrelevant now that the real source is in |
 | GitHub | `github.com/boliwaladevs/boliwala`, branch `main` |
-| Supabase project ref | `rimyttphaidvlytefvil` (ap-south-1) |
-| Secrets | `project/.env.local` — gitignored, never commit |
+| Supabase project ref | `rimyttphaidvlytefvil` (ap-south-1) — infra exists, unwired (§1) |
+| Secrets | `project/.env.local` — gitignored via `.env*`, never commit |
 
-**Stack (locked by the client brief):** Next.js 14 · TypeScript · Tailwind ·
-Supabase (Postgres + Auth + Storage) · Prisma · Vercel · Razorpay · Resend.
-
----
-
-## 2. Status against the master plan
-
-| Sprint | Target | Status |
-|---|---|---|
-| Sprint 0 — Foundations | Wk 1 | ✅ Done |
-| Sprint 1 — Core Public Pages | Wk 2 | ✅ Done |
-| *Supabase connection* | interim | ✅ Done |
-| **Sprint 1.5 — UI replication** | interim | ✅ Done |
-| Sprint 2 — Auth & Accounts | Wk 3 → **M1** | ⬜ **NEXT** |
-| Sprint 3 — Payments & Admin Core | Wk 4 | ⬜ Not started |
-| Sprint 4 — Admin Completion | Wk 5 → **M2** | ⬜ Not started |
-| Sprint 5 — QA, SEO, Launch | Wk 6 → **M3** | ⬜ Not started |
-
-**Vercel deployment: IN PROGRESS.** User was importing the repo. Root Directory
-must be **`boliwala (root)` / `./`** — not `prisma`, not `src`. Env vars needed
-before first deploy (§6).
-
-### Commit history
-```
-122ba99  Add prisma generate postinstall for Vercel builds
-eee943b  Sprint 1.5: replicate the prototype's UI and design system
-be732c5  Add Supabase MCP server to project config
-29fa2a2  Connect Supabase: Postgres, RLS, and live data
-1e7d775  Sprint 1: homepage, search, and listing page with 4-state gating
-aa1c816  Initial commit from Create Next App
-```
+**Stack as shipped by the client (verified by `pnpm build`):** Next.js 16.0.10
+· React 19.2 · TypeScript · Tailwind v4 · shadcn/ui (Radix primitives) ·
+`lenis` (smooth scroll) · `@vercel/analytics`. **No** backend deps — no
+Supabase client, no Prisma, no ORM, no auth library. This is a different
+stack than the old sprint plan assumed (it planned around Next 14 + Tailwind
+v3 + Prisma v6 — see §4).
 
 ---
 
-## 3. What is built and working
+## 3. What's built and working (current codebase)
 
-**Pages:** Homepage (parallax hero, search, trust strip, closing-soon grid,
-5-step process, Auctions by City with live filter, alerts capture, CTA) ·
-Search `/properties` (URL-driven filters, pagination, sort) · Listing page
-`/properties/[slug]` (SSR + JSON-LD, gated fields, similar properties,
-callback form, wa.me link) · 9 placeholder routes so nav resolves.
+All 14 routes render and the production build is clean
+(`pnpm install && pnpm build` — verified this session, all pages compile and
+prerender as static content):
 
-**The access layer — the business core.** `src/lib/access/`:
-- `resolve.ts` — `resolveListingAccess(viewer, settings)` is the ONLY place
-  access is decided. Never check credits or subscription anywhere else.
-- `redact.ts` — strips gated values before they cross to the client. Uses an
-  explicit allowlist, so a new gated column stays hidden until deliberately
-  exposed.
-- Costs/prices always come from `getSettings()`, never hardcoded.
+`/` · `/about` · `/admin` · `/faq` · `/listing` · `/login` · `/partner` ·
+`/partner/dashboard` · `/pricing` · `/profile` · `/search` · `/services` ·
+`/signup`
 
-**Gated model** (recovered from `demo/services.html`):
-- Always public: full address, reserve price, EMD, auction dates, notice.
-- Gated, 1 credit each: `flat_floor` · `inspection` · `officer_contact`.
-- Free = 5 credits on signup · Annual ₹999/yr = unlimited · Service ₹9,999 +
-  1% success fee, **per property** (not account-wide).
+This includes pages that never existed as a reference before today — the
+admin panel (`app/admin` + `components/admin-view.tsx`), the individual
+listing page (`app/listing` + `components/listing-view.tsx`), the profile
+page (4 tabs), and the partner dashboard. All of it is **static UI only** —
+no routing by ID/slug yet (`/listing` not `/listing/[id]`), no forms wired to
+anything, no auth state, no real data.
 
-**Database:** schema v1 migrated (16 tables). RLS + column-level GRANTs applied.
-Seeded: 6 banks, 7 settings, 12 listings. View events persist to
-`listing_views` with an atomic `viewCount` increment.
+**Not built at all (needs to be created fresh, nothing to resume):**
+- Supabase client setup, auth (signup/login/forgot password)
+- The credit/access-gating logic (which fields are public vs. paywalled,
+  resolved server-side) — the *rules* are documented in
+  `boliwala_features.txt` §1 and §2.3, but no code implements them
+- Any data layer — listings, banks, settings all need a source of truth
+  (Supabase) and the mock arrays in components need replacing
+- Admin panel backend (the UI in `components/admin-view.tsx` exists; nothing
+  behind it)
+- Payments (Razorpay), alerts/notifications, Channel Partner enrolment
+  persistence
 
-**Two layers protect gated columns** — the `anon`/`authenticated` roles have no
-SELECT grant on them at all, *and* the app redacts. Verified both ways.
-
----
-
-## 4. Verification commands — re-run these after any change
-
-```bash
-cd "C:/Users/hrida/Documents/AA A/boliwala/project"
-npm run typecheck && npm run lint && npm test && npm run build
-npm run db:verify-grants     # gated columns unreadable by anon
-npm run db:status            # row counts + live pricing
-```
-
-**The leak test is the one that matters.** Start `npm start`, fetch a listing
-page as a guest, and confirm the HTML contains none of: `B-1204`,
-`12th of 18`, `R. Krishnan`, `98123 45678`, `ao.mumbai@example-bank.in`,
-`022 2756 0100`, `Carry photo ID` — while still containing
-`Plot 12, Sector 20`, `68,50,000`, `6,85,000`, `410210`.
-
-**Last full regression (all passing):** typecheck · lint · 11/11 tests · build ·
-leak test 7/7 absent + 4/4 public · 8/8 search filter counts · view counter
-dedupe · 4/4 access states · 12/12 routes 200 · hero content present in SSR HTML.
-
-**Preview access states in dev:**
-`/properties/<slug>?preview=credits|spent|nocredits|subscriber`
-Hard-gated on `NODE_ENV === "development"`; production cannot reach it.
+**Worth checking early next session:** the old (deleted) build's business
+logic — `resolveListingAccess()`, the redaction allowlist, the credit ledger
+pattern — is preserved in the pre-reset backup zip at the repo root
+(`boliwala-project-backup-20260804-145617.zip`, path
+`project/src/lib/access/`). The *rules* it encoded came from the same
+features doc that's now confirmed accurate, so that logic is likely still
+correct and worth porting rather than re-deriving from scratch — just needs
+adapting to the new component structure.
 
 ---
 
-## 5. Gotchas — these cost time to rediscover
+## 4. What's stale in `plans/boliwala-phase1-sprint-plan.md`
+
+That plan was written when 6 of 7 reference files were missing (its own §0
+says so). Today's source drop supplied the admin panel, the listing page,
+the profile page, the partner dashboard, and the real Features/URD doc — all
+things that plan explicitly flagged as "designed from first principles" or
+"blocking." Before resuming Sprint 2+ execution against it:
+
+- Re-read `boliwala_features.txt` as the authoritative scope — it's more
+  detailed and more current (v2.0, July 2026) than what the old plan
+  inferred from a partial prototype.
+- The old plan's stack decisions (D1 Tailwind v3, D2 Prisma v6) no longer
+  apply — the real source uses Tailwind v4 and ships no ORM at all, so the
+  backend data-access approach is an open decision again (Prisma vs.
+  Supabase JS client directly vs. something else).
+- The old plan's §9 open questions (bank list count, Channel Partner login
+  vs. enrolment-only, brand assets) may now be answered by
+  `boliwala_features.txt` or `refrence/` — re-check each one before treating
+  it as still-open.
+- Sprint numbering / milestone structure (Sprint 0–5, M1–M3) is probably
+  still a reasonable shape for sequencing work, but the per-sprint task
+  lists were written against the old hand-built frontend's file layout
+  (`src/lib/access/`, `src/app/...`) which no longer exists — the new
+  frontend's layout is `app/`, `components/`, `lib/utils.ts` only.
+
+**Recommendation for next session:** don't execute the old plan as-is. Do a
+short reconciliation pass — plan vs. `boliwala_features.txt` vs. what's
+actually in `app/`/`components/` now — before committing to a sprint
+sequence, or ask the user whether to write a fresh plan against the real
+source instead of patching the old one.
+
+---
+
+## 5. Gotchas — still likely to matter once backend work resumes
 
 1. **`gh` active account drifts back to `hkforprojects`.** Pushes then 403.
-   Fix: `gh auth switch --user boliwaladevs` before pushing.
-2. **Prisma is pinned to v6 deliberately.** v7 removed `directUrl` from the
-   schema and requires driver adapters, which breaks Supabase's
-   pooled-runtime / direct-migration split. Do not "upgrade" it.
-3. **Prisma CLI does not read `.env.local`.** Every db script is wrapped in
-   `dotenv-cli`. Never create a plain `.env` — `.gitignore` only covers
-   `.env*.local`, so it would be committed with the password in it.
-4. **Percent-encode the DB password.** It contains `@` → `%40`. Without that
-   the URL parser reads it as the host separator and fails with a DNS error.
-5. **`npm run db:policies` must be re-run after every migration.** Prisma does
-   not manage RLS or GRANTs. Forgetting it silently drops column protection —
-   `npm run db:verify-grants` catches it.
-6. **`postinstall: prisma generate` is required for Vercel.** Without it the
-   build fails with "@prisma/client did not initialize yet".
-7. **PowerShell test-harness traps:** `$home` is read-only (use another name);
-   `-Headers @{'User-Agent'=…}` is ignored in PS 5.1 (use `-UserAgent`); React
-   inserts `<!-- -->` between text nodes, so strip it before regex matching.
-8. **Six of the seven original reference files never existed on disk** — the
-   admin panel prototype and the Features/URD doc among them. Sprints 3–4 have
-   no visual reference. See §0 of the master plan.
+   Fix: `gh auth switch --user boliwaladevs` before pushing. Confirmed still
+   true this session.
+2. **The DB password needs percent-encoding.** It contains `@` → `%40`.
+   Without that the connection-string parser reads it as the host separator
+   and fails with a DNS error. Still applies — same Supabase project.
+3. **Whatever ORM gets chosen, re-verify RLS/GRANTs after every migration.**
+   The old build's Postgres RLS + column-level GRANTs (protecting gated
+   fields at the DB layer, not just in the app) should still be live in
+   Supabase since the database wasn't touched — but this needs confirming
+   fresh, not assumed, once someone reconnects.
+4. **`.env.local` lives at `project/.env.local`** (moved back in by the user
+   after the reset). It's `.env*`-ignored by the new `.gitignore` — confirmed
+   not tracked.
+
+*(Prisma-specific gotchas from the old build — v6 pin, `dotenv-cli`
+wrapping, `postinstall: prisma generate` — are dropped here since the new
+codebase has no Prisma at all. Re-add if the next session reintroduces it.)*
 
 ---
 
-## 6. Vercel environment variables
+## 6. Timeline (for context, most recent first)
 
-Copy `DATABASE_URL` and `DIRECT_URL` verbatim from `project/.env.local` —
-they already have `%40` encoding.
-
-| Name | Notes |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://rimyttphaidvlytefvil.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` |
-| `DATABASE_URL` | pooled, port **6543** |
-| `DIRECT_URL` | session, port **5432** |
-| `NEXT_PUBLIC_SITE_URL` | set once the Vercel URL exists |
-
-Without `DATABASE_URL` the app silently falls back to in-memory fixtures and
-shows a "Demo data" banner — it will not crash, which makes a missing env var
-easy to miss.
-
----
-
-## 7. Next action
-
-**Immediate:** `plans/UI_replication.md` — a UI/animation gap analysis
-against `boliwala.netlify.app` (compared via the local `demo/` mirror, which
-was verified to match the live site's content). Nothing in it has been
-executed yet; it's written up for the user to read and pick a priority
-cutoff (see its §11–12) before any of it is built. Read it before starting
-work if the user says "go ahead" on UI polish.
-
-**After that — Sprint 2 (Auth & Accounts) → M1.** Deliverables per the master plan:
-- Signup / Login / forgot password (Supabase Auth clients already exist in
-  `src/lib/supabase/`; middleware already refreshes sessions)
-- Signup grants `free_signup_credits` from settings **via the ledger**, never
-  by writing `profiles.creditsBalance` directly
-- Profile page: Shortlisted · My Alerts · My Services · My Details
-- Credit spend flow: unlock → ledger → idempotent re-unlock → balance UI
-- Replace `getViewer()` in `src/lib/auth/viewer.ts` — it currently returns
-  `null` in production (everyone is a guest) and only honours `?preview=` in dev
-- Wire the disabled "Unlock" button in `GatedField.tsx` to a real server action
-
-**Blocked/needed:** Google OAuth decision (prototype shows "Continue with
-Google" — required at launch or later?) · `SUPABASE_SERVICE_ROLE_KEY` still
-blank in `.env.local`.
+1. **2026-08-04 — client source imported.** `boliwala-main/` (the exact code
+   the client has deployed on `boliwala.netlify.app`) was merged into
+   `project/`, `pnpm install && pnpm build` verified clean, committed
+   (`c42670d`), pushed to `origin/main`.
+2. **2026-08-04 — repo reset.** `demo/` and the entire old hand-built
+   `project/` were deleted (kept only `CLAUDE.md`/`MEMORY.md`), git history
+   force-pushed to a single fresh commit, in anticipation of the client
+   supplying real source. Full zip backups of the pre-reset `project/`
+   (incl. old `.git` history) and `demo/` were saved to the repo root as
+   `boliwala-project-backup-20260804-145617.zip` and
+   `boliwala-demo-backup-20260804-145617.zip`.
+3. **Earlier — original from-scratch build.** Sprint 0 (Supabase schema,
+   RLS, seed data) and Sprint 1 (hand-built homepage/search/listing UI) were
+   completed against a partial, largely-missing prototype. That UI is gone
+   from the repo (superseded by step 1) but the Supabase-side schema/RLS/
+   seed work is still live infrastructure — see §1.
 
 ---
 
-## 8. Decisions log
+## 7. Next action for a fresh session — CONFIRMED 2026-08-04
 
-| # | Decision | Rationale |
-|---|---|---|
-| D1 | Tailwind v3, not v4 | Stable pairing with Next 14; token values ported verbatim |
-| D2 | Prisma v6, not v7 | v7 drops `directUrl`; breaks Supabase pooler split |
-| D3 | Plus Jakarta Sans stands in for Satoshi | Fontshare licence not settled (risk R4) |
-| D4 | Headline stats derived from live data | Prototype's "12,400+ / 18+" are unverified claims (C5) |
-| D5 | US placeholder phone NOT reproduced | Renders only if `NEXT_PUBLIC_CONTACT_PHONE` is set (C3) |
-| D6 | Keep bracket price dropdown (T1) | Client chose it over the demo's free-text min/max |
-| D7 | Follow demo on buttons (T2) | Primary CTAs near-black; amber demoted to accent |
-| D8 | Parallax + WebP (T3) | 10.16 MB → 627 KB; rAF-throttled; respects reduced-motion |
-| D9 | Fixture fallback kept alongside Prisma | App runs on a fresh clone with no credentials |
+**Direction confirmed with the user:** Supabase integration first, then
+resume sprint execution. One correction to that framing, agreed in the same
+conversation: Supabase integration *is* the substance of the next pending
+sprint, not a separate step before it — the old plan's Sprint 2 (Auth &
+Accounts) is mostly Supabase wiring (auth, credit ledger, access-gating). So
+this isn't "integrate Supabase, then do something else called Sprint 2" —
+it's one piece of work. Concretely, in order:
+
+1. Read `boliwala_features.txt` in full — it's short enough and is now the
+   ground truth for scope.
+2. Quick plan-reconciliation pass (§4) — the old sprint task lists reference
+   file paths that no longer exist (`src/lib/access/`, `src/app/...`); confirm
+   what still applies before executing it literally. This is a short check,
+   not a blocker — don't over-invest here.
+3. Decide the data-access approach (Prisma again vs. Supabase JS client vs.
+   other) — the old codebase's choice (Prisma v6) isn't inherited by the new
+   frontend, which has no ORM at all.
+4. **Base data layer first, then auth on top of it** — two sub-steps, in
+   this order, because auth/credit-gating is meaningless without real listing
+   data to gate:
+   a. Supabase client setup + replace the hardcoded arrays (e.g.
+      `components/property-results.tsx:22`) with real queries against the
+      existing schema — this is effectively redoing the old build's "Supabase
+      connection" interim step, which no longer exists in this codebase even
+      though the DB side of it is still live.
+   b. Auth (signup/login/forgot password) + credit ledger + the
+      access/redaction layer gating fields per `boliwala_features.txt` §2.3 —
+      candidate to port from the backup zip's `src/lib/access/` (§3) since the
+      gating *rules* haven't changed, only the surrounding UI.
+5. Only after 4 is solid: continue with the old plan's Sprint 3 onward
+   (Payments & Admin Core) — re-checked against §4's reconciliation, not
+   executed blindly.
 
 ---
 
-## 9. Open questions for the client
+## 8. Open questions for the client
 
-**Blocking Sprint 3–4:** admin panel prototype and the Features/URD doc (both
-missing) · sample bulk-upload Excel with real column headers · Razorpay
-activation status.
+Carried forward from the old plan (§9 there) — re-verify each against
+`boliwala_features.txt` before re-asking, some may now be answered:
 
-**Still open:** definitive bank list (prototype says 18+ in one place, 40+ in
-two others; dropdown hardcodes 4) · real Indian contact number · Pricing vs
-Services — one page or two? · sign-off on headline statistics · Channel Partner
-login (prototype shows it, Phase 1 scope says enrolment form only) · brand
-assets (logo SVG, favicon, OG image) · Privacy and Terms copy.
-
-**Housekeeping:** the database password was pasted in a chat transcript —
-rotate it in Supabase when convenient. Supabase MCP server is configured in
-`.mcp.json` but each developer must run `claude /mcp` once to authenticate.
-
----
-
-## 10. Update protocol
-
-After every execution, update: §2 status table and commit list · §4 last
-regression result · §5 if a new gotcha appeared · §7 next action · §8 if a
-decision was taken. Keep it factual — this file is read by someone with no
-context.
+- Definitive bank list (old prototype said 18+ in one place, 40+ in two
+  others)
+- Real Indian contact number (a US placeholder number appears in the
+  client's actual code)
+- Channel Partner login — `boliwala_features.txt` §2.6 now says explicitly
+  "no partner portal or directory at launch," but `app/partner/dashboard`
+  exists in the real source as a built page — confirm whether it's
+  in-scope for launch or a future-phase page shipped early.
+- Razorpay activation status.
+- Housekeeping: the Supabase DB password was pasted in a chat transcript at
+  one point during the original build — rotate it when convenient.
