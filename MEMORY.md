@@ -11,46 +11,53 @@ context window fills up, open a new session and point it at this file first.
 > 4. `plans/boliwala-phase1-sprint-plan.md` (master plan — **includes Sprint
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
-**Last updated:** 2026-08-04, after wiring Supabase auth + the signup credit
-grant + the homepage alert form for real, and committing/pushing as
-`boliwaladevs`.
+**Last updated:** 2026-08-04. Auth/signup-credit/alerts work is committed and
+pushed (`0b51a5f`). **Sprint 2.1 is now fully built and verified this
+session (see §8) — deliberately uncommitted**, same as before: the user
+reviews locally first. If you're picking this up fresh: read §8 first (what
+actually got built, what was found, what's still open), then §6 only if you
+want the original plan for context — §8 supersedes it where they differ.
 
 ---
 
 ## 1. Quick answers (asked at handoff)
 
-**Is Supabase integrated?** Partially, and for real now — not the whole app.
-Wired: `@supabase/supabase-js` + `@supabase/ssr` clients (`lib/supabase/
-client.ts`, `lib/supabase/server.ts`), real email/password auth (signup,
-login, logout, forgot-password, reset-password), the signup → profile-row →
-5-free-credits flow (via a Postgres trigger, see §3), the homepage alert
-capture form, and the profile page's session/credits/name/phone. **Not
-wired:** anything on the search/listing pages (still 100% hardcoded mockups,
-see Sprint 2.1 in §4), the credit *spend*/unlock flow (needs a real listing
-to unlock — blocked by the same thing), shortlist add/remove (same reason),
-Google OAuth (Sprint 2.5, deferred). Prisma was explicitly dropped this
-session — the app talks to Supabase directly via `@supabase/supabase-js`, no
-ORM.
+**Is Supabase integrated?** Yes, essentially the whole app now (Sprint 2.1
+finished this session). Wired: `@supabase/supabase-js` + `@supabase/ssr`
+clients, real email/password auth, signup → profile-row → 5-free-credits,
+homepage alerts, profile session/credits/name/phone, **real `/search`**
+(live listings/banks, URL-driven filters, real pagination/counts), **real
+`/listing/[slug]`** (replaced the static `/listing` mockup — old route now
+redirects to `/search`), the full four-state access-gating flow
+(guest/member-no-credits/member-with-credits/subscriber) driven by
+`lib/access/*` end-to-end, **credit spend/unlock** (via a new
+`unlock_field_group` SECURITY DEFINER RPC, see §8.2), **shortlist add/remove**
+(search cards, listing page, and profile's Saved Properties tab, all real),
+and **view-count tracking** (deduped, trigger-incremented). **Not wired:**
+Google OAuth (Sprint 2.5, deferred, unchanged), payments/admin/Channel
+Partner build-out (Sprint 3+). Prisma stays dropped — no ORM, direct
+`@supabase/supabase-js`.
 
 **Migrations, since there's no ORM?** `supabase/migrations/*.sql` +
 `node scripts/apply-sql.mjs <file>` (uses `pg` against `DIRECT_URL`, added
 this session as devDependencies). Simple query protocol, whole file in one
 `client.query()` call — no manual statement-splitting needed, unlike the old
-`prisma/apply-policies.ts`. This is a stopgap; the user shared Supabase MCP
-server setup instructions (`claude mcp add ... supabase`) — once authenticated
-(needs a regular terminal, not this IDE extension — user has to run
-`claude /mcp` themselves), that's probably the better tool for future
-migrations. Not set up yet.
+`prisma/apply-policies.ts`. **The Supabase MCP server is now added and
+authenticated** (see gotcha #6 in §5, "Gotchas") — prefer it over this script
+for new work once a fresh session confirms its tools are loaded;
+`apply-sql.mjs` stays as a working fallback either way.
 
 **How many phases, and what's our status?** Same as before — only
 `plans/boliwala-phase1-sprint-plan.md` exists (Sprints 0–5), plus two new
 deferred sub-sprints added this session: **2.1** (search/listing page
 rebuild) and **2.5** (Google OAuth). See §4.
 
-**Current status, one line:** auth + signup credit grant + profile basics +
-homepage alerts are real and verified end-to-end against the live DB. Search,
-listing pages, shortlist, and credit spend are still the old static mockups —
-that's Sprint 2.1, next up.
+**Current status, one line:** Sprint 2.1 is done — auth, credits, search,
+listing pages, shortlist, unlock/credit-spend, and view tracking are all
+real and verified end-to-end against the live DB (see §8 for the full
+verification record). Next up: Sprint 2.5 (Google OAuth, still blocked on
+client credentials) or Sprint 3 (Payments & Admin Core), per the sequencing
+in §4.
 
 ---
 
@@ -131,22 +138,19 @@ Partner portal build-out. See §4.
 
 ## 4. Sprint plan status
 
-`plans/boliwala-phase1-sprint-plan.md` now has two new sub-sprints added this
-session, both **deferred, not started**:
+`plans/boliwala-phase1-sprint-plan.md` has two sub-sprints added in an
+earlier session:
 
-- **Sprint 2.1 — Search & Listing Page Rebuild.** `components/
-  property-results.tsx` and `components/listing-view.tsx` turned out to be
-  pure client mockups with zero data-fetching — hardcoded arrays / hand-typed
-  JSX strings, decorative filters, `/listing` not `/listing/[slug]`. This is
-  effectively the old plan's Sprint 1 core deliverable again, not a data
-  swap. It's next up — unblocks shortlist, credit spend/unlock, and real
-  search.
-- **Sprint 2.5 — Google OAuth.** No `GOOGLE_CLIENT_ID`/`SECRET` in
-  `.env.local`, Q4 from the old plan never answered. Button is UI-present,
-  disabled. Do this *after* 2.1 per the user's explicit sequencing.
+- **Sprint 2.1 — Search & Listing Page Rebuild. DONE this session, see §8.**
+  `property-results.tsx` and `listing-view.tsx` were pure client mockups
+  with zero data-fetching; both are now real, along with everything else in
+  the URD's Sprint 2.1 scope (shortlist, unlock, view tracking).
+- **Sprint 2.5 — Google OAuth.** Still not started. No `GOOGLE_CLIENT_ID`/
+  `SECRET` in `.env.local`, Q4 from the old plan never answered. Button is
+  UI-present, disabled. Next up per the user's sequencing.
 
-**Sequencing confirmed with the user:** finish the rest of Sprint 2 → Sprint
-2.1 → Sprint 2.5 → Sprint 3 onward.
+**Sequencing confirmed with the user:** Sprint 2.1 (done) → Sprint 2.5 →
+Sprint 3 onward.
 
 ---
 
@@ -174,31 +178,187 @@ session, both **deferred, not started**:
    app code; the app uses the `NEXT_PUBLIC_*`-prefixed one (required for
    client-side use in Next.js). Worth asking the user if that second key is
    meant to replace something before it goes stale.
-6. **Supabase MCP server** — user shared setup instructions
-   (`claude mcp add --scope project --transport http supabase "..."`).
-   Not yet added or authenticated. Authentication (`claude /mcp`) needs a
-   regular terminal, not this IDE extension — the user has to do that step
-   themselves.
+6. **Supabase MCP server — added and authenticated** (user confirmed
+   2026-08-04, done in a separate regular terminal via `claude /mcp` while
+   this session kept working). Config lives at `boliwala/.mcp.json` (project
+   scope, sibling to `project/` — **not inside the git repo**, same as
+   `plans/`), confirmed on disk:
+   `{"mcpServers":{"supabase":{"type":"http","url":"https://mcp.supabase.com/mcp?project_ref=rimyttphaidvlytefvil&features=..."}}}`.
+   **Caveat for whoever reads this next:** MCP servers connect at session
+   start — *this* session was already running before authentication
+   happened, so its tool list doesn't include the Supabase MCP tools
+   (checked, none loaded). A **fresh session** should have them available
+   immediately; if not, re-run `claude /mcp` and check the connection status
+   there. Once available, prefer it over `scripts/apply-sql.mjs` for new
+   migrations/DB inspection per the earlier note in §1.
 7. **Test-user hygiene:** all throwaway accounts created while verifying the
    signup trigger this session were deleted via the Admin API afterward — no
    test data left in the live DB. If you create more, same rule.
 
 ---
 
-## 6. Next action for a fresh session
+## 6. Sprint 2.1 — execution-ready plan for the next session
 
-1. Finish the rest of Sprint 2 that's still meaningfully blocked by Sprint
-   2.1 (shortlist add/remove, credit spend/unlock flow, "Saved
-   Properties"/"My Alerts"/"My Services" profile tabs reading real data) —
-   these all need real listing rows to attach to, so in practice this means:
-2. **Sprint 2.1 next** — rebuild `/search` and add `/listing/[slug]` for
-   real, wire the already-ported `lib/access/` gating layer into the real
-   listing page, real view-count tracking, then re-run the guest-source leak
-   test. See the sprint plan's Sprint 2.1 section for full scope.
-3. Then Sprint 2.5 (Google OAuth) once the client confirms it's needed and
-   supplies credentials.
-4. Then Sprint 3 onward (Payments & Admin Core), re-checked against
-   `boliwala_features.txt`.
+Everything below was verified live this session (queried the real DB with
+the anon key) so the next agent doesn't have to re-derive it. **Don't commit
+until the user says so** — they're reviewing locally first, and want Sprint
+2.5's handoff drafted too before it goes in (see §6.6).
+
+### 6.1 The two files being replaced, and exactly what's wrong with them
+
+- **`components/property-results.tsx`** (366 lines, search results) — a
+  hardcoded `Property[]` array of 6 fake listings. Filters (property type,
+  bank, price, possession, auction date) are checkbox/radio UI with **no
+  state, no handlers** — they don't filter anything. The "247 properties"
+  count and per-bank counts (`Bank of Baroda: 18`, `SBI: 312`...) are literal
+  strings. Pagination buttons (1, 2, 3, ..., 21) don't paginate. Every card
+  links to the single static `/listing` route, not a per-property one.
+- **`components/listing-view.tsx`** (451 lines, individual listing page) —
+  even more hardcoded: property details, auction info, legal status, and
+  "Inspection & Bank Contact" are typed directly into JSX (`"Flat No. 303,
+  Vithai Apartment, Airoli, Navi Mumbai"`, `"₹60,12,000"`, etc.), not even in
+  a data object. The gated section already has the right *shape* (blurred
+  preview + "Sign up to view" CTA) — that's good, it means the visual design
+  for the four access states doesn't need reinventing, just needs to be
+  driven by `lib/access/redact.ts`'s `GateDecision` instead of hardcoded
+  blur classes. Three "Similar Auctions" cards at the bottom are also
+  hardcoded.
+
+### 6.2 What's already built and ready to consume — don't rebuild these
+
+- `lib/access/{types,resolve,redact,index}.ts` — the gating logic
+  (`resolveListingAccess`, `redactListing`, the four `AccessState`s). Ported
+  verbatim from the pre-reset backup, typechecks clean, **unit-tested by
+  hand this session is not done** — no test runner exists in this codebase
+  (client shipped none; adding one is your call, wasn't done previously
+  either). Verify via the guest-source leak test instead (§6.4).
+- `lib/auth/viewer.ts` — `getViewer(listingId?)`, real Supabase session +
+  credit balance + per-listing `unlockedGroups`. Call this from the listing
+  page server component to get the `Viewer` to pass into
+  `resolveListingAccess()`.
+- `lib/data/types.ts` — `Listing`/`Bank` types matching the DB's actual
+  camelCase columns (Prisma created real camelCase Postgres columns, not
+  snake_case — confirmed by querying the live table directly).
+- `lib/supabase/{client,server}.ts` — browser/SSR clients, already used
+  elsewhere (auth-view, profile-view).
+
+### 6.3 Real data already live — use it, don't re-seed
+
+Queried directly this session:
+
+- **6 banks**, real names: State Bank of India (SBI), Punjab National Bank
+  (PNB), Bank of Baroda (BoB), Canara Bank, Union Bank of India, IDBI Bank.
+  The current sidebar hardcodes 5 different fake banks with fake counts —
+  replace both the list and the counts with a real query against `banks` +
+  an aggregate count of live `listings` per bank.
+- **12 live listings**, spread across residential/commercial/industrial/
+  agricultural/mixed_use, real cities (Pune, Lucknow, Jaipur, Coimbatore,
+  Hyderabad, Mumbai, Nagpur, Chennai, Surat, Bengaluru, Ahmedabad), real
+  `slug`s already populated (e.g. `industrial-warehouse-chakan-pune-union`,
+  `2bhk-flat-kharghar-navi-mumbai-sbi`) — enough to build and manually test
+  `/listing/[slug]` against real rows immediately, no seeding step needed.
+  Public columns (`addressLine`, `reservePrice`, `emdAmount`, `auctionDate`,
+  etc.) are readable by anon; gated columns (`flatNumber`,
+  `authorisedOfficerPhone`, etc.) 401 for anon/authenticated without the
+  right access state — exactly the security boundary §6.4 tests.
+- **All 7 settings rows** populated (`free_signup_credits: 5`,
+  `annual_price: 999`, `credit_cost_flat_floor: 1`, etc.) — read these for
+  `PricingSettings`, never hardcode.
+
+### 6.4 Schema gap found this session — decide before building the details table
+
+`listing-view.tsx`'s "Auction Information" table shows **Auction Time**
+(separate from date), **Mode** ("Online e-Auction"), **Bid Increase Amount**,
+and **Total Outstanding Dues** — none of these exist as columns on
+`listings` in `schema.prisma` (which is otherwise still an accurate map of
+the live table). Two options, pick one and note the decision here:
+(a) drop these fields from the rebuilt page since they're presentational
+invention with nothing behind them, or (b) add the columns via a new
+`supabase/migrations/000X_*.sql` (same pattern as this session's migrations,
+run with `node scripts/apply-sql.mjs <file>`) if the client actually wants
+them. Don't silently fabricate values for them.
+
+### 6.5 Build order (each step should be independently verifiable)
+
+1. **`/search` → real data.** Convert `property-results.tsx` (or a new
+   server component it delegates to) to query `listings` server-side:
+   public columns only, `status = 'live'`, joined to `banks` (PostgREST
+   embed: `select=*,bank:banks(*)`). Wire the existing filter UI to actual
+   query params (URL-driven, per the old plan's Sprint 1 note — keeps it
+   shareable/SEO-friendly and matches how `keyword`/`q` splitting was done
+   in Sprint 1.5). Real pagination. Real per-bank/per-city counts — decide
+   whether that's N small `count=exact` queries or one aggregate query/RPC;
+   either is fine, just don't hardcode.
+   → verify: all filter combinations return correct counts against the 12
+   live rows; no gated columns appear in the response (check Network tab —
+   the query must never select them for a search-card view).
+2. **`/listing/[slug]` route.** New dynamic route, server component. Fetch
+   the listing by slug (public columns), call `getViewer(listing.id)`, then
+   `resolveListingAccess(viewer, settings)`, then `redactListing(listing,
+   access)`. Render the `SafeListing` — gated sections render via
+   `decision.visible`/`decision.action`, reusing the existing blurred-preview
+   visual pattern already in `listing-view.tsx`, just data-driven now.
+   Retire the static `/listing` route (redirect to `/search`, or delete it —
+   your call, note which).
+   → verify: **guest-source leak test** (old plan §3, repeat it here) — view
+   a live listing signed out, check page source contains zero gated values
+   (`flatNumber`, `authorisedOfficerPhone`, etc. must not appear in the HTML
+   at all, not even hidden/blurred via CSS). Then check the four access
+   states render correctly by testing as guest / a fresh signup (5 credits,
+   `member_with_credits`) / a user with 0 credits / a subscriber (you may
+   need to manually insert a test `subscriptions` row for the last one,
+   clean it up after).
+3. **View-count tracking.** Insert into `listing_views` on each listing page
+   load (dedupe by session/IP within some window — the old schema has
+   `sessionId`/`ipHash` columns for exactly this). Increment
+   `listings.viewCount` — check whether that's a trigger or an app-level
+   update; there's no trigger for it yet, so either add one (consistent with
+   this session's `handle_new_user` pattern) or do it in the same request.
+   → verify: view an listing twice quickly, count increments once (dedupe
+   works); view again after the window, increments again.
+4. **Shortlist add/remove**, now that real listing IDs exist — wire the
+   `Bookmark`/"Save" buttons in both the search cards and the listing page
+   to `shortlists` (RLS already supports full CRUD for
+   `userId = auth.uid()`, confirmed working last session, no migration
+   needed). Also revisit `profile-view.tsx`'s "Saved Properties" tab (still
+   the original mock cards, deliberately left alone last session) — wire it
+   to a real `shortlists` query now that there's real data to show.
+   → verify: save/unsave round-trips, persists across reload, shows up in
+   the profile tab.
+5. **Credit spend/unlock flow** — the "Sign Up Free to Unlock" / "Unlock for
+   1 credit" buttons need a server action: check balance, insert into
+   `unlocks`, insert a `credit_transactions` ledger row (`reason: unlock`,
+   negative delta), all atomically. Remember: `unlocks` and
+   `credit_transactions` have **no client INSERT policy** (by design, same
+   as signup credits) — this has to go through a server-side path using
+   `SUPABASE_SERVICE_ROLE_KEY` (there's no admin client file yet — add
+   `lib/supabase/admin.ts`, service-role, server-only, never imported from a
+   client component) or a `SECURITY DEFINER` Postgres function callable via
+   RPC that enforces the balance check itself (arguably safer — keeps the
+   "never charge twice" `UNIQUE(userId, listingId, fieldGroup)` constraint
+   and the balance check atomic in the DB rather than split across an app
+   request). Pick one, it's a real design decision, not a detail.
+   → verify: unlock spends exactly 1 credit, re-visiting the same listing
+   doesn't charge again (idempotent), balance shown in profile updates,
+   can't go negative.
+6. **Full regression**, same bar as Sprint 1.5 used: typecheck, `pnpm build`,
+   guest leak test, all filter combinations, view counter dedupe, all four
+   access states, shortlist round-trip, unlock idempotency.
+
+### 6.6 Sprint 2.5 (Google OAuth) — handoff design, not execution
+
+Scope is already written in `plans/boliwala-phase1-sprint-plan.md`'s Sprint
+2.5 section (blocked on the client supplying Google OAuth credentials — still
+true, nothing changed there this session). Nothing to add here beyond what's
+already in that file; the user asked for its "handoff designed" alongside
+2.1's, and the plan doc already is that — a fresh agent picking up 2.5 later
+should read that section directly, no separate prep needed.
+
+### 6.7 After 2.1
+
+Sprint 3 onward (Payments & Admin Core), re-checked against
+`boliwala_features.txt` per §4's reconciliation note — unchanged from
+earlier handoffs.
 
 ---
 
@@ -206,8 +366,10 @@ session, both **deferred, not started**:
 
 Unchanged from last handoff, still open:
 
-- Definitive bank list (old prototype said 18+ in one place, 40+ in two
-  others)
+- Definitive bank list — mechanism is now real (§8: real `banks` table,
+  live per-bank counts on `/search`), but only 6 banks are seeded (SBI, PNB,
+  BoB, Canara, Union, IDBI). Old prototype said 18+ in one place, 40+ in
+  two others — confirm whether more banks get added before launch.
 - Real Indian contact number (a US placeholder number appears in the
   client's actual code)
 - Channel Partner login — `boliwala_features.txt` §2.6 says "no partner
@@ -217,3 +379,121 @@ Unchanged from last handoff, still open:
 - Google OAuth — required at launch, or fast-follow? (Sprint 2.5)
 - Housekeeping: rotate the Supabase DB password (was pasted in a chat
   transcript during the original build)
+
+---
+
+## 8. Sprint 2.1 — completion record (2026-08-04)
+
+Executed end-to-end this session, following §6's build order. Everything
+below was verified live against the real Supabase project with throwaway
+test users, created and cleaned up each time (checked at the end — zero
+leftover test rows). **Not committed** — same as every session, the user
+reviews locally first.
+
+### 8.1 Two security bugs found and fixed, outside the original plan
+
+Neither was in scope going in — both surfaced while building the pieces
+that touch the same tables/columns, and both were live/exploitable before
+this session's fix:
+
+1. **`profiles.creditsBalance` and `profiles.role` were directly
+   client-writable.** `own_profile_update`'s RLS policy only checks
+   `id = auth.uid()`, no column restriction, and `authenticated` held the
+   default Supabase blanket table-level `UPDATE` grant. Any signed-in user
+   could `PATCH /rest/v1/profiles` their own `creditsBalance` to anything,
+   or set `role: 'admin'`. Fix (migration `0005`): revoke the table-level
+   grant entirely, re-grant `UPDATE` on only `fullName`/`phone` (the two
+   columns `profile-view.tsx` actually writes) to `authenticated`. A
+   column-level revoke alone does **not** work here — the table-level grant
+   dominates it; had to revoke table-level and re-grant column-level.
+   Verified: real attack attempt (`PATCH` with `creditsBalance: 999999` and
+   `role: 'admin'`) now 403s; the legitimate fullName/phone save still 200s.
+2. **`listing_views` had RLS disabled entirely** — anon key could read,
+   write, or delete any row, including other users' `userId`/`ipHash`.
+   Fixed in the same migration: `ENABLE ROW LEVEL SECURITY`, no client
+   policies at all — every write goes through the service-role admin client
+   (`lib/supabase/admin.ts`, new this session), same pattern as
+   `credit_transactions`/`unlocks`.
+
+Two other tables still have RLS disabled — `listing_images` and
+`bulk_upload_batches`/`admin_audit_log` — **not fixed**, nothing in Sprint
+2.1 touches them, flagged for whoever picks up admin/bulk-upload work.
+
+### 8.2 Migrations added
+
+- `0005_listing_auction_fields_unlock_rpc_and_profile_grant_fix.sql` — the
+  profiles grant fix above; four new `listings` columns (`auctionTime`,
+  `mode`, `bidIncreaseAmount`, `totalOutstandingDues` — the §6.4 schema
+  gap, resolved as "add columns," not "drop fields"); a
+  `UNIQUE("userId","listingId","fieldGroup")` constraint on `unlocks` (did
+  **not** already exist despite §6.5's step 5 assuming it did — added it);
+  `listing_views` RLS enable; and the `unlock_field_group(uuid, "FieldGroup")`
+  SECURITY DEFINER RPC — atomic balance-check + charge, idempotent (a
+  second call for an already-unlocked group returns the existing unlock
+  instead of charging again; a `unique_violation` race on concurrent calls
+  is caught and treated the same way), free for active subscribers.
+  Verified: charges exactly once, ledger correct, idempotent on repeat and
+  on reload, balance floor enforced (`insufficient_credits`).
+- `0006_listing_view_count_trigger.sql` — `increment_listing_view_count()`
+  trigger on `listing_views` insert, atomic (avoids a read-then-write race
+  on concurrent views), same pattern as `handle_new_user`.
+
+### 8.3 New files
+
+- `lib/supabase/admin.ts` — service-role client, server-only. Needed
+  because **gated listing columns have no SELECT grant for
+  anon/authenticated at all**, by design (confirmed live) — so even
+  server-side code running as the visitor's own session can't read
+  `flatNumber`/`authorisedOfficerPhone`/etc. to compute the redaction.
+  `getListingBySlug` uses this; `resolveListingAccess`/`redactListing`
+  still do the actual gating in app code exactly as `lib/access/redact.ts`
+  already documented — the admin client just gets the full row to redact,
+  same category of exception as `unlock_field_group`.
+- `lib/data/listings.ts` — `searchListings`, `getBanksWithCounts`,
+  `getListingBySlug`, `getSimilarListings`, `getShortlistedListings`. Search
+  functions select an explicit public-only column allowlist (never the
+  gated ones) even though they use the ordinary client — defense in depth,
+  matches the existing allowlist philosophy in `redact.ts`.
+- `lib/data/views.ts` — `recordListingView`, IP-hash-based dedupe (30 min
+  window), admin client.
+- `lib/access/settings.ts` — `getPricingSettings()`, live from `settings`.
+- `lib/search-url.ts` — URL-param helpers so every filter/pagination link
+  in `/search` is a plain server-rendered `<Link>`, no client JS needed
+  except the sort dropdown and the grid/list toggle.
+- `lib/format.ts` — `formatINR`/`formatDateShort`/`formatDateLong`
+  (`en-IN` locale — real lakh/crore grouping).
+- `app/actions/shortlist.ts`, `app/actions/unlock.ts` — server actions.
+- `app/listing/[slug]/page.tsx` — new dynamic route. `app/listing/page.tsx`
+  now just `redirect("/search")`.
+
+### 8.4 Verification performed (all against the live 12 listings / 6 banks)
+
+- `tsc --noEmit` and `pnpm build` clean (only the 3 pre-existing unrelated
+  ref-type errors remain, untouched).
+- **Guest-source leak test**: raw HTML for a live listing, signed out —
+  zero occurrences of any gated field name or value.
+- **All four access states**, real accounts: guest (3 "Sign up to view"),
+  member-with-credits (unlock charges 1 credit, persists across reload, no
+  double charge), member-no-credits (balance forced to 0 → "Upgrade" CTAs),
+  subscriber (real `subscriptions` row → everything visible, zero charge).
+- **Search filters**: location, keyword, property type, possession, bank
+  (multi-select), price range, sort, pagination — each verified against
+  real counts (e.g. Pune → 2, industrial → 2, bank counts sum to 12).
+  Real browser test (Playwright) for the sort dropdown and price-range
+  form, not just curl.
+- **View-count dedupe**: 3 rapid requests → 1 row, +1 count; backdating
+  past the 30-min window → new row, +1 count again.
+- **Shortlist round-trip**: save on listing page → appears on profile →
+  remove from profile → gone, DB confirms 0 rows.
+- Old `/listing` → 307 to `/search`; bad slug → 404.
+
+### 8.5 Deliberately left alone
+
+The "Get email alerts for this search" banner on `/search` is still
+non-functional (same as the mockup) — wiring it to `alert_subscriptions`
+wasn't in §6.5's build order and would mean inventing the filter-to-JSON
+mapping; flagging it rather than guessing. The `alert_subscriptions.filters`
+column exists and `alerts-section.tsx` already shows the insert pattern, so
+it's a small follow-up whenever it's wanted. WhatsApp button number is
+unchanged (already an open question in §7). Alerts/Services tabs on
+`/profile` are still mock — only "Saved Properties" was in scope.

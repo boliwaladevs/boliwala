@@ -3,6 +3,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ProfileView } from "@/components/profile-view"
 import { createClient } from "@/lib/supabase/server"
+import { getShortlistedListings } from "@/lib/data/listings"
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -14,11 +15,10 @@ export default async function ProfilePage() {
     redirect("/login")
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("fullName, email, phone, creditsBalance, createdAt")
-    .eq("id", user.id)
-    .single()
+  const [{ data: profile }, shortlisted] = await Promise.all([
+    supabase.from("profiles").select("fullName, email, phone, creditsBalance, createdAt").eq("id", user.id).single(),
+    getShortlistedListings(user.id),
+  ])
 
   return (
     <main className="min-h-screen bg-background text-foreground flex flex-col">
@@ -32,6 +32,7 @@ export default async function ProfilePage() {
             creditsBalance: profile?.creditsBalance ?? 0,
             memberSince: profile?.createdAt ?? user.created_at,
           }}
+          shortlisted={shortlisted}
         />
       </div>
       <Footer />

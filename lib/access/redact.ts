@@ -46,7 +46,11 @@ export interface SafeListing {
   emdAmount: number;
   estimatedMarketValue: number | null;
   auctionDate: string;
+  auctionTime: string | null;
+  mode: string | null;
   emdDeadline: string;
+  bidIncreaseAmount: number | null;
+  totalOutstandingDues: number | null;
   noticeUrl: string | null;
   areaSqft: number | null;
   bedrooms: number | null;
@@ -90,7 +94,11 @@ export function redactListing(
     emdAmount: listing.emdAmount,
     estimatedMarketValue: listing.estimatedMarketValue,
     auctionDate: listing.auctionDate,
+    auctionTime: listing.auctionTime,
+    mode: listing.mode,
     emdDeadline: listing.emdDeadline,
+    bidIncreaseAmount: listing.bidIncreaseAmount,
+    totalOutstandingDues: listing.totalOutstandingDues,
     noticeUrl: listing.noticeUrl,
     areaSqft: listing.areaSqft,
     bedrooms: listing.bedrooms,

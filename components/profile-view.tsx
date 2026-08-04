@@ -1,11 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bookmark, Bell, Briefcase, User, LogOut, Search, MapPin, Scale, MessageCircle, FileText, CheckCircle2, CircleDashed } from "lucide-react"
+import { Bookmark, Bell, Briefcase, User, LogOut, MapPin, Scale, MessageCircle, FileText, CheckCircle2, CircleDashed } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { toggleShortlist } from "@/app/actions/shortlist"
+import { formatDateShort, formatINR } from "@/lib/format"
+import type { SearchListing } from "@/lib/data/listings"
 
 type Tab = "saved" | "alerts" | "services" | "info"
 
@@ -17,14 +20,28 @@ interface Profile {
   memberSince: string
 }
 
-export function ProfileView({ profile }: { profile: Profile }) {
+export function ProfileView({ profile, shortlisted }: { profile: Profile; shortlisted: SearchListing[] }) {
   const [activeTab, setActiveTab] = useState<Tab>("saved")
   const [fullName, setFullName] = useState(profile.fullName ?? "")
   const [phone, setPhone] = useState(profile.phone ?? "")
   const [savingDetails, setSavingDetails] = useState(false)
+  const [savedListings, setSavedListings] = useState(shortlisted)
+  const [, startShortlistTransition] = useTransition()
   const router = useRouter()
   const { toast } = useToast()
   const supabase = createClient()
+
+  const handleRemoveShortlist = (listingId: string) => {
+    const previous = savedListings
+    setSavedListings((prev) => prev.filter((l) => l.id !== listingId))
+    startShortlistTransition(async () => {
+      const result = await toggleShortlist(listingId)
+      if ("error" in result) {
+        setSavedListings(previous)
+        toast({ variant: "destructive", title: "Couldn't remove property" })
+      }
+    })
+  }
 
   const displayName = profile.fullName?.trim() || profile.email
   const firstName = displayName.split(" ")[0]
@@ -99,7 +116,7 @@ export function ProfileView({ profile }: { profile: Profile }) {
                 }`}
               >
                 <Bookmark className="w-4 h-4" />
-                Saved Properties (4)
+                Saved Properties ({savedListings.length})
               </button>
               
               <button 
@@ -163,83 +180,57 @@ export function ProfileView({ profile }: { profile: Profile }) {
                   </Link>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Mock Property Card 1 */}
-                  <div className="bg-background rounded-2xl border border-border overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
-                    <div className="relative h-48 bg-secondary/50">
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-xs font-bold px-3 py-1.5 rounded-lg text-slate-800 shadow-sm flex items-center gap-2">
-                        <span>SBI</span>
-                      </div>
-                      <div className="absolute top-3 right-3 bg-red-100 text-red-700 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
-                        07 Jul 2026
-                      </div>
-                      <div className="absolute bottom-3 right-3 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
-                        Physical Possession
-                      </div>
-                      <div className="w-full h-full flex items-center justify-center text-4xl">🏢</div>
-                    </div>
-                    <div className="p-5 flex-1 flex flex-col">
-                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Reserve Price</div>
-                      <div className="text-2xl font-bold text-blue-600 font-display mb-3">₹1,42,03,540</div>
-                      <div className="font-bold text-foreground text-sm line-clamp-1 mb-1">Flat No. 401, Vithai Apartment, Airoli</div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-1.5 mb-4">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">Sector-9, Airoli, Navi Mumbai</span>
-                      </div>
-                      <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                        <div className="text-sm text-muted-foreground">
-                          EMD: <strong className="text-foreground">₹14,20,354</strong>
-                        </div>
-                        <div className="flex gap-2">
-                          <Link href="/listing" className="bg-secondary hover:bg-secondary/80 text-foreground text-xs font-bold py-2 px-4 rounded-lg transition-colors">
-                            View
-                          </Link>
-                          <button className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 p-2 rounded-lg transition-colors" title="Remove">
-                            <Bookmark className="w-4 h-4 fill-current" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                {savedListings.length === 0 ? (
+                  <div className="bg-background rounded-2xl border border-border p-10 text-center text-muted-foreground">
+                    <Bookmark className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                    No saved properties yet. Browse auctions and tap Save to track them here.
                   </div>
-
-                  {/* Mock Property Card 2 */}
-                  <div className="bg-background rounded-2xl border border-border overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
-                    <div className="relative h-48 bg-secondary/50">
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-xs font-bold px-3 py-1.5 rounded-lg text-slate-800 shadow-sm flex items-center gap-2">
-                        <span>PNB</span>
-                      </div>
-                      <div className="absolute top-3 right-3 bg-red-100 text-red-700 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
-                        18 Jul 2026
-                      </div>
-                      <div className="absolute bottom-3 right-3 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
-                        Symbolic Possession
-                      </div>
-                      <div className="w-full h-full flex items-center justify-center text-4xl">🏠</div>
-                    </div>
-                    <div className="p-5 flex-1 flex flex-col">
-                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Reserve Price</div>
-                      <div className="text-2xl font-bold text-blue-600 font-display mb-3">₹1,78,00,000</div>
-                      <div className="font-bold text-foreground text-sm line-clamp-1 mb-1">3 BHK Apartment, Andheri West</div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-1.5 mb-4">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">Mumbai, Maharashtra</span>
-                      </div>
-                      <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                        <div className="text-sm text-muted-foreground">
-                          EMD: <strong className="text-foreground">₹17,80,000</strong>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {savedListings.map((listing) => (
+                      <div key={listing.id} className="bg-background rounded-2xl border border-border overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
+                        <div className="relative h-48 bg-secondary/50">
+                          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-xs font-bold px-3 py-1.5 rounded-lg text-slate-800 shadow-sm flex items-center gap-2">
+                            <span>{listing.bank.shortName}</span>
+                          </div>
+                          <div className="absolute top-3 right-3 bg-red-100 text-red-700 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                            {formatDateShort(listing.auctionDate)}
+                          </div>
+                          <div className="absolute bottom-3 right-3 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
+                            {listing.possessionType === "physical" ? "Physical Possession" : "Symbolic Possession"}
+                          </div>
+                          <div className="w-full h-full flex items-center justify-center text-4xl">🏢</div>
                         </div>
-                        <div className="flex gap-2">
-                          <Link href="/listing" className="bg-secondary hover:bg-secondary/80 text-foreground text-xs font-bold py-2 px-4 rounded-lg transition-colors">
-                            View
-                          </Link>
-                          <button className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 p-2 rounded-lg transition-colors" title="Remove">
-                            <Bookmark className="w-4 h-4 fill-current" />
-                          </button>
+                        <div className="p-5 flex-1 flex flex-col">
+                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Reserve Price</div>
+                          <div className="text-2xl font-bold text-blue-600 font-display mb-3">{formatINR(listing.reservePrice)}</div>
+                          <div className="font-bold text-foreground text-sm line-clamp-1 mb-1">{listing.title}</div>
+                          <div className="text-sm text-muted-foreground flex items-center gap-1.5 mb-4">
+                            <MapPin className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{listing.locality}, {listing.city}</span>
+                          </div>
+                          <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+                            <div className="text-sm text-muted-foreground">
+                              EMD: <strong className="text-foreground">{formatINR(listing.emdAmount)}</strong>
+                            </div>
+                            <div className="flex gap-2">
+                              <Link href={`/listing/${listing.slug}`} className="bg-secondary hover:bg-secondary/80 text-foreground text-xs font-bold py-2 px-4 rounded-lg transition-colors">
+                                View
+                              </Link>
+                              <button
+                                onClick={() => handleRemoveShortlist(listing.id)}
+                                className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 p-2 rounded-lg transition-colors"
+                                title="Remove"
+                              >
+                                <Bookmark className="w-4 h-4 fill-current" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
             )}
 

@@ -35,7 +35,11 @@ export interface Listing {
   emdAmount: number
   estimatedMarketValue: number | null
   auctionDate: string
+  auctionTime: string | null
+  mode: string | null
   emdDeadline: string
+  bidIncreaseAmount: number | null
+  totalOutstandingDues: number | null
   noticeUrl: string | null
   areaSqft: number | null
   bedrooms: number | null
