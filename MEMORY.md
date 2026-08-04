@@ -12,7 +12,8 @@ context window fills up, open a new session and point it at this file first.
 >    places**, see §4 below before trusting it)
 
 **Last updated:** 2026-08-04, after committing the client's real source
-(commit `c42670d`) and handing off for a fresh session.
+(commit `c42670d`), locking down `main` with branch protection, and handing
+off for a fresh session.
 
 ---
 
@@ -61,7 +62,8 @@ built fresh against these new components.
 | Reference assets | `project/refrence/` (6 screenshots + `Boliwala-Features-v2.docx`), plus 3 standalone static-export HTML files at `project/` root (`boliwala-admin-v3.html`, `channel-partner-dashboard.html`, `pricing.html`) — useful as pixel reference alongside the live `app/` routes |
 | Old sprint plan | `plans/boliwala-phase1-sprint-plan.md` — **stale, see §4** |
 | UI gap analysis | `plans/UI_replication.md` — **moot**, was comparing our old hand-built replica to the prototype; irrelevant now that the real source is in |
-| GitHub | `github.com/boliwaladevs/boliwala`, branch `main` |
+| Repo governance | `plans/version_control.md` — collaborator/branch-protection/Vercel-deploy explanation, see §6 below |
+| GitHub | `github.com/boliwaladevs/boliwala`, branch `main`, **public**, branch-protected (§6) |
 | Supabase project ref | `rimyttphaidvlytefvil` (ap-south-1) — infra exists, unwired (§1) |
 | Secrets | `project/.env.local` — gitignored via `.env*`, never commit |
 
@@ -172,6 +174,17 @@ codebase has no Prisma at all. Re-add if the next session reintroduces it.)*
 
 ## 6. Timeline (for context, most recent first)
 
+0. **2026-08-04 — repo governance locked down.** Collaborator `nesora-ops`
+   (GitHub Write access, not an admin) can no longer push directly to `main`
+   — branch protection now requires a PR + 1 approval to merge, and blocks
+   force pushes, for everyone except the `boliwaladevs` admin account
+   (`enforce_admins: false`, so the owner can still push directly). Repo
+   stays **public** deliberately — see `plans/version_control.md` §4 for why
+   going private would have been the wrong move here (it doesn't gate
+   content, only delays which push triggers the build, and actually causes
+   the exact GitHub/Vercel drift the user was trying to avoid). Public also
+   means `nesora-ops`'s branch pushes get free Vercel Preview deployments,
+   with production only moving when a PR is merged.
 1. **2026-08-04 — client source imported.** `boliwala-main/` (the exact code
    the client has deployed on `boliwala.netlify.app`) was merged into
    `project/`, `pnpm install && pnpm build` verified clean, committed
