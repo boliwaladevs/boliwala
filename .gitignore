@@ -18,6 +18,7 @@ yarn-error.log*
 
 # env files
 .env*
+boliwala_google_oauth_json_file_path.json
 
 # vercel
 .vercel

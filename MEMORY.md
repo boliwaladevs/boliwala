@@ -150,12 +150,27 @@ earlier session:
   `property-results.tsx` and `listing-view.tsx` were pure client mockups
   with zero data-fetching; both are now real, along with everything else in
   the URD's Sprint 2.1 scope (shortlist, unlock, view tracking).
-- **Sprint 2.5 — Google OAuth.** Still not started. No `GOOGLE_CLIENT_ID`/
-  `SECRET` in `.env.local`, Q4 from the old plan never answered. Button is
-  UI-present, disabled. Next up per the user's sequencing.
+- **Sprint 2.5 — Google OAuth. Prerequisites confirmed 2026-08-09, execution
+  starting now.** `.env.local` has `GOOGLE_OAUTH_CLIENT_ID`/
+  `GOOGLE_OAUTH_CLIENT_SECRET` (note: `OAUTH_` in the name, not
+  `GOOGLE_CLIENT_ID` as the old plan text assumed — cosmetic, the app never
+  reads these directly since Supabase's dashboard holds its own copy of the
+  same creds). Verified live, not just user-reported: Supabase's public
+  `/auth/v1/settings` endpoint returns `"google": true`; user-supplied GCP
+  screenshots show Publishing status **In production**, User type
+  **External**, and OAuth client `1041401822894-cs5...` matching the
+  `.env.local` client ID exactly. **Not independently verified:** the
+  client's Authorized redirect URI (should be
+  `https://rimyttphaidvlytefvil.supabase.co/auth/v1/callback`) and
+  Supabase's own URL Configuration (Site URL/Redirect URLs) — no screenshot
+  covered either; flagged to the user as the most likely failure point if
+  something breaks at actual login time. Q4 (required at launch vs.
+  fast-follow) still unanswered but doesn't block building. Button is still
+  UI-present/disabled, no `/auth/callback` route yet — both are this
+  sprint's actual work, starting now.
 
-**Sequencing confirmed with the user:** Sprint 2.1 (done) → Sprint 2.5 →
-Sprint 3 onward.
+**Sequencing confirmed with the user:** Sprint 2.1 (done) → Sprint 2.5
+(starting) → Sprint 3 onward.
 
 ---
 
@@ -900,3 +915,73 @@ the **PowerShell tool**, not Bash, to actually kill them —
 { $_.CommandLine -match 'next|pnpm.*dev' } | Stop-Process -Force`. Cost
 some time mid-session chasing a phantom 404/500 on the new `/contact`
 route that turned out to be three stale dev servers, not a real bug.
+
+---
+
+## 13. Sprint 2.5 — Google OAuth, completion record (2026-08-09)
+
+**Executed and verified live this session. Not yet committed** — same
+"user reviews locally first" convention as every prior sprint.
+
+### 13.1 Prerequisite verification, before writing any code
+
+Checked independently rather than taking the user's word for it:
+`.env.local` has real `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`
+(note the `OAUTH_` in the name — cosmetic, the app never reads these
+directly, Supabase's dashboard holds its own copy); Supabase's public
+`/auth/v1/settings` endpoint returned `"google": true`; user-supplied GCP
+screenshots showed Publishing status **In production**, User type
+**External**, client ID matching `.env.local` exactly. User then confirmed
+the GCP Authorized redirect URI is exactly
+`https://rimyttphaidvlytefvil.supabase.co/auth/v1/callback`, and answered
+the long-open Q4: **Google OAuth is required at launch**, not a
+fast-follow.
+
+### 13.2 What was built
+
+- `components/auth-view.tsx` — `handleGoogleLogin()` calls
+  `supabase.auth.signInWithOAuth({ provider: 'google', options: {
+  redirectTo: '${origin}/auth/callback' } })`; the button is no longer
+  disabled.
+- `app/auth/callback/route.ts` (new) — exchanges the OAuth `code` for a
+  session via `exchangeCodeForSession`, redirects to `/profile` on
+  success, `/login` on failure.
+- No changes needed to `handle_new_user` (migration `0004`) — it's an
+  `AFTER INSERT ON auth.users` trigger, provider-agnostic, already fires
+  correctly for OAuth signups with zero modification. Confirmed this
+  structurally guarantees no double-grant on repeat logins (a second
+  Google login updates the existing `auth.users` row rather than
+  inserting a new one, so the trigger can't fire twice) — not just
+  empirically observed once.
+
+### 13.3 Verification performed
+
+- `tsc --noEmit` / `pnpm build` clean (same 3 pre-existing unrelated
+  ref-type errors as every prior session, untouched).
+- Real browser test via the dev server: clicking "Google" correctly
+  redirected to Google's real sign-in screen scoped to "continue to
+  rimyttphaidvlytefvil.supabase.co" — confirms client ID/secret/redirect
+  URI/provider-enablement all correctly linked, before any manual login
+  was attempted.
+- **Real Google sign-in, done by the user** (`ops@nesora.co.in`, "Hriday
+  Kampani") — verified directly against the live DB afterward: one
+  `auth.users` row with `provider: google`, one `profiles` row
+  (`creditsBalance: 5`, `fullName` populated from Google's profile data),
+  **exactly one** `credit_transactions` row (`reason: signup_grant`,
+  `delta: +5`, `balanceAfter: 5`) — no duplicate grant.
+- Added `.claude/launch.json` (`pnpm -C project dev`, port 3000) this
+  session so the dev server can be previewed via the browser tool going
+  forward — didn't exist before.
+
+### 13.4 Test account — resolved
+
+`ops@nesora.co.in` ("Hriday Kampani") is the user's own real account, not
+a throwaway — user confirmed 2026-08-09, explicitly keep it, do not
+delete. Different from every prior sprint's test-user hygiene rule (which
+applies to accounts created purely to exercise a flow then discarded);
+this one stays in the live DB.
+
+**Sprint 2.5 status: done, verified, committed.** Next up per §4's
+original sequencing: Sprint 3.5 (Razorpay) or Sprint 4.5 (Resend + C5
+sign-off) — both still blocked on the user, per §9.3/§11.4. Nothing left
+unblocked to build until one of those lands.
