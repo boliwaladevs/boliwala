@@ -12,8 +12,10 @@ context window fills up, open a new session and point it at this file first.
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
 **Last updated:** 2026-08-09. Sprints 2.1 (`5f6f771`), 2.7 (`2ee35a1`),
-3 (`74ba69a`), 4 (`54714f8`) and 2.5 (`c48559d`) are committed and pushed.
-**Sprint 5 (QA/SEO/performance) is done but NOT yet committed — see §15.**
+3 (`74ba69a`), 4 (`54714f8`), 2.5 (`c48559d`) and 5 (`0b88cb6`, docs in
+`d6d952d`) are all committed and pushed — §15 said "not yet committed"
+when written but was pushed shortly after from a second machine working
+in parallel; corrected here after pulling, see §17.
 
 **If you're picking this up fresh, read §14 and §15 first** — §14 is the
 Sprint 5/5.5 split plus this machine's environment quirks (no `project/`
@@ -1486,3 +1488,24 @@ is being self-hosted to license. Left unfixed deliberately: the right fix
 depends on the licence answer (buy and genuinely self-host, or switch to
 the Plus Jakarta Sans fallback the prototype also used). Added to
 `blockers.md`.
+
+---
+
+## 17. Pulled Sprint 5 + docs onto this machine (2026-08-09)
+
+This session (the `C:\Users\hrida\...` machine, §2) built and pushed
+Sprint 2.5 (§13) independently, then pulled `origin/main` and found two
+commits it hadn't made: `0b88cb6` (Sprint 5) and `d6d952d` (§16's three
+docs), both co-authored `Claude Opus 5`, from the second machine described
+in §14.1 (`C:\Users\AARYAN KALE\...`). Confirms a second person/session
+has direct push access to `main` and is working in parallel, not just a
+one-off environment note. Fast-forward pull, no conflicts (`c48559d` →
+`d6d952d`) — the two sessions touched disjoint files. Nothing rebuilt or
+re-verified here; §15/§16 stand as written by the session that did the
+work. Only correction made: the top summary's stale "not yet committed"
+claim, fixed above once `git log` confirmed both commits were on
+`origin/main`.
+
+**Practical implication for whoever reads this next:** `git fetch`/`git
+log HEAD..origin/main` before assuming this file reflects the remote —
+main is no longer only touched by one machine at a time.
