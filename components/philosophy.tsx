@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Image from "next/image"
 import { HighlightedText } from "./highlighted-text"
 
 const philosophyItems = [
@@ -76,10 +77,13 @@ export function Philosophy() {
             </h2>
 
             <div className="relative hidden lg:block mt-8">
-              <img
-                src="/images/exterior.png"
+              <Image
+                src="/images/exterior.webp"
                 alt="Architectural sketch of home office workspace"
-                className="opacity-90 relative z-10 w-full max-w-md"
+                width={1696}
+                height={1928}
+                sizes="(min-width: 1024px) 28rem, 0px"
+                className="opacity-90 relative z-10 w-full max-w-md h-auto"
               />
             </div>
           </div>

@@ -101,7 +101,7 @@ export function Projects() {
               onMouseLeave={() => setHoveredId(null)}
             >
               {/* Left Section: Image Area */}
-              <div ref={(el) => (imageRefs.current[index] = el)} className="relative md:w-2/5 aspect-[4/3] md:aspect-auto overflow-hidden">
+              <div ref={(el) => { imageRefs.current[index] = el }} className="relative md:w-2/5 aspect-[4/3] md:aspect-auto overflow-hidden">
                 <img
                   src={project.image || "/placeholder.svg"}
                   alt={project.title}

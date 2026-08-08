@@ -1,11 +1,12 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import Image from "next/image"
 import { ArrowDown } from "lucide-react"
 
 export function Hero() {
   const contentRef = useRef<HTMLDivElement>(null)
-  const heroRef = useRef<HTMLElement>(null)
+  const heroRef = useRef<HTMLDivElement>(null)
   const backgroundRef = useRef<HTMLDivElement>(null)
   const foregroundRef = useRef<HTMLDivElement>(null)
 
@@ -55,10 +56,13 @@ export function Hero() {
           className="absolute inset-0 z-0 will-change-transform"
           style={{ transform: "translateY(0px)" }}
         >
-          <img
-            src="/images/hously-background.png"
-            alt="Sky Background"
-            className="w-full h-full object-cover object-center opacity-80"
+          <Image
+            src="/images/hously-background.webp"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center opacity-80"
           />
         </div>
 
@@ -114,9 +118,16 @@ export function Hero() {
           className="absolute inset-x-0 bottom-0 z-20 pointer-events-none will-change-transform flex items-end justify-center overflow-visible"
           style={{ transform: "translateY(100%)" }}
         >
-          <img
-            src="/images/hously-foreground.png"
-            alt="Building Foreground"
+          <Image
+            src="/images/hously-foreground.webp"
+            alt=""
+            width={2750}
+            height={1536}
+            // Not `priority`: at scroll 0 this layer is translated fully below
+            // the fold and only slides up as you scroll, so preloading it would
+            // compete with the background, which is the actual LCP element.
+            loading="lazy"
+            sizes="100vw"
             className="w-full h-auto object-contain object-bottom min-w-full"
           />
         </div>

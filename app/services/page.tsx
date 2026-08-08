@@ -2,6 +2,14 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ServicesView } from "@/components/services-view"
 import { getPricingSettings } from "@/lib/access/settings"
+import { pageMetadata } from "@/lib/seo"
+
+export const metadata = pageMetadata({
+  title: "Services",
+  description:
+    "Title search, bid management, possession support, and loan assistance for SARFAESI bank auctions — with a dedicated relationship manager.",
+  path: "/services",
+})
 
 export default async function ServicesPage() {
   const settings = await getPricingSettings()

@@ -7,6 +7,16 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Check, X } from "lucide-react"
 import { getPricingSettings } from "@/lib/access/settings"
 import { formatINR } from "@/lib/format"
+import { pageMetadata } from "@/lib/seo"
+
+// Deliberately no rupee figures here — prices are admin-editable at runtime and
+// a hardcoded number in a meta description would silently go stale.
+export const metadata = pageMetadata({
+  title: "Pricing",
+  description:
+    "Browse every bank auction listing free, forever. Compare the free tier, annual membership, and our full-service package with success-fee-only pricing.",
+  path: "/pricing",
+})
 
 export default async function PricingPage() {
   const settings = await getPricingSettings()

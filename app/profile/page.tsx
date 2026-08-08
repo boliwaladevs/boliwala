@@ -4,6 +4,14 @@ import { Footer } from "@/components/footer"
 import { ProfileView } from "@/components/profile-view"
 import { createClient } from "@/lib/supabase/server"
 import { getShortlistedListings } from "@/lib/data/listings"
+import { pageMetadata } from "@/lib/seo"
+
+export const metadata = pageMetadata({
+  title: "My Account",
+  description: "Your shortlists, alerts, services, and account details.",
+  path: "/profile",
+  noIndex: true,
+})
 
 export default async function ProfilePage() {
   const supabase = await createClient()

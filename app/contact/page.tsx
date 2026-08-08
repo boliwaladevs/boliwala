@@ -2,6 +2,14 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ContactForm } from "@/components/contact-form"
 import { createClient } from "@/lib/supabase/server"
+import { pageMetadata } from "@/lib/seo"
+
+export const metadata = pageMetadata({
+  title: "Contact Us",
+  description:
+    "Request a free consultation about any bank auction property. Tell us what you are looking for and our team will call you back.",
+  path: "/contact",
+})
 
 export default async function ContactPage({
   searchParams,

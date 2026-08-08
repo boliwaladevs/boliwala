@@ -1,5 +1,8 @@
 import "server-only"
 
+import { cache } from "react"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { Bank, Listing, PossessionType, PropertyType } from "@/lib/data/types"
@@ -205,7 +208,7 @@ const FULL_LISTING_COLUMNS = `
  * session can't read them. Reading the full row to compute the redaction is
  * a legitimate system operation, same category as the unlock RPC.
  */
-export async function getListingBySlug(slug: string): Promise<Listing | null> {
+export const getListingBySlug = cache(async (slug: string): Promise<Listing | null> => {
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("listings")
@@ -219,7 +222,7 @@ export async function getListingBySlug(slug: string): Promise<Listing | null> {
 
   const row = data as unknown as Omit<Listing, "images"> & { images: { url: string }[] }
   return { ...row, images: row.images.map((i) => i.url) }
-}
+})
 
 /** A signed-in user's shortlisted listings, most recently saved first. */
 export async function getShortlistedListings(userId: string): Promise<SearchListing[]> {
@@ -232,6 +235,30 @@ export async function getShortlistedListings(userId: string): Promise<SearchList
 
   if (error) throw error
   return ((data ?? []) as unknown as { listing: SearchListing }[]).map((r) => r.listing).filter(Boolean)
+}
+
+/**
+ * Slugs of every live listing, for the sitemap.
+ *
+ * Uses a cookie-less anon client rather than the shared `createClient()`: a
+ * sitemap is an anonymous document, and reading `cookies()` would make the
+ * route dynamic for no benefit. Public columns only.
+ */
+export async function getSitemapListings(): Promise<{ slug: string; updatedAt: string }[]> {
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false } },
+  )
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select('slug, "updatedAt"')
+    .eq("status", "live")
+    .order("updatedAt", { ascending: false })
+
+  if (error) throw error
+  return (data ?? []) as { slug: string; updatedAt: string }[]
 }
 
 /** A few other live listings in the same city, for the "Similar Auctions" section. */

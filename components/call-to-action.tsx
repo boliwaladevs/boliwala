@@ -5,7 +5,7 @@ import { ArrowUpRight } from "lucide-react"
 
 export function CallToAction() {
   const [isVisible, setIsVisible] = useState(false)
-  const sectionRef = useRef<HTMLElement>(null)
+  const sectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const observer = new IntersectionObserver(

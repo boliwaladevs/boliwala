@@ -4,6 +4,16 @@ import { SearchSection } from "@/components/search-section"
 import { PropertyResults } from "@/components/property-results"
 import { createClient } from "@/lib/supabase/server"
 import type { SearchParamsInput } from "@/lib/data/listings"
+import { pageMetadata } from "@/lib/seo"
+
+// The canonical points at the bare /search so the thousands of filter-param
+// permutations all consolidate to one indexable URL instead of competing.
+export const metadata = pageMetadata({
+  title: "Search Bank Auction Properties",
+  description:
+    "Search live SARFAESI bank auction properties across India. Filter by city, price, bank, property type, and possession status.",
+  path: "/search",
+})
 
 export default async function SearchPage({
   searchParams,
