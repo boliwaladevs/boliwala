@@ -1,5 +1,170 @@
 # Version control & deployment permissions — collaborator on `main`
 
+**Start here if you just want to do something** (push, sync a branch,
+approve, merge). Everything below the Quick Reference is the investigation
+log this doc grew out of — background and rationale, not a place to look
+things up under time pressure.
+
+---
+
+# Quick Reference
+
+## The rules of this repo, as currently configured
+
+Live-checked against `github.com/boliwaladevs/boliwala`, re-verified
+2026-08-08 (`gh api repos/boliwaladevs/boliwala/branches/main/protection`,
+`gh api repos/boliwaladevs/boliwala/collaborators`).
+
+- **`main` is protected:** requires a PR with **1 approving review** before
+  merging; force-pushes and branch deletion are blocked for everyone.
+  Everything else (status checks, signed commits, linear history,
+  conversation resolution) is off.
+- **Admins bypass the PR requirement** (`enforce_admins: false`) — an admin
+  can `git push` straight to `main`. Non-admins cannot; a direct push is
+  rejected with `GH006: Protected branch update failed`.
+- **Collaborators today:** `boliwaladevs` (admin, bypasses the rule),
+  `nesora-ops` (write, non-admin, must go through a PR).
+- **A PR author can never approve their own PR** — GitHub blocks this
+  regardless of which local `gh` account runs the command. With only one
+  admin, every non-admin PR needs `boliwaladevs` specifically to approve it.
+- **House defaults, decided in conversation, not GitHub settings — follow
+  these even though GitHub wouldn't stop you doing otherwise:**
+  - Syncing a stale feature branch with an advanced `main` → **merge**
+    `origin/main` into the feature branch (not rebase). Reasoning: no
+    history rewrite, so no force-push needed — safe even if someone else
+    might have pushed to that branch too.
+  - Merging an approved PR into `main` → **`--rebase`**. Reasoning: linear
+    history on `main`, no merge commits, individual commits preserved
+    (unlike squash).
+
+## "Push to main" — admin only (`boliwaladevs`)
+
+Admins can push directly; the protection rule doesn't apply to them. Still
+worth pulling first so you're not pushing on top of something you haven't
+seen:
+
+```bash
+gh auth switch --user boliwaladevs
+git checkout main
+git pull origin main
+# ... make your changes, then:
+git add <files>
+git commit -m "..."
+git push origin main
+```
+
+If you're a non-admin and try this, it will fail — see the PR flow below
+instead.
+
+## "Push to my feature branch" — anyone, including non-admins
+
+Works the same for everyone; feature branches carry none of `main`'s
+restrictions (force-push, rebase, delete freely on your own branch).
+
+```bash
+git checkout -b <branch-name>
+git push -u origin <branch-name>
+```
+
+If committing under a specific identity (e.g. `nesora-ops`, distinct from
+your machine's global git identity), set it locally first — `--local`
+scopes this to the current repo only, and set the matching `gh` account
+too, since `gh` is the credential helper that actually authenticates the
+push:
+
+```bash
+git config --local user.name "nesora-ops"
+git config --local user.email "ops@nesora.co.in"
+gh auth switch --user nesora-ops
+```
+
+## Landing a feature branch on `main` when you're not an admin
+
+Non-admins can't push to `main` directly — open a PR instead:
+
+```bash
+gh pr create --base main --title "..." --body "..."
+```
+
+Then it needs `boliwaladevs`'s approval before it can merge (§ rules
+above). Once approved, whoever has write access can merge it — default to
+`--rebase` per the house default:
+
+```bash
+gh pr merge <pr-number> --repo boliwaladevs/boliwala --rebase
+```
+
+(`--merge` keeps a merge commit; `--squash` flattens all commits into one.
+Both work, `--rebase` is just the default going forward — swap in whichever
+fits if a specific PR calls for it.)
+
+## Approving a PR (must be `boliwaladevs`, and must not be the PR's author)
+
+```bash
+gh auth switch --user boliwaladevs
+gh pr review <pr-number> --repo boliwaladevs/boliwala --approve
+```
+
+Switch back to whichever account should do the merge afterward, e.g.:
+
+```bash
+gh auth switch --user nesora-ops
+```
+
+No bulk-approve exists in the GitHub UI — each PR needs its own
+**Files changed → Review changes → Approve**, or the `gh pr review`
+equivalent. Scriptable if several are open:
+
+```bash
+gh pr list --repo boliwaladevs/boliwala --json number --jq '.[].number' \
+  | xargs -I{} gh pr review {} --approve --repo boliwaladevs/boliwala
+```
+
+## Syncing a stale feature branch with `main` — merge (house default)
+
+```bash
+git checkout <branch-name>
+git fetch origin
+git merge origin/main
+git push
+```
+
+(Rebase is the alternative — `git rebase origin/main` then
+`git push --force-with-lease` — but merge is the default here; only reach
+for rebase deliberately, not as the default sync method.)
+
+## Switching back to `main` locally
+
+```bash
+git checkout main
+git pull origin main
+```
+
+A non-admin **can** `git commit` on `main` locally — that's purely local
+and branch protection can't see it. What's blocked is `git push origin
+main`. A local commit on `main` just has to move onto a branch and become a
+PR like anything else — there's no shortcut around the push restriction.
+
+## The recurring `gh` account-drift gotcha
+
+`gh`'s active account silently reverts to whichever one was last used
+system-wide (has drifted back to `hkforprojects` more than once this
+project). **Always check before a push or a PR action that matters:**
+
+```bash
+gh auth status
+```
+
+and switch explicitly if it's not the account you meant:
+
+```bash
+gh auth switch --user <boliwaladevs|nesora-ops>
+```
+
+---
+
+# Investigation log (background and rationale)
+
 **Question asked:** you added a collaborator on GitHub. Can they push to
 `main`? Given Vercel is on the Hobby plan, can they push to production?
 
@@ -183,6 +348,190 @@ $ gh api repos/boliwaladevs/boliwala/branches/main/protection --jq \
 your approval to merge); direct force-pushes to `main` are also now blocked
 for everyone, including `boliwaladevs`. Regular direct pushes from the admin
 account are still allowed (`enforce_admins: false`).
+
+---
+
+## 5. Where to see the branch protection rule in the GitHub UI
+
+`github.com/boliwaladevs/boliwala` → **Settings** → **Code and automation** →
+**Branches** → the rule listed under "Branch protection rules" for `main` →
+**Edit**. Requires being signed in as an admin of the repo (`boliwaladevs`,
+or another admin) — the Settings tab doesn't appear otherwise.
+
+**Re-checked 2026-08-08** (`gh api repos/boliwaladevs/boliwala/branches/main/protection`
+and `gh api repos/boliwaladevs/boliwala/rulesets`) — still a classic branch
+protection rule, no repo rulesets in use. Current state:
+
+| Setting | State |
+|---|---|
+| Require a pull request before merging | ✅ on, 1 approving review |
+| Dismiss stale approvals | ❌ off |
+| Require code owner review | ❌ off |
+| Require status checks | ❌ off |
+| Require signed commits | ❌ off |
+| Require linear history | ❌ off |
+| Require conversation resolution | ❌ off |
+| Allow force pushes | ❌ blocked |
+| Allow deletions | ❌ blocked |
+| Do not allow bypassing (include administrators) | ❌ off |
+
+Since "include administrators" is off, `boliwaladevs` (admin) still bypasses
+the PR requirement and can push straight to `main` — this is why the
+Sprint 3 and Sprint 4 work landed on `main` via direct push, not a PR. The
+rule as configured mainly stops force-push/deletion on `main` and makes the
+PR+review path the only option for non-admin collaborators.
+
+Collaborators, confirmed live the same day:
+
+```
+$ gh api repos/boliwaladevs/boliwala/collaborators --jq \
+  '.[] | "\(.login)\t\(.role_name)\tadmin=\(.permissions.admin)\tpush=\(.permissions.push)"'
+nesora-ops    write    admin=false    push=true
+boliwaladevs  admin    admin=true     push=true
+```
+
+So `nesora-ops` is currently the only non-admin collaborator, and the only
+one actually held to the PR/approval requirement.
+
+---
+
+## 6. Collaborator PR workflow — `nesora-ops` end to end
+
+`nesora-ops` has push access to the repo itself (no fork needed), but not to
+`main` directly — a direct push is rejected server-side:
+
+```
+remote: error: GH006: Protected branch update failed for refs/heads/main.
+remote: error: Changes must be made through a pull request.
+```
+
+Working flow: branch → push → PR → **`boliwaladevs` approves** (the only
+account that can, since a PR author can't approve their own PR, and
+approvals require write access or higher) → `nesora-ops` merges once
+approved.
+
+```bash
+git checkout -b <branch-name>
+git push -u origin <branch-name>
+gh pr create --base main --title "..." --body "..."
+# after boliwaladevs approves in the GitHub UI:
+gh pr merge --squash
+```
+
+Feature branches themselves are unprotected — force-push, rebase, delete
+freely on those. Only `main` is covered by the rule.
+
+`gh` uses whichever account is currently active as the git credential
+helper for github.com — the push and the PR are attributed to whoever `gh
+auth switch` last selected, not to whatever `git config user.email` says.
+Both need to be set correctly before pushing as a specific person:
+
+```bash
+git config --local user.name "nesora-ops"
+git config --local user.email "ops@nesora.co.in"
+gh auth switch --user nesora-ops
+```
+
+`--local` (not `--global`) scopes the identity change to this repo only.
+
+**Worked example, done 2026-08-08:** copied the previously-untracked
+`plans/` folder into the repo (see gotcha in §1 of `MEMORY.md` about
+`plans/` originally living outside the repo — this reverses that), committed
+and pushed as `nesora-ops` to branch `feat_hriday`, opened a PR into `main`,
+approved as `boliwaladevs` in the browser to see the flow work end to end.
+
+---
+
+## 7. Syncing a stale feature branch with an advanced `main`
+
+If `main` has moved on since a feature branch was cut, two ways to bring the
+branch up to date — **merge is the one we're using** (rebase is the
+alternative, noted below for reference, not the house preference):
+
+**Merge `main` into the feature branch (preferred):**
+
+```bash
+git checkout feat_hriday
+git fetch origin
+git merge origin/main
+git push
+```
+
+No history rewrite, so no force-push needed — safe on a branch that's
+already been pushed and might be shared. Adds a merge commit.
+
+**Rebase instead (alternative, not preferred here):** rewrites the branch's
+commits onto the tip of `main` (`git rebase origin/main`), giving linear
+history but requiring `git push --force-with-lease` afterward since the
+branch's history changed. `--force-with-lease` (never plain `--force`)
+refuses the push if someone else has pushed to the same branch in the
+meantime, so it won't silently clobber a collaborator's work.
+
+---
+
+## 8. Switching back to `main`, and can a collaborator commit to it locally?
+
+```bash
+git checkout main
+git pull origin main   # picks up anything merged since, e.g. after a PR lands
+```
+
+**Can `nesora-ops` `git commit` to `main` locally?** Yes — `git commit` is
+purely local; branch protection is a GitHub server-side rule on `git push`,
+it has no visibility into local commits. They can check out `main` and
+commit on it all they like on their own machine.
+
+What's blocked is `git push origin main` — same `GH006` rejection as
+before, since only `boliwaladevs` (admin) bypasses the rule. In practice a
+local commit on `main` just sits there unpushed until it's moved onto a
+branch and opened as a PR — same flow as §6.
+
+---
+
+## 9. Approving and merging a PR via `gh` (as opposed to the browser)
+
+Same PR as §6's worked example — `feat_hriday` → `main`, opened by
+`nesora-ops`. GitHub blocks a PR author from approving their own PR, no
+matter which local account runs the command, so the approval has to come
+from `boliwaladevs` and the merge from whoever has write access once that
+approval exists (`nesora-ops` qualifies).
+
+```bash
+# 1. Approve as boliwaladevs (must not be the PR author)
+gh auth switch --user boliwaladevs
+gh pr review 1 --repo boliwaladevs/boliwala --approve
+
+# 2. Switch back
+gh auth switch --user nesora-ops
+
+# 3. "Push to main" happens via merging the PR, not a direct git push —
+#    a bare `git push origin main` is still blocked even after approval.
+gh pr merge 1 --repo boliwaladevs/boliwala --squash
+```
+
+`--squash` can be swapped for `--merge` (keeps the commit as-is, adds a merge
+commit) or `--rebase` (linear history, no merge commit) — all three are
+enabled on this repo (`allow_squash`/`allow_merge`/`allow_rebase`, checked
+§1). `gh pr merge` succeeds here specifically because the review requirement
+is now satisfied; before approval it would fail the same way a direct push
+does.
+
+**Bulk-approving multiple open PRs at once:** no such button in the GitHub
+UI — each PR needs its own **Files changed → Review changes → Approve** (or
+the `gh pr review <n> --approve` equivalent). Scriptable if several are open
+at once:
+
+```bash
+gh pr list --repo boliwaladevs/boliwala --json number --jq '.[].number' \
+  | xargs -I{} gh pr review {} --approve --repo boliwaladevs/boliwala
+```
+
+**Removing the approval requirement entirely** (not done — just the option,
+if the one-approver bottleneck becomes a problem) is a branch-protection
+change, not a per-PR action: drop `required_approving_review_count` to `0`
+in Settings → Branches → the rule for `main`. Keeps the PR-before-merge
+structure and the force-push/deletion protection, just removes the mandatory
+sign-off — the same tradeoff noted in §5.
 
 ---
 

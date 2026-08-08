@@ -186,8 +186,8 @@ Sprint 3 onward.
 6. **Supabase MCP server — added and authenticated** (user confirmed
    2026-08-04, done in a separate regular terminal via `claude /mcp` while
    this session kept working). Config lives at `boliwala/.mcp.json` (project
-   scope, sibling to `project/` — **not inside the git repo**, same as
-   `plans/`), confirmed on disk:
+   scope, sibling to `project/` — **not inside the git repo**), confirmed on
+   disk:
    `{"mcpServers":{"supabase":{"type":"http","url":"https://mcp.supabase.com/mcp?project_ref=rimyttphaidvlytefvil&features=..."}}}`.
    **Caveat for whoever reads this next:** MCP servers connect at session
    start — *this* session was already running before authentication
@@ -199,6 +199,17 @@ Sprint 3 onward.
 7. **Test-user hygiene:** all throwaway accounts created while verifying the
    signup trigger this session were deleted via the Admin API afterward — no
    test data left in the live DB. If you create more, same rule.
+8. **`plans/` moved inside the repo, 2026-08-08.** Previously a sibling of
+   `project/`, outside git (see the now-corrected note above). Copied into
+   `project/plans/` and merged to `main` via PR #1 (`feat_hriday`, opened as
+   `nesora-ops`, approved by `boliwaladevs`, merged with `--rebase`) — the
+   first PR this repo has ever had, used deliberately to exercise the branch
+   protection flow end to end. **`plans/version_control.md` is now the
+   canonical reference for how to work with this repo's rules** — admin vs.
+   non-admin push, PR/approve/merge commands, the house defaults (merge to
+   sync a stale branch, rebase to land a PR), and the recurring `gh`
+   account-drift gotcha (same underlying issue as #1 above, generalized).
+   Read that file directly rather than duplicating its commands here.
 
 ---
 
