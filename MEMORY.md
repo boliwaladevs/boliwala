@@ -11,17 +11,34 @@ context window fills up, open a new session and point it at this file first.
 > 4. `plans/boliwala-phase1-sprint-plan.md` (master plan — **includes Sprint
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
-**Last updated:** 2026-08-05. Sprint 2.1 (`5f6f771`), Sprint 2.7 (`2ee35a1`),
-Sprint 3 (`74ba69a`), and **Sprint 4 are all committed and pushed — see §11
-for what Sprint 4 actually built**. **Next session picks up three blocked
-items together: Sprint 2.5 (Google OAuth), Sprint 3.5 (Razorpay), and
-Sprint 4.5 (Resend email + the C5 headline-stats sign-off) — all still
-blocked on the user supplying something** (credentials for the first two,
-content sign-off for the third). Check `.env.local` and with the user
-before assuming any of the three are unblocked — there's no code to write
-until then. If you're picking this up fresh: read §11 first (Sprint 4
-completion record), then §10 (Sprint 3), §9 for the original
-Sprint 3/3.5 split and why, §8 for Sprint 2.1 + 2.7.
+**Last updated:** 2026-08-09. Sprints 2.1 (`5f6f771`), 2.7 (`2ee35a1`),
+3 (`74ba69a`), 4 (`54714f8`) and 2.5 (`c48559d`) are committed and pushed.
+**Sprint 5 (QA/SEO/performance) is done but NOT yet committed — see §15.**
+
+**If you're picking this up fresh, read §14 and §15 first** — §14 is the
+Sprint 5/5.5 split plus this machine's environment quirks (no `project/`
+subdirectory, pnpm PATH, disk pressure), §15 is what Sprint 5 built and
+the four things it found but deliberately did not fix. Then §11/§12
+(Sprint 4), §10 (Sprint 3), §9 (the 3/3.5 split), §8 (2.1 + 2.7),
+§13 (2.5).
+
+**There is nothing unblocked left to build.** Everything remaining waits
+on the client, verified empirically against `.env.local` on 2026-08-09,
+not assumed:
+
+| Blocked work | Waiting on |
+|---|---|
+| Sprint 3.5 — Razorpay integration | `RAZORPAY_KEY_ID` / `_KEY_SECRET` / `_WEBHOOK_SECRET`, all empty |
+| Sprint 4.5 — Resend transactional email | `RESEND_API_KEY` / `RESEND_FROM_EMAIL`, both empty, plus DNS |
+| Privacy Policy + Terms pages | Client copy (footer links are still `href="#"`) |
+| C5 headline statistics | Client sign-off on real numbers |
+| Real contact number / WhatsApp link | `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CONTACT_PHONE`, both empty |
+| Production domain cutover | Client; `NEXT_PUBLIC_SITE_URL` is still `http://localhost:3000` |
+| Real brand assets (logo, favicon, OG) | Client; placeholders generated in §15.5 |
+
+Re-check `.env.local` before assuming any of these cleared. **The 20 Aug
+M3 "production launch" milestone is not reachable** while payments and
+email do not exist and Privacy/Terms have no copy — see §14.5.
 
 ---
 
@@ -985,3 +1002,487 @@ this one stays in the live DB.
 original sequencing: Sprint 3.5 (Razorpay) or Sprint 4.5 (Resend + C5
 sign-off) — both still blocked on the user, per §9.3/§11.4. Nothing left
 unblocked to build until one of those lands.
+
+---
+
+## 14. Sprint 5 — split into 5 (executable) and 5.5 (blocked), 2026-08-09
+
+Same exercise as §9 (Sprint 3) and §11 (Sprint 4), one sprint later.
+Original Sprint 5 scope, from `plans/boliwala-phase1-sprint-plan.md`
+line 238: cross-device/browser QA, responsive audit, PWA manifest +
+service worker, SEO (per-listing metadata, OG images, `sitemap.xml`,
+`robots.txt`, JSON-LD, canonicals), re-run the four-state gating matrix +
+guest-source leak test, Lighthouse/Core Web Vitals/image optimisation,
+Razorpay live-key switchover, production deploy, client walkthrough +
+handover docs.
+
+### 14.1 Environment state, verified this session before scoping
+
+This is a **fresh clone on a different machine** than every prior sprint
+(`C:\Users\AARYAN KALE\OneDrive\Documents\Aaryan\Programs\boliwala`, not
+the `C:\Users\hrida\...` path in §2), and the layout differs from what §2
+describes: **there is no `project/` subdirectory — the app is at the repo
+root.** `app/`, `components/`, `lib/`, `supabase/` are all top-level.
+Any command in earlier sections written as `pnpm -C project ...` (e.g.
+§13.3's `.claude/launch.json` note) needs the `-C project` dropped here.
+`.claude/` does not exist in this clone at all.
+
+Setup done this session to make the repo runnable:
+
+- **`env (1).download` → renamed to `.env.local`.** The user had
+  downloaded the env file into the repo root under that name. It was
+  **untracked and NOT gitignored** — `.gitignore`'s `.env*` pattern does
+  not match a filename starting with `env`, so a `git add -A` would have
+  committed `SUPABASE_SERVICE_ROLE_KEY` and both DB connection strings
+  (passwords inline) to a **public** repo. Renaming fixed both problems at
+  once: the app can now read it, and `.env*` now matches it (verified with
+  `git check-ignore -v .env.local`).
+- **pnpm was not installed** (only npm/node v22.12.0). `corepack prepare`
+  fails with `EPERM` on this machine — it tries to write to
+  `C:\Program Files\nodejs` without admin. Working install:
+  `npm install -g pnpm` (prefix is the user-writable `%APPDATA%\npm`).
+  That dir is **not on PATH** for the tool shells, so every pnpm call
+  needs `$env:Path = "C:\Users\AARYAN KALE\AppData\Roaming\npm;" +
+  $env:Path` prefixed, and must go through the **PowerShell tool** —
+  `pnpm` is not resolvable from the Bash tool at all.
+- **`C:` was 100% full — 40 KB free**, which is what actually blocked the
+  first install attempt (`ERR_PNPM_ENOSPC`). Cleared npm's own cache
+  (`npm cache clean --force` + removing `%LOCALAPPDATA%\npm-cache`,
+  1.54 GB, regenerable) → 1.66 GB free, enough to install. **Still tight:
+  ~1.5 GB free after `node_modules`.** Other reclaimable caches measured
+  and left alone for the user to decide on: `C:\Windows\Temp` 1.65 GB,
+  `%LOCALAPPDATA%\Temp` 0.63 GB, `%LOCALAPPDATA%\pnpm` 0.34 GB, pip cache
+  0.13 GB. Worth flagging: `node_modules` now lives **inside a
+  OneDrive-synced folder**, which is both a sync-churn and a
+  disk-pressure problem.
+
+**Baseline after setup, matching §13.3's numbers exactly** (so nothing
+regressed between machines): `tsc --noEmit` → the same 3 pre-existing
+ref-type errors in `call-to-action.tsx`/`hero.tsx`/`projects.tsx`, nothing
+else; `pnpm build` → clean, all 18 routes compile.
+
+### 14.2 Findings that change the scope, not in the original plan text
+
+All four found by inspecting this clone, none of them previously recorded:
+
+- **`next.config.mjs` sets `typescript: { ignoreBuildErrors: true }`.**
+  This is why "3 pre-existing type errors" and "`pnpm build` clean" have
+  coexisted in every handoff since Sprint 2 — the build literally prints
+  `Skipping validation of types`. Shipping a production launch with
+  typechecking disabled is a Sprint 5 quality item in its own right, and
+  the 3 errors are small ref-typing fixes, not deep ones.
+- **`next.config.mjs` also sets `images: { unoptimized: true }`**, and
+  the homepage hero still loads **raw PNGs totalling ~9.8 MB**
+  (`hously-background.png` 5.76 MB + `hously-foreground.png` 4.02 MB),
+  plus `exterior.png` 870 KB, `desk.png` 655 KB,
+  `premium_property_bg.png` 679 KB. Sprint 1.5's §T3 recorded converting
+  the hero art to WebP (10.16 MB → 627 KB) — **that conversion is not
+  present in this codebase.** Either it was lost in the reset that dropped
+  Prisma, or it only ever existed in the old `project/` tree. Sprint 5's
+  "image optimisation / Core Web Vitals" line item is therefore much
+  larger than a polish pass: it is the single biggest CWV problem on the
+  site and has to be redone.
+- **`app/layout.tsx` references four icon files that do not exist.**
+  `/icon-light-32x32.png`, `/icon-dark-32x32.png`, `/icon.svg`, and
+  `/apple-icon.png` are all declared in the `metadata.icons` block;
+  `public/` contains **only** an `images/` folder. All four 404 today.
+  This overlaps the long-open "brand assets (logo SVG, favicon, OG image)"
+  question — see 14.4.
+- **SEO is at zero, not partial.** Exactly one `export const metadata` in
+  the entire app (the root layout) and **zero** `generateMetadata`
+  functions. No `sitemap.ts`, no `robots.ts`, no `manifest`, no
+  `opengraph-image`, no JSON-LD, no canonicals anywhere. Every one of the
+  18 routes currently serves the same title and description.
+
+### 14.3 Sprint 5 (executable now, no external blocker)
+
+Ordered by launch impact. Each carries its own verification, per
+CLAUDE.md §4.
+
+1. **Re-run the security matrix first, before changing anything** — the
+   four access states and the guest-visible-source leak test (old plan
+   §3, last run in Sprint 2.1 §8.4). This is a fresh clone against the
+   same live DB; establishing that the revenue-critical boundary still
+   holds is the precondition for trusting any later "still passes" claim.
+   → verify: gated field names absent from guest HTML, 4 access states
+   render correctly.
+2. **SEO foundation.** `app/sitemap.ts` (static routes + all
+   `status = 'live'` listings), `app/robots.ts`, per-route `metadata`, and
+   `generateMetadata` on `/listing/[slug]` (real title/description/OG from
+   the listing's public columns only — **never a gated field**).
+   Canonicals throughout. All URLs derived from `NEXT_PUBLIC_SITE_URL` so
+   the domain cutover is a one-env-var change, not a code change.
+   → verify: `/sitemap.xml` and `/robots.txt` return 200 with correct
+   content; two different listings return two different titles; no gated
+   value appears in any `<meta>` tag.
+3. **JSON-LD** structured data on listing pages (`RealEstateListing` /
+   `Product`, plus `Organization` on the homepage), public fields only.
+   → verify: valid JSON parses out of the rendered HTML.
+4. **Image optimisation** — the 14.2 item. Convert the hero PNGs to
+   WebP/AVIF, drop `images: { unoptimized: true }`, size and lazy-load
+   correctly.
+   → verify: measured before/after byte counts recorded here, same as
+   Sprint 1.5 did.
+5. **Icons + PWA manifest.** Generate the four missing icon files and
+   `app/manifest.ts`. Service worker last — old plan R7 names PWA offline
+   as the first thing to cut if time runs short.
+   → verify: all four icon URLs 200; manifest validates.
+6. **Re-enable typechecking** — fix the 3 ref errors, remove
+   `ignoreBuildErrors`.
+   → verify: `pnpm build` passes *with* type validation on.
+7. **Responsive / cross-browser QA** at 375 / 768 / 1280 across all 18
+   routes, and **Lighthouse / CWV** measured after items 4–6 land.
+8. **Handover docs.**
+
+### 14.4 Sprint 5.5 (blocked)
+
+Verified empirically against `.env.local` this session, not assumed from
+the previous handoff — every one of these is still genuinely blocked:
+
+| Item | Blocked on | Evidence checked |
+|---|---|---|
+| Razorpay live-key switchover | **Sprint 3.5 first** — the integration itself was never built — *and* credentials | `RAZORPAY_KEY_ID` / `_KEY_SECRET` / `_WEBHOOK_SECRET` all empty. Double blocker: there is no live-key "switchover" to perform until there is an integration to switch. |
+| Transactional email (Resend) | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` + DNS verification (R1) | Both empty. Carried unchanged from §11.4. |
+| Privacy Policy + Terms pages | Client copy | `components/footer.tsx:79,82` link both to `href="#"`; no `/privacy` or `/terms` route exists. Old plan §7 item 14. |
+| C5 headline statistics | Client sign-off | Unchanged from §11.2 — still fabricated in `hero.tsx` and `about-view.tsx`. |
+| Real contact number / WhatsApp deep link (C3) | Client | `NEXT_PUBLIC_WHATSAPP_NUMBER` and `NEXT_PUBLIC_CONTACT_PHONE` both empty. |
+| Production domain cutover + registrar | Client | `NEXT_PUBLIC_SITE_URL` is still `http://localhost:3000`. Mitigated by design in 14.3 item 2 — every generated URL reads this var, so cutover is one env change. |
+| Brand assets (real logo SVG, favicon, OG image) | Client | Overlaps 14.3 item 5. **Not hard-blocking** — placeholders generated from the existing `hously-logo.svg` and brand tokens unblock the build; swapping in real assets later is a file replacement, no code change. Flagged so placeholders don't get mistaken for final brand. |
+| Production deploy + client walkthrough | Everything above | Terminal step. |
+
+### 14.5 What this means for the 20 Aug M3 launch date
+
+Sprint 5's *own* QA/SEO/performance work is unblocked and is what's being
+executed now. But **M3 as originally defined — "production launch" — is
+not reachable** while payments (3.5) do not exist, email (4.5) does not
+exist, and Privacy/Terms have no copy. Those are three separate waits on
+the client, and 3.5 in particular is a build sprint, not a switch-flip.
+Recorded here rather than discovered at the deadline.
+
+---
+
+## 15. Sprint 5 — completion record (2026-08-09)
+
+Items 1–7 of §14.3 executed and verified this session. **Not committed** —
+same "user reviews locally first" convention as every prior sprint.
+Item 8 (handover docs) is deliberately deferred: a handover document is
+written against a launched system, and launch is blocked (§14.4).
+
+### 15.1 Security re-verified first, and it holds
+
+Two re-runnable scripts now live in the repo so no future session has to
+rebuild them:
+
+- **`scripts/leak-test.mjs`** — reads the real gated values for every live
+  listing with the service-role key, then fetches each listing page with
+  no cookies and asserts neither the gated column keys nor their actual
+  values appear in the HTML. **12/12 listings PASS**, 96 column-key checks,
+  96 non-empty value checks. Re-run after every subsequent change this
+  session, and again against the **production build** (`next start`) — same
+  result. Usage: `node scripts/leak-test.mjs http://localhost:3000`.
+- **`scripts/access-matrix-test.mjs`** — drives `resolveListingAccess()`
+  through 7 viewer shapes covering all four states, with pricing read live
+  from the `settings` table rather than assumed. **49 assertions, all
+  PASS.** Includes the two cases that cost money if they regress: an
+  already-unlocked group is never re-charged, and a subscriber is never
+  charged. Needs Node's type stripping to load the app's `.ts` modules:
+  `node --experimental-strip-types --import ./scripts/ts-resolve-hook.mjs scripts/access-matrix-test.mjs`.
+- **`scripts/ts-resolve-hook.mjs`** — 20-line resolve hook that retries
+  extensionless relative imports as `.ts`. Exists so the matrix test can
+  exercise the real `lib/access/` modules instead of a copy, without
+  adding `.ts` extensions to application source to suit a test runner.
+
+Also confirmed by `git log`: `lib/access/`, `lib/auth/viewer.ts` and
+`app/actions/unlock.ts` have not changed since `5f6f771` (Sprint 2.1) —
+the same commit whose §8.4 record documents the full four-state
+end-to-end run with real accounts. So the logic under test is byte-identical
+to what was last verified against live sessions.
+
+**Two findings from the first run, both false positives — worth knowing
+about because the naive version of this test reports them as leaks:**
+
+1. The bare substring `floor` appears in every listing page. It is the
+   field-group id `flat_floor` and its label "Flat number & floor", sitting
+   right next to `"value":null`. The test now matches the serialised key
+   form (`"floor":`) instead.
+2. `flatNumber` on `agricultural-land-ajmer-road-jaipur-bob` is
+   `"Khasra 210"`, which appears in the page — because the **public**
+   `addressLine` is `"Khasra 210, Village Bhankrota"`. The redaction layer
+   is correct; the seed data has a gated field duplicating public data.
+   **Not a security bug, but a real monetisation bug:** a buyer spends a
+   credit on `flat_floor` for that listing and receives a string already
+   visible for free. The test now reports this category separately rather
+   than failing on it. Worth raising with the client alongside the other
+   data questions.
+
+### 15.2 SEO — built from zero
+
+Before this session: one `export const metadata` in the whole app (the root
+layout), zero `generateMetadata`, no sitemap/robots/manifest/canonicals.
+
+- **`lib/seo.ts`** — `SITE_URL` (from `NEXT_PUBLIC_SITE_URL`, trailing
+  slash stripped), `absoluteUrl()`, and a `pageMetadata()` builder that
+  attaches a canonical plus OG/Twitter tags. **Every absolute URL the site
+  emits now derives from this one place**, so the production domain
+  cutover is an env-var change and nothing else — see §14.4.
+- **Root layout** — `metadataBase`, a `%s — Boliwala.com` title template,
+  `openGraph`/`twitter` defaults, `robots: index/follow`, and
+  `lang="en-IN"` (was `en`).
+- **`app/sitemap.ts`** — 8 static routes + every live listing, `revalidate
+  = 3600`. **20 entries** confirmed. Wrapped in try/catch so a DB blip
+  degrades to the static routes rather than serving a crawler a 500.
+- **`app/robots.ts`** — disallows `/admin`, `/profile`,
+  `/partner/dashboard`, `/auth/`, `/reset-password`; points at the sitemap.
+- **`generateMetadata` on `/listing/[slug]`** — real per-listing title,
+  description (bank, locality, reserve price, EMD, auction date, all
+  `formatINR`/`formatDateLong`), canonical, and OG image from the first
+  listing photo. **Public columns only**, with a comment saying why.
+  Titles came out at 71+ chars on the first pass because the seeded titles
+  already name the city; now the city is appended only when missing, giving
+  50–56 chars.
+- **Per-route metadata** on all 13 remaining routes — indexable ones get
+  real descriptions, the six authenticated/auth surfaces get `noIndex`.
+  `/search`'s canonical points at the bare path so filter-param
+  permutations consolidate instead of competing.
+- **`getListingBySlug` is now wrapped in React `cache()`.** Without it,
+  adding `generateMetadata` would have doubled the DB query on every
+  listing page render, since both it and the page component fetch by slug.
+
+### 15.3 JSON-LD
+
+`components/json-ld.tsx` — escapes `<` so a `</script>` inside a title or
+description cannot close the tag early. Emits `RealEstateListing` (with
+`PostalAddress`, an `Offer` carrying reserve price / INR / `validThrough`,
+and the bank as seller) on listing pages, plus `Organization` and `WebSite`
+with a `SearchAction` on the homepage. All blocks verified to parse.
+
+Built from **named public fields only** — never a spread, and never
+`safeListing.gated`, which holds real values for a subscriber. Dropped
+`datePosted` after first emitting it: it means "when the listing was
+published", and filling it with the auction date would have published
+incorrect structured data. `Organization` carries no `telephone` or
+`sameAs` because the real contact number and social handles are still open
+(C3) and inventing them would publish false contact details.
+
+### 15.4 Image optimisation — the biggest measured win
+
+`next.config.mjs` had `images: { unoptimized: true }`, and the homepage
+shipped raw PNGs. Converted the three images that live code actually
+references to WebP with ffmpeg (`libwebp -quality 82`), switched
+`hero.tsx` and `philosophy.tsx` to `next/image`, and enabled the optimizer
+with `formats: ["image/avif", "image/webp"]`.
+
+Source files:
+
+| File | Before | After |
+|---|---|---|
+| `hously-background.png` | 5,626 KB | 94 KB webp |
+| `hously-foreground.png` | 3,926 KB | 328 KB webp |
+| `exterior.png` | 850 KB | 637 KB webp |
+
+What a browser at a 1920px viewport actually downloads:
+
+| | Before | After |
+|---|---|---|
+| background | 5,761,457 B (png) | 18,062 B (avif) |
+| foreground | 4,020,097 B (png) | 116,534 B (avif) |
+| exterior | 870,902 B (png) | 77,633 B (avif, 640w) |
+| **total** | **10,652,456 B** | **212,229 B — 98.0% smaller** |
+
+Details worth keeping:
+
+- Alpha survives the conversion (`yuva420p` on both hero layers, verified
+  with ffprobe) — the foreground is a building cut-out and would have
+  broken visibly otherwise.
+- The background is `priority` (it is the LCP element). The foreground is
+  explicitly `loading="lazy"`: at scroll 0 it is translated fully below the
+  fold and only slides up as you scroll, so preloading it would compete
+  with the LCP image. This matches Sprint 1.5's T3 decision.
+- Both hero images had descriptive `alt` text ("Sky Background", "Building
+  Foreground") and are now `alt=""` — they are decorative, and an empty alt
+  is what stops a screen reader announcing them.
+- `remotePatterns` added for the Supabase Storage host. Listing photos in
+  the public `listing-images` bucket are still rendered with a plain
+  `<img>` in `listing-view.tsx`, so nothing needs it *yet* — but the moment
+  anyone switches that to `next/image` it would 400 without this.
+- **Deliberately not deleted:** `desk.png`, `premium_property_bg.png`,
+  `hously-1..4.png` (1.6 MB total). `hously-1/2/3` are referenced only by
+  `components/projects.tsx`, which **nothing imports** — pre-existing dead
+  code, flagged rather than removed per CLAUDE.md §3. The other two are
+  referenced by nothing at all. Removing `projects.tsx` and those six PNGs
+  is a clean follow-up if you want it.
+
+### 15.5 Icons, manifest, OG image
+
+`app/layout.tsx` declared four icon files — `/icon-light-32x32.png`,
+`/icon-dark-32x32.png`, `/icon.svg`, `/apple-icon.png` — and `public/`
+contained only an `images/` folder. **All four 404'd.**
+
+Replaced with Next file conventions, generated at build time via
+`next/og`'s `ImageResponse` (no new dependency): `app/icon.tsx` (64×64),
+`app/apple-icon.tsx` (180×180), `app/opengraph-image.tsx` (1200×630), and
+`app/manifest.ts`. The mark is rebuilt from the gavel glyph and amber
+gradient already in `components/logo.tsx`, so it is brand-consistent
+**but is still a placeholder** — the client's real logo is an open asset
+request. Swapping it is one file, no other code changes. The light/dark
+favicon pair is gone; the amber mark reads on both.
+
+The OG card carries no headline statistics on purpose — the "12,400+"
+figures are unverified (C5) and an OG card is a public marketing claim.
+
+`manifest.ts` does not declare `purpose: "maskable"`: the mark is not
+padded for Android's safe zone, so claiming it would get the gavel cropped
+on adaptive-icon launchers. Service worker / offline support was **not**
+built — old plan R7 names it the first thing to cut, and it buys little for
+a listings site whose value is live data.
+
+### 15.6 Typechecking is on for the first time
+
+`next.config.mjs` had `typescript: { ignoreBuildErrors: true }` — which is
+why "3 pre-existing type errors" and "`pnpm build` clean" coexisted in
+every handoff since Sprint 2; the build printed `Skipping validation of
+types`. All three were small ref-typing bugs:
+
+- `call-to-action.tsx` / `hero.tsx` — `useRef<HTMLElement>` attached to a
+  `<div>` → `useRef<HTMLDivElement>`.
+- `projects.tsx` — a ref callback returning the assigned value, which
+  React 19 rejects → wrapped the assignment in braces.
+
+`tsc --noEmit` is now clean, `ignoreBuildErrors` is removed, and
+`pnpm build` runs `Running TypeScript ...` and passes. **Do not put that
+flag back.**
+
+### 15.7 Verification performed
+
+- `tsc --noEmit` clean (zero errors, first time in this project).
+- `pnpm build` clean **with type validation enabled** — 24 routes, up from
+  18 (the 6 new ones are icon, apple-icon, opengraph-image,
+  manifest.webmanifest, robots.txt, sitemap.xml).
+- **Route sweep, 23 routes, run twice — once against `next dev` and once
+  against the real production build (`next start`), identical results:**
+  all public pages 200; `/listing` → 307; `/profile` and `/admin` → 307 for
+  a guest; unknown slug → 404; all six new SEO endpoints 200 with correct
+  content types.
+- **Leak test PASS against the production build**, not just dev.
+- Access matrix 49/49.
+- Search filters re-checked against the live 12 listings and match Sprint
+  2.1 §8.4's recorded counts exactly: Pune 2, Mumbai 1, industrial 2,
+  residential 6, agricultural 1, physical 8 + symbolic 4 = 12, price band
+  6. (`/search` with no params returns 0 cards by design — `hasSearched`
+  is false, pre-existing behaviour.)
+- Image optimizer verified end to end: correct `srcset` at 8 widths,
+  content negotiation returning AVIF to an `Accept: image/avif` client and
+  WebP/JPEG below that.
+- JSON-LD blocks parse on homepage and two listing pages.
+- Viewport meta present.
+
+### 15.8 Found, not fixed — flagged deliberately
+
+- **`/partner/dashboard` returns 200 to a signed-out guest.** It is a
+  static mockup with no auth guard and no real data, so nothing leaks, but
+  it should not be publicly reachable at launch. It is `noIndex` and
+  robots-disallowed now, which is not the same as protected. Ties into the
+  open question in §7 about whether the partner portal is in scope at all.
+- **`components/projects.tsx` is dead code** — see §15.4.
+- **The `flatNumber`/`addressLine` overlap** — see §15.1.
+- `desk.png`, `premium_property_bg.png`, `hously-4.png` referenced by
+  nothing.
+
+### 15.9 Environment note for the next session
+
+The dev server here runs on **port 3100** (`pnpm dev --port 3100`) because
+ports were already in use by an unrelated `gymos` project on this machine —
+those processes were left alone. `pnpm` needs the PATH prefix from §14.1
+and must be run through the **PowerShell tool**; it is not resolvable from
+Bash. `C:` still has only ~1.5 GB free.
+
+---
+
+## 16. Project documentation set — added 2026-08-09
+
+Three deliverables written at the user's request after Sprint 5. **All
+three live at the repo root, not in a `project/` folder** — the user asked
+for `project/`, but no such subdirectory exists on this machine (§14.1);
+creating one purely for docs would have stranded them beside nothing and
+contradicted that note. Flagged to the user, who can have them moved.
+
+| File | What it is |
+|---|---|
+| `testing_guide.md` | 11-phase sequential test plan for everything built through Sprint 5 |
+| `blockers.md` | Every blocker, prerequisite, risk and open question, with owners and dates |
+| `project_calendar.html` | Six-week visual delivery calendar, 10 Aug → 15 Sep 2026 |
+
+### 16.1 `testing_guide.md`
+
+Ordered phases 0–11. Phase 0 environment, Phase 1 build integrity,
+**Phase 2 is a blocking security gate** (both `scripts/` tests plus a
+manual view-source check — nothing after it is trustworthy if it fails),
+then public pages, the four access states, auth, engagement, admin, SEO
+and performance, production-build parity, cross-browser.
+
+Two things make it usable by someone who was not in these sessions:
+
+- **Real expected values throughout**, taken from verified runs rather
+  than invented: Pune → 2 results, physical 8 + symbolic 4 = 12, unlock
+  leaves a balance of 4 and is still 4 after reload, sitemap has 20
+  entries, homepage images ≈210 KB.
+- **Phase 11 enumerates what is deliberately mock** — the eleven admin
+  tabs, the dead `/search` alerts banner, the placeholder statistics — so
+  testers do not raise tickets against unbuilt features.
+
+### 16.2 `blockers.md`
+
+12 blockers in four groups (hard external / content waits / decisions
+needed / debt), plus environment and delivery risks. Every credential
+claim was **re-verified against `.env.local` on the day**, not carried
+forward from an earlier section.
+
+Its central argument, which is the thing to repeat to the client:
+**Razorpay is the critical path and is a build sprint, not a switch-flip.**
+There is no payment code in the repo at all, so it is ~2 weeks of work
+that cannot start until test credentials exist. Working back from 15 Sep
+puts that build in 17–30 Aug, hence "test keys by 17 August". The document
+also states the fallback plainly — past 31 Aug, either move the date or
+launch the free tier with paid as a fast-follow, which is viable because
+everything else is built and tested.
+
+### 16.3 `project_calendar.html`
+
+Six Mon–Sun weeks from 10 Aug landing exactly on Tue 15 Sep. Built on the
+product's own shadcn token values (§Sprint 1.5) so it reads as part of
+Boliwala rather than a generic template; `--radius: 0.25rem` and the
+amber-on-navy masthead come straight from the app.
+
+- Upper half is the **delivered** record — ten sprint cards plus an
+  infrastructure strip — because the user specifically wanted everything
+  built through 9 Aug shown, not just the remaining plan.
+- Lower half is a CSS-grid Gantt. Status is encoded as a **left stripe
+  and a hatch pattern**, not colour alone, so blocked bars survive
+  greyscale printing and colour-blindness.
+- Then the client-deadline gates (17 / 24 Aug, 31 Aug, 7 Sep) and the
+  critical-path callout.
+- Full light/dark token sets including the un-stamped `prefers-color-scheme`
+  case; the Gantt scrolls horizontally inside its own container.
+
+Also published as a private artifact:
+`https://claude.ai/code/artifact/1c09594a-cddd-4553-9fb5-790f4f29519f`
+To update it from a future session, pass that URL as `url` to the Artifact
+tool — republishing the file path alone from a different conversation
+mints a new URL.
+
+### 16.4 A finding made while writing these
+
+**Satoshi is not actually loading.** `app/fonts/Satoshi-Bold.woff2`,
+`-Medium.woff2` and `-Regular.woff2` are each **609 bytes and are not
+fonts** — they are CSS `@font-face` snippets pointing at
+`//cdn.fontshare.com`, misnamed with a `.woff2` extension. Nothing in
+`app/globals.css` references them; line 79 only names the family in
+`--font-sans: "Satoshi", ...`, so the app has been silently falling back
+to `system-ui` since the fonts were "self-hosted".
+
+Two consequences: the shipped typography is not what the design intended,
+and **R4 (the Satoshi commercial licence question) may be moot** — nothing
+is being self-hosted to license. Left unfixed deliberately: the right fix
+depends on the licence answer (buy and genuinely self-host, or switch to
+the Plus Jakarta Sans fallback the prototype also used). Added to
+`blockers.md`.

@@ -1,0 +1,806 @@
+<title>Boliwala — Road to 15 September</title>
+<style>
+  /* ---- Tokens: the product's own shadcn palette (see MEMORY.md §Sprint 1.5) ---- */
+  :root {
+    --ground:      #f7f5f1;
+    --surface:     #faf8f5;
+    --surface-sunk:#efece6;
+    --hairline:    #dbd7d0;
+    --hairline-sc: #c8c2b8;
+    --ink:         #14110d;
+    --ink-soft:    #453f37;
+    --ink-mute:    #6b645a;
+
+    --navy:        #0a0f1c;
+    --navy-soft:   #16203a;
+    --on-navy:     #f7f5f1;
+    --on-navy-mute:#9aa3b8;
+
+    --amber:       #f99c00;
+    --amber-deep:  #b96f00;
+    --amber-wash:  #fdf0da;
+
+    --ship:        #00875c;
+    --ship-wash:   #ddf2ea;
+    --block:       #c40012;
+    --block-wash:  #fbe3e5;
+    --wait:        #9a6b00;
+    --wait-wash:   #fbf0d5;
+    --sched:       #1447e6;
+    --sched-wash:  #e2e8fd;
+
+    --radius: 0.25rem;   /* the product uses a deliberately tight radius */
+
+    --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system,
+            "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0a0f1c;
+      --surface:     #121a2c;
+      --surface-sunk:#0d1424;
+      --hairline:    #24304a;
+      --hairline-sc: #35435f;
+      --ink:         #f2efe9;
+      --ink-soft:    #c5cbd8;
+      --ink-mute:    #8b94a7;
+
+      --navy:        #060a13;
+      --navy-soft:   #16203a;
+      --on-navy:     #f2efe9;
+      --on-navy-mute:#8b94a7;
+
+      --amber:       #ffb43d;
+      --amber-deep:  #ffc981;
+      --amber-wash:  #33260f;
+
+      --ship:        #2ed69a;
+      --ship-wash:   #0d2b23;
+      --block:       #ff6b78;
+      --block-wash:  #331419;
+      --wait:        #ffc94a;
+      --wait-wash:   #322710;
+      --sched:       #7fa4ff;
+      --sched-wash:  #131f3d;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0a0f1c;
+    --surface:     #121a2c;
+    --surface-sunk:#0d1424;
+    --hairline:    #24304a;
+    --hairline-sc: #35435f;
+    --ink:         #f2efe9;
+    --ink-soft:    #c5cbd8;
+    --ink-mute:    #8b94a7;
+
+    --navy:        #060a13;
+    --navy-soft:   #16203a;
+    --on-navy:     #f2efe9;
+    --on-navy-mute:#8b94a7;
+
+    --amber:       #ffb43d;
+    --amber-deep:  #ffc981;
+    --amber-wash:  #33260f;
+
+    --ship:        #2ed69a;
+    --ship-wash:   #0d2b23;
+    --block:       #ff6b78;
+    --block-wash:  #331419;
+    --wait:        #ffc94a;
+    --wait-wash:   #322710;
+    --sched:       #7fa4ff;
+    --sched-wash:  #131f3d;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* ---------------------------------------------------------- masthead */
+  .masthead {
+    background: var(--navy);
+    color: var(--on-navy);
+    margin-bottom: 56px;
+    border-bottom: 3px solid var(--amber);
+  }
+  .masthead-inner { max-width: 1180px; margin: 0 auto; padding: 44px 24px 40px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    color: var(--on-navy-mute);
+    max-width: 62ch;
+    margin: 0;
+    font-size: 16px;
+  }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--navy-soft);
+    border: 1px solid var(--navy-soft);
+    margin-top: 34px;
+  }
+  .tile { background: var(--navy); padding: 16px 18px; }
+  .tile-n {
+    font-family: var(--mono);
+    font-size: 27px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    display: block;
+    line-height: 1.1;
+  }
+  .tile-l {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--on-navy-mute);
+    margin-top: 5px;
+    display: block;
+  }
+  .tile-n.good { color: var(--ship); }
+  .tile-n.bad  { color: var(--block); }
+  .tile-n.warn { color: var(--amber); }
+
+  /* ---------------------------------------------------------- sections */
+  section { margin-bottom: 60px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 9px;
+    margin-bottom: 22px;
+  }
+  h2 {
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 0;
+  }
+  .sec-note { color: var(--ink-mute); font-size: 13px; margin: 0; }
+
+  /* ---------------------------------------------------------- shipped */
+  .shipped-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+    gap: 12px;
+  }
+  .ship-card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-left: 3px solid var(--ship);
+    border-radius: var(--radius);
+    padding: 13px 15px;
+  }
+  .ship-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+  .ship-name { font-weight: 650; font-size: 14px; letter-spacing: -0.01em; }
+  .ship-date {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .ship-what { font-size: 13px; color: var(--ink-soft); line-height: 1.45; }
+  .ship-what code {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    background: var(--surface-sunk);
+    padding: 1px 4px;
+    border-radius: 2px;
+    color: var(--ink);
+  }
+
+  .infra {
+    margin-top: 14px;
+    background: var(--ship-wash);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    align-items: center;
+  }
+  .infra-l {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    width: 100%;
+  }
+  .infra span.item { font-size: 13px; color: var(--ink); }
+  .infra span.item::before { content: "✓ "; color: var(--ship); font-weight: 700; }
+
+  /* ---------------------------------------------------------- gantt */
+  .scroller { overflow-x: auto; padding-bottom: 6px; }
+  .gantt { min-width: 880px; }
+
+  .gantt-head {
+    display: grid;
+    grid-template-columns: 190px repeat(6, 1fr);
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .wk {
+    background: var(--surface-sunk);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+  }
+  .wk-n {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    display: block;
+  }
+  .wk-d {
+    font-size: 13px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    display: block;
+    margin-top: 2px;
+  }
+  .wk.launch { background: var(--amber-wash); border-color: var(--amber); }
+  .wk.launch .wk-n { color: var(--amber-deep); }
+  .corner { display: flex; align-items: flex-end; }
+  .corner span {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    padding-bottom: 9px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 190px repeat(6, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+    align-items: stretch;
+  }
+  .row-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 9px 12px 9px 0;
+    border-right: 1px solid var(--hairline);
+  }
+  .row-name { font-size: 13.5px; font-weight: 650; letter-spacing: -0.01em; }
+  .row-meta { font-size: 11px; color: var(--ink-mute); font-family: var(--mono); }
+
+  /* grid cells that show the week rhythm behind the bars */
+  .cell { border-right: 1px dashed var(--hairline); min-height: 46px; }
+  .cell:last-child { border-right: none; }
+
+  .bar {
+    border-radius: var(--radius);
+    padding: 7px 11px;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 46px;
+    border: 1px solid transparent;
+    border-left-width: 3px;
+  }
+  .bar small {
+    display: block;
+    font-weight: 500;
+    font-size: 11px;
+    opacity: 0.82;
+    margin-top: 1px;
+  }
+
+  .bar.blocked {
+    background: var(--block-wash);
+    border-color: var(--hairline);
+    border-left-color: var(--block);
+    color: var(--ink);
+    /* hatching so status survives greyscale printing and colour-blindness */
+    background-image: repeating-linear-gradient(
+      -45deg, transparent 0 7px, color-mix(in srgb, var(--block) 13%, transparent) 7px 14px);
+  }
+  .bar.scheduled {
+    background: var(--sched-wash);
+    border-color: var(--hairline);
+    border-left-color: var(--sched);
+    color: var(--ink);
+  }
+  .bar.waiting {
+    background: var(--wait-wash);
+    border-color: var(--hairline);
+    border-left-color: var(--wait);
+    color: var(--ink);
+  }
+  .bar.launch {
+    background: var(--navy);
+    border-color: var(--amber);
+    border-left-color: var(--amber);
+    color: var(--on-navy);
+  }
+  .bar.launch small { color: var(--amber); opacity: 1; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--hairline);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .legend div { display: flex; align-items: center; gap: 7px; }
+  .sw { width: 13px; height: 13px; border-radius: 2px; flex: none; border: 1px solid var(--hairline-sc); }
+  .sw.b { background: var(--block-wash); border-left: 3px solid var(--block); }
+  .sw.s { background: var(--sched-wash); border-left: 3px solid var(--sched); }
+  .sw.w { background: var(--wait-wash);  border-left: 3px solid var(--wait); }
+  .sw.d { background: var(--ship-wash);  border-left: 3px solid var(--ship); }
+
+  /* ---------------------------------------------------------- deadlines */
+  .gates {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+    gap: 12px;
+  }
+  .gate {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-top: 3px solid var(--wait);
+    border-radius: var(--radius);
+    padding: 14px 15px;
+  }
+  .gate.critical { border-top-color: var(--block); }
+  .gate-d {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    display: block;
+    margin-bottom: 9px;
+  }
+  .gate.critical .gate-d { color: var(--block); }
+  .gate ul { margin: 0; padding-left: 17px; }
+  .gate li { font-size: 13px; margin-bottom: 5px; color: var(--ink-soft); }
+  .gate li:last-child { margin-bottom: 0; }
+  .gate li b { color: var(--ink); font-weight: 650; }
+
+  /* ---------------------------------------------------------- callout */
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-left: 3px solid var(--amber);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+  }
+  .callout h3 {
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .callout p { margin: 0 0 11px; color: var(--ink-soft); max-width: 74ch; font-size: 14px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout b { color: var(--ink); }
+
+  .chain {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin: 14px 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    color: var(--ink-soft);
+  }
+  .chain b { color: var(--block); }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 18px;
+    border-top: 1px solid var(--hairline);
+    font-size: 12.5px;
+    color: var(--ink-mute);
+  }
+  footer code {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    background: var(--surface-sunk);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  a { color: inherit; }
+  a:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .masthead-inner { padding: 32px 20px 30px; }
+    .wrap { padding: 0 20px 64px; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="eyebrow">Boliwala.com · Phase 1 · Optimistic IP</p>
+    <h1>Road to 15 September</h1>
+    <p class="standfirst">
+      Ten sprints shipped and verified through 9 August. Everything that could be
+      built without the client is built. The remaining six weeks are governed by
+      one dependency: Razorpay credentials.
+    </p>
+
+    <div class="tiles">
+      <div class="tile">
+        <span class="tile-n good">10</span>
+        <span class="tile-l">Sprints shipped</span>
+      </div>
+      <div class="tile">
+        <span class="tile-n warn">2</span>
+        <span class="tile-l">Sprints remaining</span>
+      </div>
+      <div class="tile">
+        <span class="tile-n bad">3</span>
+        <span class="tile-l">Hard blockers</span>
+      </div>
+      <div class="tile">
+        <span class="tile-n">37</span>
+        <span class="tile-l">Days to launch</span>
+      </div>
+      <div class="tile">
+        <span class="tile-n good">98<span style="font-size:17px">%</span></span>
+        <span class="tile-l">Hero weight cut</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============================================ DELIVERED -->
+  <section>
+    <div class="sec-head">
+      <h2>Delivered — through 9 August</h2>
+      <p class="sec-note">All committed and pushed except Sprint 5, which is awaiting review.</p>
+    </div>
+
+    <div class="shipped-grid">
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 0 — Foundations</span><span class="ship-date">Jul</span></div>
+        <div class="ship-what">GitHub repo, Vercel project, Supabase project, all linked with preview deploys. Next.js 16 + TypeScript + Tailwind v4 scaffold.</div>
+      </div>
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 1 — Public pages</span><span class="ship-date">Jul</span></div>
+        <div class="ship-what">Homepage, search shell, listing page, Indian currency and date formatting, view tracking.</div>
+      </div>
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 1.5 — Design replication</span><span class="ship-date">Jul</span></div>
+        <div class="ship-what">shadcn semantic tokens, sticky parallax hero, rebuilt search panel, Lucide icon set.</div>
+      </div>
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 2 — Auth &amp; accounts</span><span class="ship-date">Aug</span></div>
+        <div class="ship-what">Email/password auth, signup trigger granting 5 credits via ledger, profile page, password reset, alerts capture.</div>
+      </div>
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 2.1 — Search &amp; listings</span><span class="ship-date">4 Aug</span></div>
+        <div class="ship-what">Real filterable search, <code>/listing/[slug]</code>, the four-state gating layer, credit unlock RPC, shortlists, deduped view counts.</div>
+      </div>
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 2.5 — Google OAuth</span><span class="ship-date">9 Aug</span></div>
+        <div class="ship-what">Google sign-in wired end to end, callback route, verified no double credit grant on repeat login.</div>
+      </div>
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 2.7 — RLS hardening</span><span class="ship-date">4 Aug</span></div>
+        <div class="ship-what">Locked down every remaining RLS-disabled table, revoked direct execution on trigger functions.</div>
+      </div>
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 3 — Admin core</span><span class="ship-date">5 Aug</span></div>
+        <div class="ship-what">Real admin auth guard, live dashboard KPIs, listings CRUD, Supabase Storage image upload, bulk Excel upload with column mapping.</div>
+      </div>
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 4 — Admin &amp; pages</span><span class="ship-date">5 Aug</span></div>
+        <div class="ship-what">Callback capture pipeline, admin callbacks workflow, admin pricing settings with live propagation, partner enrolment.</div>
+      </div>
+      <div class="ship-card">
+        <div class="ship-top"><span class="ship-name">Sprint 5 — QA, SEO, performance</span><span class="ship-date">9 Aug</span></div>
+        <div class="ship-what">Sitemap, robots, canonicals, per-listing metadata, JSON-LD, icons and manifest, typechecking re-enabled, two re-runnable security scripts.</div>
+      </div>
+    </div>
+
+    <div class="infra">
+      <span class="infra-l">Infrastructure &amp; platform — live</span>
+      <span class="item">GitHub, branch-protected</span>
+      <span class="item">Vercel, preview deploys</span>
+      <span class="item">Supabase, ap-south-1</span>
+      <span class="item">Postgres schema + RLS</span>
+      <span class="item">Column-level grants</span>
+      <span class="item">Storage bucket</span>
+      <span class="item">Auth + Google OAuth</span>
+      <span class="item">12 listings, 6 banks seeded</span>
+      <span class="item">Leak test passing</span>
+      <span class="item">24 routes building clean</span>
+    </div>
+  </section>
+
+  <!-- ============================================ TIMELINE -->
+  <section>
+    <div class="sec-head">
+      <h2>Six weeks to launch</h2>
+      <p class="sec-note">10 August – 15 September 2026</p>
+    </div>
+
+    <div class="scroller">
+      <div class="gantt">
+
+        <div class="gantt-head">
+          <div class="corner"><span>Workstream</span></div>
+          <div class="wk"><span class="wk-n">Week 1</span><span class="wk-d">10–16 Aug</span></div>
+          <div class="wk"><span class="wk-n">Week 2</span><span class="wk-d">17–23 Aug</span></div>
+          <div class="wk"><span class="wk-n">Week 3</span><span class="wk-d">24–30 Aug</span></div>
+          <div class="wk"><span class="wk-n">Week 4</span><span class="wk-d">31 Aug–6 Sep</span></div>
+          <div class="wk"><span class="wk-n">Week 5</span><span class="wk-d">7–13 Sep</span></div>
+          <div class="wk launch"><span class="wk-n">Week 6</span><span class="wk-d">14–15 Sep</span></div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Cleanup &amp; hardening</span>
+            <span class="row-meta">unblocked</span>
+          </div>
+          <div style="grid-column: 2 / 3;">
+            <div class="bar scheduled">Debt sprint
+              <small>Data audit · dead code · profile fields · partner route · rotate DB password</small>
+            </div>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Payments — Sprint 3.5</span>
+            <span class="row-meta">blocked · B1</span>
+          </div>
+          <div style="grid-column: 2 / 3;">
+            <div class="bar blocked">Waiting
+              <small>Razorpay test keys</small>
+            </div>
+          </div>
+          <div style="grid-column: 3 / 5;">
+            <div class="bar scheduled">Razorpay build — the critical path
+              <small>Order → checkout → webhook verification → entitlement · signature validation · idempotent webhooks · failure and retry</small>
+            </div>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Email — Sprint 4.5</span>
+            <span class="row-meta">blocked · B2</span>
+          </div>
+          <div style="grid-column: 2 / 3;">
+            <div class="bar blocked">Waiting
+              <small>Resend key + DNS</small>
+            </div>
+          </div>
+          <div style="grid-column: 3 / 5;">
+            <div class="bar scheduled">Transactional email
+              <small>Signup, payment receipt, callback acknowledgement</small>
+            </div>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Admin completion</span>
+            <span class="row-meta">follows 3.5</span>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 5 / 6;">
+            <div class="bar scheduled">Real admin tabs
+              <small>Packages · Payments · Success Fees · Users · Partners</small>
+            </div>
+          </div>
+          <div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Content &amp; legal</span>
+            <span class="row-meta">waiting · B4 B5 B6</span>
+          </div>
+          <div class="cell"></div>
+          <div style="grid-column: 3 / 4;">
+            <div class="bar waiting">Client copy due
+              <small>Stats · legal · contacts</small>
+            </div>
+          </div>
+          <div style="grid-column: 4 / 6;">
+            <div class="bar scheduled">Build &amp; wire
+              <small>Privacy and Terms routes · real statistics · contact number and WhatsApp link</small>
+            </div>
+          </div>
+          <div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Domain, brand, cutover</span>
+            <span class="row-meta">waiting · B3 B7 B12</span>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 6 / 7;">
+            <div class="bar waiting">Cutover
+              <small>Domain · brand assets · re-test Google OAuth redirects · Razorpay live keys</small>
+            </div>
+          </div>
+          <div class="cell"></div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">QA &amp; release</span>
+            <span class="row-meta">us</span>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 6 / 7;">
+            <div class="bar scheduled">Full regression
+              <small>Leak test · access matrix · cross-browser · Lighthouse · UAT</small>
+            </div>
+          </div>
+          <div style="grid-column: 7 / 8;">
+            <div class="bar launch">Launch
+              <small>15 Sep</small>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="legend">
+      <div><span class="sw d"></span> Shipped</div>
+      <div><span class="sw s"></span> Scheduled — we can execute</div>
+      <div><span class="sw w"></span> Waiting on client input</div>
+      <div><span class="sw b"></span> Blocked — cannot start</div>
+    </div>
+  </section>
+
+  <!-- ============================================ GATES -->
+  <section>
+    <div class="sec-head">
+      <h2>What we need from the client, by date</h2>
+      <p class="sec-note">Each missed date pushes launch by roughly the same amount.</p>
+    </div>
+
+    <div class="gates">
+      <div class="gate critical">
+        <span class="gate-d">By 17 August — critical</span>
+        <ul>
+          <li><b>Razorpay test keys</b> — self-serve, no KYC, ~10 minutes</li>
+          <li><b>Razorpay live KYC started</b> — takes days to weeks</li>
+          <li><b>Resend API key</b></li>
+        </ul>
+      </div>
+      <div class="gate">
+        <span class="gate-d">By 24 August</span>
+        <ul>
+          <li><b>Real contact number</b>, WhatsApp, email, social links</li>
+          <li><b>Channel Partner scope</b> — ship the portal or delete the route</li>
+          <li><b>Which admin tabs</b> are launch-critical</li>
+        </ul>
+      </div>
+      <div class="gate">
+        <span class="gate-d">By 31 August</span>
+        <ul>
+          <li><b>Headline statistics</b> — real figures or written sign-off</li>
+          <li><b>Privacy Policy and Terms</b> copy</li>
+          <li><b>DNS records</b> for the Resend sending domain</li>
+          <li><b>Definitive bank list</b></li>
+        </ul>
+      </div>
+      <div class="gate">
+        <span class="gate-d">By 7 September</span>
+        <ul>
+          <li><b>Production domain</b> and registrar access</li>
+          <li><b>Brand assets</b> — logo, favicon, share image</li>
+          <li><b>Listing photography</b>, or accept placeholders</li>
+          <li><b>Razorpay live activation</b> complete</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ CRITICAL PATH -->
+  <section>
+    <div class="sec-head">
+      <h2>The critical path</h2>
+    </div>
+
+    <div class="callout">
+      <h3>One chain governs the date</h3>
+
+      <div class="chain">
+        <b>Razorpay test keys</b> → Sprint 3.5 build (~2 weeks) → admin Packages / Payments / Success Fees → full regression → <b>launch</b>
+      </div>
+
+      <p>
+        Razorpay is commonly misread as a configuration step. It is not — there is
+        <b>no payment code in the repo at all</b> today. Once credentials arrive it is
+        roughly two weeks of build plus test, and it cannot start early.
+      </p>
+      <p>
+        Working backwards from 15 September: release prep needs Week 5, admin
+        completion needs Week 4, so the Razorpay build must run Weeks 2–3 —
+        which means <b>credentials by 17 August</b>. Every week they slip moves
+        launch by a week, because nothing else can fill that slot.
+      </p>
+      <p>
+        If they slip past <b>31 August</b>, the realistic choice is to move the date or
+        launch without payments — shipping the free tier and lead capture, with paid
+        tiers as a fast-follow. That fallback is genuinely viable: everything except
+        payments is already built and tested.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    Generated 9 August 2026 from <code>MEMORY.md</code> §14–§15.
+    Detail on every blocker in <code>blockers.md</code>; test procedures in
+    <code>testing_guide.md</code>.
+  </footer>
+</div>
