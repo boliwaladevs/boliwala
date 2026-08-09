@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+> **🔄 UPDATE RULE (MANDATORY):** On every code change and commit, the following files
+> MUST be updated to reflect the current state:
+> - `MEMORY.md` — update the relevant sprint section, add new sections as needed
+> - `project_calendar.html` — mark completed sprints, update timelines
+> - `SPRINT_CALENDAR.md` — mark completed tasks `[x]`, update statuses and dates
+>
+> This rule is non-negotiable. No commit goes out without these three files in sync.
+
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.

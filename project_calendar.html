@@ -1,99 +1,41 @@
-<title>Boliwala — Road to 15 September</title>
+<!--
+  🔄 UPDATE RULE: On every code change and commit, the following files MUST be updated
+  to reflect the current state: MEMORY.md, project_calendar.html, SPRINT_CALENDAR.md.
+  Mark completed items, update dates, and move status indicators.
+-->
+<title>Boliwala — Road to 15 September Launch</title>
 <style>
-  /* ---- Tokens: the product's own shadcn palette (see MEMORY.md §Sprint 1.5) ---- */
   :root {
     --ground:      #f7f5f1;
-    --surface:     #faf8f5;
-    --surface-sunk:#efece6;
+    --surface:     #ffffff;
+    --surface-sunk:#f0ece5;
     --hairline:    #dbd7d0;
     --hairline-sc: #c8c2b8;
     --ink:         #14110d;
     --ink-soft:    #453f37;
     --ink-mute:    #6b645a;
 
-    --navy:        #0a0f1c;
-    --navy-soft:   #16203a;
-    --on-navy:     #f7f5f1;
-    --on-navy-mute:#9aa3b8;
+    --head-bg:     #faf8f5;
+    --head-border: #e8e3db;
 
-    --amber:       #f99c00;
-    --amber-deep:  #b96f00;
+    --amber:       #d48800;
+    --amber-deep:  #a06800;
     --amber-wash:  #fdf0da;
+    --amber-light: #fff8eb;
 
     --ship:        #00875c;
-    --ship-wash:   #ddf2ea;
+    --ship-wash:   #e4f5ed;
     --block:       #c40012;
-    --block-wash:  #fbe3e5;
+    --block-wash:  #fde8ea;
     --wait:        #9a6b00;
-    --wait-wash:   #fbf0d5;
+    --wait-wash:   #fef5dd;
     --sched:       #1447e6;
-    --sched-wash:  #e2e8fd;
+    --sched-wash:  #eaf0ff;
 
-    --radius: 0.25rem;   /* the product uses a deliberately tight radius */
-
+    --radius: 0.3rem;
     --sans: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system,
             "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ground:      #0a0f1c;
-      --surface:     #121a2c;
-      --surface-sunk:#0d1424;
-      --hairline:    #24304a;
-      --hairline-sc: #35435f;
-      --ink:         #f2efe9;
-      --ink-soft:    #c5cbd8;
-      --ink-mute:    #8b94a7;
-
-      --navy:        #060a13;
-      --navy-soft:   #16203a;
-      --on-navy:     #f2efe9;
-      --on-navy-mute:#8b94a7;
-
-      --amber:       #ffb43d;
-      --amber-deep:  #ffc981;
-      --amber-wash:  #33260f;
-
-      --ship:        #2ed69a;
-      --ship-wash:   #0d2b23;
-      --block:       #ff6b78;
-      --block-wash:  #331419;
-      --wait:        #ffc94a;
-      --wait-wash:   #322710;
-      --sched:       #7fa4ff;
-      --sched-wash:  #131f3d;
-    }
-  }
-
-  :root[data-theme="dark"] {
-    --ground:      #0a0f1c;
-    --surface:     #121a2c;
-    --surface-sunk:#0d1424;
-    --hairline:    #24304a;
-    --hairline-sc: #35435f;
-    --ink:         #f2efe9;
-    --ink-soft:    #c5cbd8;
-    --ink-mute:    #8b94a7;
-
-    --navy:        #060a13;
-    --navy-soft:   #16203a;
-    --on-navy:     #f2efe9;
-    --on-navy-mute:#8b94a7;
-
-    --amber:       #ffb43d;
-    --amber-deep:  #ffc981;
-    --amber-wash:  #33260f;
-
-    --ship:        #2ed69a;
-    --ship-wash:   #0d2b23;
-    --block:       #ff6b78;
-    --block-wash:  #331419;
-    --wait:        #ffc94a;
-    --wait-wash:   #322710;
-    --sched:       #7fa4ff;
-    --sched-wash:  #131f3d;
   }
 
   * { box-sizing: border-box; }
@@ -108,16 +50,15 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
+  .wrap { max-width: 1220px; margin: 0 auto; padding: 0 24px 80px; }
 
-  /* ---------------------------------------------------------- masthead */
+  /* ---- masthead (light) ---- */
   .masthead {
-    background: var(--navy);
-    color: var(--on-navy);
-    margin-bottom: 56px;
-    border-bottom: 3px solid var(--amber);
+    background: var(--head-bg);
+    border-bottom: 2px solid var(--amber);
+    margin-bottom: 48px;
   }
-  .masthead-inner { max-width: 1180px; margin: 0 auto; padding: 44px 24px 40px; }
+  .masthead-inner { max-width: 1220px; margin: 0 auto; padding: 40px 24px 36px; }
 
   .eyebrow {
     font-family: var(--mono);
@@ -125,35 +66,39 @@
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--amber);
-    margin: 0 0 14px;
+    margin: 0 0 12px;
+    font-weight: 600;
   }
   h1 {
-    font-size: clamp(30px, 5vw, 46px);
-    line-height: 1.05;
+    font-size: clamp(28px, 4.5vw, 42px);
+    line-height: 1.08;
     letter-spacing: -0.025em;
     font-weight: 700;
-    margin: 0 0 14px;
-    text-wrap: balance;
+    margin: 0 0 12px;
+    color: var(--ink);
   }
   .standfirst {
-    color: var(--on-navy-mute);
-    max-width: 62ch;
+    color: var(--ink-mute);
+    max-width: 66ch;
     margin: 0;
-    font-size: 16px;
+    font-size: 15.5px;
   }
 
   .tiles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1px;
-    background: var(--navy-soft);
-    border: 1px solid var(--navy-soft);
-    margin-top: 34px;
+    grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+    gap: 10px;
+    margin-top: 28px;
   }
-  .tile { background: var(--navy); padding: 16px 18px; }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
   .tile-n {
     font-family: var(--mono);
-    font-size: 27px;
+    font-size: 26px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
@@ -161,68 +106,69 @@
     line-height: 1.1;
   }
   .tile-l {
-    font-size: 11px;
+    font-size: 10.5px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--on-navy-mute);
+    color: var(--ink-mute);
     margin-top: 5px;
     display: block;
+    font-weight: 500;
   }
   .tile-n.good { color: var(--ship); }
   .tile-n.bad  { color: var(--block); }
   .tile-n.warn { color: var(--amber); }
 
-  /* ---------------------------------------------------------- sections */
-  section { margin-bottom: 60px; }
+  /* ---- sections ---- */
+  section { margin-bottom: 52px; }
   .sec-head {
     display: flex;
     align-items: baseline;
     gap: 14px;
     flex-wrap: wrap;
     border-bottom: 2px solid var(--ink);
-    padding-bottom: 9px;
-    margin-bottom: 22px;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
   }
   h2 {
-    font-size: 21px;
+    font-size: 20px;
     font-weight: 700;
     letter-spacing: -0.015em;
     margin: 0;
   }
   .sec-note { color: var(--ink-mute); font-size: 13px; margin: 0; }
 
-  /* ---------------------------------------------------------- shipped */
+  /* ---- shipped ---- */
   .shipped-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
   }
   .ship-card {
     background: var(--surface);
     border: 1px solid var(--hairline);
     border-left: 3px solid var(--ship);
     border-radius: var(--radius);
-    padding: 13px 15px;
+    padding: 12px 14px;
   }
   .ship-top {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
   }
-  .ship-name { font-weight: 650; font-size: 14px; letter-spacing: -0.01em; }
+  .ship-name { font-weight: 650; font-size: 13.5px; letter-spacing: -0.01em; }
   .ship-date {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10.5px;
     color: var(--ink-mute);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-  .ship-what { font-size: 13px; color: var(--ink-soft); line-height: 1.45; }
+  .ship-what { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
   .ship-what code {
     font-family: var(--mono);
-    font-size: 11.5px;
+    font-size: 11px;
     background: var(--surface-sunk);
     padding: 1px 4px;
     border-radius: 2px;
@@ -230,110 +176,112 @@
   }
 
   .infra {
-    margin-top: 14px;
+    margin-top: 12px;
     background: var(--ship-wash);
     border: 1px solid var(--hairline);
     border-radius: var(--radius);
-    padding: 14px 16px;
+    padding: 12px 14px;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 22px;
+    gap: 6px 18px;
     align-items: center;
   }
   .infra-l {
     font-family: var(--mono);
-    font-size: 10.5px;
+    font-size: 10px;
     letter-spacing: 0.13em;
     text-transform: uppercase;
     color: var(--ink-soft);
     width: 100%;
+    font-weight: 600;
   }
-  .infra span.item { font-size: 13px; color: var(--ink); }
+  .infra span.item { font-size: 12.5px; color: var(--ink); }
   .infra span.item::before { content: "✓ "; color: var(--ship); font-weight: 700; }
 
-  /* ---------------------------------------------------------- gantt */
+  /* ---- gantt ---- */
   .scroller { overflow-x: auto; padding-bottom: 6px; }
-  .gantt { min-width: 880px; }
+  .gantt { min-width: 960px; }
 
   .gantt-head {
     display: grid;
-    grid-template-columns: 190px repeat(6, 1fr);
-    gap: 4px;
-    margin-bottom: 8px;
+    grid-template-columns: 195px repeat(5, 1fr);
+    gap: 3px;
+    margin-bottom: 6px;
   }
   .wk {
-    background: var(--surface-sunk);
+    background: var(--surface);
     border: 1px solid var(--hairline);
     border-radius: var(--radius);
-    padding: 8px 10px;
+    padding: 7px 9px;
   }
   .wk-n {
     font-family: var(--mono);
-    font-size: 10.5px;
+    font-size: 9.5px;
     letter-spacing: 0.13em;
     text-transform: uppercase;
     color: var(--ink-mute);
     display: block;
+    font-weight: 600;
   }
   .wk-d {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 650;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.01em;
     display: block;
     margin-top: 2px;
   }
-  .wk.launch { background: var(--amber-wash); border-color: var(--amber); }
+  .wk.launch { background: var(--amber-light); border-color: var(--amber); }
   .wk.launch .wk-n { color: var(--amber-deep); }
   .corner { display: flex; align-items: flex-end; }
   .corner span {
     font-family: var(--mono);
-    font-size: 10.5px;
+    font-size: 10px;
     letter-spacing: 0.13em;
     text-transform: uppercase;
     color: var(--ink-mute);
-    padding-bottom: 9px;
+    padding-bottom: 8px;
+    font-weight: 600;
   }
 
   .row {
     display: grid;
-    grid-template-columns: 190px repeat(6, 1fr);
-    gap: 4px;
-    margin-bottom: 4px;
+    grid-template-columns: 195px repeat(5, 1fr);
+    gap: 3px;
+    margin-bottom: 3px;
     align-items: stretch;
   }
   .row-label {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 9px 12px 9px 0;
+    padding: 6px 10px 6px 0;
     border-right: 1px solid var(--hairline);
   }
-  .row-name { font-size: 13.5px; font-weight: 650; letter-spacing: -0.01em; }
-  .row-meta { font-size: 11px; color: var(--ink-mute); font-family: var(--mono); }
+  .row-name { font-size: 12.5px; font-weight: 650; letter-spacing: -0.01em; }
+  .row-meta { font-size: 10px; color: var(--ink-mute); font-family: var(--mono); }
 
-  /* grid cells that show the week rhythm behind the bars */
-  .cell { border-right: 1px dashed var(--hairline); min-height: 46px; }
+  .cell { border-right: 1px dashed var(--hairline); min-height: 40px; }
   .cell:last-child { border-right: none; }
 
   .bar {
     border-radius: var(--radius);
-    padding: 7px 11px;
-    font-size: 12.5px;
+    padding: 6px 9px;
+    font-size: 11.5px;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.25;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    min-height: 46px;
+    min-height: 40px;
     border: 1px solid transparent;
     border-left-width: 3px;
   }
   .bar small {
     display: block;
     font-weight: 500;
-    font-size: 11px;
-    opacity: 0.82;
+    font-size: 10px;
+    opacity: 0.78;
     margin-top: 1px;
   }
 
@@ -342,9 +290,8 @@
     border-color: var(--hairline);
     border-left-color: var(--block);
     color: var(--ink);
-    /* hatching so status survives greyscale printing and colour-blindness */
     background-image: repeating-linear-gradient(
-      -45deg, transparent 0 7px, color-mix(in srgb, var(--block) 13%, transparent) 7px 14px);
+      -45deg, transparent 0 7px, color-mix(in srgb, var(--block) 10%, transparent) 7px 14px);
   }
   .bar.scheduled {
     background: var(--sched-wash);
@@ -359,75 +306,76 @@
     color: var(--ink);
   }
   .bar.launch {
-    background: var(--navy);
-    border-color: var(--amber);
-    border-left-color: var(--amber);
-    color: var(--on-navy);
+    background: linear-gradient(135deg, var(--amber), var(--amber-deep));
+    border-color: var(--amber-deep);
+    border-left-color: var(--amber-deep);
+    color: #fff;
   }
-  .bar.launch small { color: var(--amber); opacity: 1; }
+  .bar.launch small { color: #fff; opacity: 0.9; }
 
   .legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 20px;
-    margin-top: 18px;
-    padding-top: 14px;
+    gap: 8px 18px;
+    margin-top: 16px;
+    padding-top: 12px;
     border-top: 1px solid var(--hairline);
-    font-size: 12.5px;
+    font-size: 12px;
     color: var(--ink-soft);
   }
-  .legend div { display: flex; align-items: center; gap: 7px; }
+  .legend div { display: flex; align-items: center; gap: 6px; }
   .sw { width: 13px; height: 13px; border-radius: 2px; flex: none; border: 1px solid var(--hairline-sc); }
   .sw.b { background: var(--block-wash); border-left: 3px solid var(--block); }
   .sw.s { background: var(--sched-wash); border-left: 3px solid var(--sched); }
   .sw.w { background: var(--wait-wash);  border-left: 3px solid var(--wait); }
   .sw.d { background: var(--ship-wash);  border-left: 3px solid var(--ship); }
 
-  /* ---------------------------------------------------------- deadlines */
+  /* ---- gates ---- */
   .gates {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
   }
   .gate {
     background: var(--surface);
     border: 1px solid var(--hairline);
     border-top: 3px solid var(--wait);
     border-radius: var(--radius);
-    padding: 14px 15px;
+    padding: 13px 14px;
   }
   .gate.critical { border-top-color: var(--block); }
   .gate-d {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--ink-mute);
     display: block;
-    margin-bottom: 9px;
+    margin-bottom: 8px;
   }
   .gate.critical .gate-d { color: var(--block); }
-  .gate ul { margin: 0; padding-left: 17px; }
-  .gate li { font-size: 13px; margin-bottom: 5px; color: var(--ink-soft); }
+  .gate ul { margin: 0; padding-left: 16px; }
+  .gate li { font-size: 12.5px; margin-bottom: 4px; color: var(--ink-soft); }
   .gate li:last-child { margin-bottom: 0; }
   .gate li b { color: var(--ink); font-weight: 650; }
 
-  /* ---------------------------------------------------------- callout */
+  /* ---- callout ---- */
   .callout {
     background: var(--surface);
     border: 1px solid var(--hairline);
     border-left: 3px solid var(--amber);
     border-radius: var(--radius);
-    padding: 20px 22px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
   }
   .callout h3 {
-    margin: 0 0 10px;
+    margin: 0 0 8px;
     font-size: 15px;
     font-weight: 700;
     letter-spacing: -0.01em;
   }
-  .callout p { margin: 0 0 11px; color: var(--ink-soft); max-width: 74ch; font-size: 14px; }
+  .callout p { margin: 0 0 10px; color: var(--ink-soft); max-width: 74ch; font-size: 13.5px; }
   .callout p:last-child { margin-bottom: 0; }
   .callout b { color: var(--ink); }
 
@@ -437,49 +385,81 @@
     background: var(--surface-sunk);
     border: 1px solid var(--hairline);
     border-radius: var(--radius);
-    padding: 12px 14px;
-    margin: 14px 0;
+    padding: 11px 13px;
+    margin: 12px 0;
     overflow-x: auto;
     white-space: nowrap;
     color: var(--ink-soft);
   }
   .chain b { color: var(--block); }
 
+  /* ---- sprint summary cards ---- */
+  .sprint-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+  }
+  .sprint-card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .sprint-card h4 {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .sprint-card .week-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--sched);
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .sprint-card ul {
+    margin: 0;
+    padding-left: 15px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .sprint-card li { margin-bottom: 2px; }
+
   footer {
-    margin-top: 60px;
-    padding-top: 18px;
+    margin-top: 52px;
+    padding-top: 16px;
     border-top: 1px solid var(--hairline);
-    font-size: 12.5px;
+    font-size: 12px;
     color: var(--ink-mute);
   }
   footer code {
     font-family: var(--mono);
-    font-size: 11.5px;
+    font-size: 11px;
     background: var(--surface-sunk);
     padding: 1px 5px;
     border-radius: 2px;
   }
 
   a { color: inherit; }
-  a:focus-visible, [tabindex]:focus-visible {
-    outline: 2px solid var(--amber);
-    outline-offset: 2px;
-  }
 
   @media (max-width: 640px) {
-    .masthead-inner { padding: 32px 20px 30px; }
-    .wrap { padding: 0 20px 64px; }
+    .masthead-inner { padding: 28px 20px 26px; }
+    .wrap { padding: 0 20px 56px; }
   }
 </style>
 
 <header class="masthead">
   <div class="masthead-inner">
-    <p class="eyebrow">Boliwala.com · Phase 1 · Optimistic IP</p>
-    <h1>Road to 15 September</h1>
+    <p class="eyebrow">Boliwala.com · Full Scope · 15 September Launch</p>
+    <h1>5 Weeks to Launch Day</h1>
     <p class="standfirst">
-      Ten sprints shipped and verified through 9 August. Everything that could be
-      built without the client is built. The remaining six weeks are governed by
-      one dependency: Razorpay credentials.
+      Ten sprints shipped. Eight remaining — compressed into five weeks with parallel execution.
+      Every feature from the URD ships on 15 September. Credentials must arrive by 17 August.
     </p>
 
     <div class="tiles">
@@ -488,20 +468,24 @@
         <span class="tile-l">Sprints shipped</span>
       </div>
       <div class="tile">
-        <span class="tile-n warn">2</span>
-        <span class="tile-l">Sprints remaining</span>
+        <span class="tile-n warn">8</span>
+        <span class="tile-l">Sprints left</span>
       </div>
       <div class="tile">
         <span class="tile-n bad">3</span>
         <span class="tile-l">Hard blockers</span>
       </div>
       <div class="tile">
-        <span class="tile-n">37</span>
-        <span class="tile-l">Days to launch</span>
+        <span class="tile-n">5</span>
+        <span class="tile-l">Weeks to ship</span>
       </div>
       <div class="tile">
         <span class="tile-n good">98<span style="font-size:17px">%</span></span>
         <span class="tile-l">Hero weight cut</span>
+      </div>
+      <div class="tile">
+        <span class="tile-n warn">15<span style="font-size:15px"> Sep</span></span>
+        <span class="tile-l">🚀 Launch day</span>
       </div>
     </div>
   </div>
@@ -513,72 +497,71 @@
   <section>
     <div class="sec-head">
       <h2>Delivered — through 9 August</h2>
-      <p class="sec-note">All committed and pushed except Sprint 5, which is awaiting review.</p>
+      <p class="sec-note">All committed and pushed to main.</p>
     </div>
 
     <div class="shipped-grid">
       <div class="ship-card">
         <div class="ship-top"><span class="ship-name">Sprint 0 — Foundations</span><span class="ship-date">Jul</span></div>
-        <div class="ship-what">GitHub repo, Vercel project, Supabase project, all linked with preview deploys. Next.js 16 + TypeScript + Tailwind v4 scaffold.</div>
+        <div class="ship-what">GitHub, Vercel, Supabase. Next.js 16 + TS + Tailwind v4.</div>
       </div>
       <div class="ship-card">
         <div class="ship-top"><span class="ship-name">Sprint 1 — Public pages</span><span class="ship-date">Jul</span></div>
-        <div class="ship-what">Homepage, search shell, listing page, Indian currency and date formatting, view tracking.</div>
+        <div class="ship-what">Homepage, search shell, listing page, Indian formatting.</div>
       </div>
       <div class="ship-card">
-        <div class="ship-top"><span class="ship-name">Sprint 1.5 — Design replication</span><span class="ship-date">Jul</span></div>
-        <div class="ship-what">shadcn semantic tokens, sticky parallax hero, rebuilt search panel, Lucide icon set.</div>
+        <div class="ship-top"><span class="ship-name">Sprint 1.5 — Design</span><span class="ship-date">Jul</span></div>
+        <div class="ship-what">shadcn tokens, parallax hero, search panel, Lucide icons.</div>
       </div>
       <div class="ship-card">
-        <div class="ship-top"><span class="ship-name">Sprint 2 — Auth &amp; accounts</span><span class="ship-date">Aug</span></div>
-        <div class="ship-what">Email/password auth, signup trigger granting 5 credits via ledger, profile page, password reset, alerts capture.</div>
+        <div class="ship-top"><span class="ship-name">Sprint 2 — Auth</span><span class="ship-date">Aug</span></div>
+        <div class="ship-what">Email/password auth, 5-credit signup trigger, profile, password reset.</div>
       </div>
       <div class="ship-card">
         <div class="ship-top"><span class="ship-name">Sprint 2.1 — Search &amp; listings</span><span class="ship-date">4 Aug</span></div>
-        <div class="ship-what">Real filterable search, <code>/listing/[slug]</code>, the four-state gating layer, credit unlock RPC, shortlists, deduped view counts.</div>
+        <div class="ship-what">Real search, <code>/listing/[slug]</code>, 4-state gating, unlock RPC, shortlists.</div>
       </div>
       <div class="ship-card">
         <div class="ship-top"><span class="ship-name">Sprint 2.5 — Google OAuth</span><span class="ship-date">9 Aug</span></div>
-        <div class="ship-what">Google sign-in wired end to end, callback route, verified no double credit grant on repeat login.</div>
+        <div class="ship-what">Google sign-in end to end, no double credit grant.</div>
       </div>
       <div class="ship-card">
         <div class="ship-top"><span class="ship-name">Sprint 2.7 — RLS hardening</span><span class="ship-date">4 Aug</span></div>
-        <div class="ship-what">Locked down every remaining RLS-disabled table, revoked direct execution on trigger functions.</div>
+        <div class="ship-what">All tables locked, trigger execution revoked from public.</div>
       </div>
       <div class="ship-card">
         <div class="ship-top"><span class="ship-name">Sprint 3 — Admin core</span><span class="ship-date">5 Aug</span></div>
-        <div class="ship-what">Real admin auth guard, live dashboard KPIs, listings CRUD, Supabase Storage image upload, bulk Excel upload with column mapping.</div>
+        <div class="ship-what">Admin guard, live KPIs, listings CRUD, image upload, bulk Excel.</div>
       </div>
       <div class="ship-card">
         <div class="ship-top"><span class="ship-name">Sprint 4 — Admin &amp; pages</span><span class="ship-date">5 Aug</span></div>
-        <div class="ship-what">Callback capture pipeline, admin callbacks workflow, admin pricing settings with live propagation, partner enrolment.</div>
+        <div class="ship-what">Callback pipeline, callbacks workflow, pricing settings, partner form.</div>
       </div>
       <div class="ship-card">
-        <div class="ship-top"><span class="ship-name">Sprint 5 — QA, SEO, performance</span><span class="ship-date">9 Aug</span></div>
-        <div class="ship-what">Sitemap, robots, canonicals, per-listing metadata, JSON-LD, icons and manifest, typechecking re-enabled, two re-runnable security scripts.</div>
+        <div class="ship-top"><span class="ship-name">Sprint 5 — QA, SEO, perf</span><span class="ship-date">9 Aug</span></div>
+        <div class="ship-what">Sitemap, robots, JSON-LD, icons, manifest, typechecking on, 98% image cut.</div>
       </div>
     </div>
 
     <div class="infra">
-      <span class="infra-l">Infrastructure &amp; platform — live</span>
-      <span class="item">GitHub, branch-protected</span>
-      <span class="item">Vercel, preview deploys</span>
-      <span class="item">Supabase, ap-south-1</span>
-      <span class="item">Postgres schema + RLS</span>
-      <span class="item">Column-level grants</span>
+      <span class="infra-l">Infrastructure live</span>
+      <span class="item">GitHub (protected)</span>
+      <span class="item">Vercel (previews)</span>
+      <span class="item">Supabase (ap-south-1)</span>
+      <span class="item">RLS + column grants</span>
       <span class="item">Storage bucket</span>
-      <span class="item">Auth + Google OAuth</span>
-      <span class="item">12 listings, 6 banks seeded</span>
+      <span class="item">Google OAuth</span>
+      <span class="item">12 listings, 6 banks</span>
       <span class="item">Leak test passing</span>
-      <span class="item">24 routes building clean</span>
+      <span class="item">24 routes clean</span>
     </div>
   </section>
 
-  <!-- ============================================ TIMELINE -->
+  <!-- ============================================ GANTT -->
   <section>
     <div class="sec-head">
-      <h2>Six weeks to launch</h2>
-      <p class="sec-note">10 August – 15 September 2026</p>
+      <h2>5-Week Sprint Plan → 15 September</h2>
+      <p class="sec-note">Parallel execution required. All credentials by 17 Aug.</p>
     </div>
 
     <div class="scroller">
@@ -590,121 +573,170 @@
           <div class="wk"><span class="wk-n">Week 2</span><span class="wk-d">17–23 Aug</span></div>
           <div class="wk"><span class="wk-n">Week 3</span><span class="wk-d">24–30 Aug</span></div>
           <div class="wk"><span class="wk-n">Week 4</span><span class="wk-d">31 Aug–6 Sep</span></div>
-          <div class="wk"><span class="wk-n">Week 5</span><span class="wk-d">7–13 Sep</span></div>
-          <div class="wk launch"><span class="wk-n">Week 6</span><span class="wk-d">14–15 Sep</span></div>
+          <div class="wk launch"><span class="wk-n">Week 5</span><span class="wk-d">7–15 Sep</span></div>
         </div>
 
+        <!-- Sprint 6 -->
         <div class="row">
           <div class="row-label">
-            <span class="row-name">Cleanup &amp; hardening</span>
+            <span class="row-name">Sprint 6 — Profile &amp; Debt</span>
             <span class="row-meta">unblocked</span>
           </div>
           <div style="grid-column: 2 / 3;">
-            <div class="bar scheduled">Debt sprint
-              <small>Data audit · dead code · profile fields · partner route · rotate DB password</small>
+            <div class="bar scheduled">Profile + cleanup
+              <small>My Alerts · My Details · /search alerts · dead code · DB rotation</small>
+            </div>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <!-- Sprint 3.5 -->
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Sprint 3.5 — Razorpay</span>
+            <span class="row-meta">blocked → B1</span>
+          </div>
+          <div style="grid-column: 2 / 3;">
+            <div class="bar blocked">Waiting
+              <small>Test keys needed</small>
+            </div>
+          </div>
+          <div style="grid-column: 3 / 4;">
+            <div class="bar scheduled">Razorpay build
+              <small>₹999 sub · ₹9,999 pkg · webhooks · entitlement</small>
             </div>
           </div>
           <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <!-- Sprint 4.5 -->
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Sprint 4.5 — Email</span>
+            <span class="row-meta">blocked → B2</span>
+          </div>
+          <div style="grid-column: 2 / 3;">
+            <div class="bar blocked">Waiting
+              <small>Resend key</small>
+            </div>
+          </div>
+          <div style="grid-column: 3 / 4;">
+            <div class="bar scheduled">Resend email
+              <small>Welcome · receipt · callback ack</small>
+            </div>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <!-- Sprint 7 + 8 -->
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Sprint 7 — Admin Finance</span>
+            <span class="row-meta">follows 3.5</span>
+          </div>
+          <div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 4 / 5;">
+            <div class="bar scheduled">Admin tabs (real)
+              <small>Payments · Subs · Success Fees · Users · Packages · Chart · Feed</small>
+            </div>
+          </div>
           <div class="cell"></div><div class="cell"></div>
         </div>
 
         <div class="row">
           <div class="row-label">
-            <span class="row-name">Payments — Sprint 3.5</span>
-            <span class="row-meta">blocked · B1</span>
+            <span class="row-name">Sprint 8 — User Services</span>
+            <span class="row-meta">follows 3.5</span>
           </div>
-          <div style="grid-column: 2 / 3;">
-            <div class="bar blocked">Waiting
-              <small>Razorpay test keys</small>
+          <div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 4 / 5;">
+            <div class="bar scheduled">Profile + admin pipeline
+              <small>My Subscription · My Services · My Reports · Service Pipeline · Doc Upload</small>
             </div>
           </div>
-          <div style="grid-column: 3 / 5;">
-            <div class="bar scheduled">Razorpay build — the critical path
-              <small>Order → checkout → webhook verification → entitlement · signature validation · idempotent webhooks · failure and retry</small>
+          <div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <!-- Sprint 5.5 -->
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Sprint 5.5 — Content</span>
+            <span class="row-meta">waiting · client</span>
+          </div>
+          <div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 4 / 5;">
+            <div class="bar waiting">Content &amp; legal
+              <small>Privacy · Terms · stats · contacts · brand · fonts</small>
             </div>
+          </div>
+          <div class="cell"></div><div class="cell"></div>
+        </div>
+
+        <!-- Sprint 9 + 10 -->
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Sprint 9 — Engagement</span>
+            <span class="row-meta">follows 3.5 + 4.5</span>
           </div>
           <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 5 / 6;">
+            <div class="bar scheduled">Marketing engine
+              <small>Alert engine · Email lifecycle · Credit nudges · Sub lifecycle · Cross-sell · Admin tools</small>
+            </div>
+          </div>
+          <div class="cell"></div>
         </div>
 
         <div class="row">
           <div class="row-label">
-            <span class="row-name">Email — Sprint 4.5</span>
-            <span class="row-meta">blocked · B2</span>
-          </div>
-          <div style="grid-column: 2 / 3;">
-            <div class="bar blocked">Waiting
-              <small>Resend key + DNS</small>
-            </div>
-          </div>
-          <div style="grid-column: 3 / 5;">
-            <div class="bar scheduled">Transactional email
-              <small>Signup, payment receipt, callback acknowledgement</small>
-            </div>
-          </div>
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
-        </div>
-
-        <div class="row">
-          <div class="row-label">
-            <span class="row-name">Admin completion</span>
+            <span class="row-name">Sprint 10 — Channel Partners</span>
             <span class="row-meta">follows 3.5</span>
           </div>
           <div class="cell"></div><div class="cell"></div><div class="cell"></div>
           <div style="grid-column: 5 / 6;">
-            <div class="bar scheduled">Real admin tabs
-              <small>Packages · Payments · Success Fees · Users · Partners</small>
-            </div>
-          </div>
-          <div class="cell"></div><div class="cell"></div>
-        </div>
-
-        <div class="row">
-          <div class="row-label">
-            <span class="row-name">Content &amp; legal</span>
-            <span class="row-meta">waiting · B4 B5 B6</span>
-          </div>
-          <div class="cell"></div>
-          <div style="grid-column: 3 / 4;">
-            <div class="bar waiting">Client copy due
-              <small>Stats · legal · contacts</small>
-            </div>
-          </div>
-          <div style="grid-column: 4 / 6;">
-            <div class="bar scheduled">Build &amp; wire
-              <small>Privacy and Terms routes · real statistics · contact number and WhatsApp link</small>
-            </div>
-          </div>
-          <div class="cell"></div><div class="cell"></div>
-        </div>
-
-        <div class="row">
-          <div class="row-label">
-            <span class="row-name">Domain, brand, cutover</span>
-            <span class="row-meta">waiting · B3 B7 B12</span>
-          </div>
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
-          <div style="grid-column: 6 / 7;">
-            <div class="bar waiting">Cutover
-              <small>Domain · brand assets · re-test Google OAuth redirects · Razorpay live keys</small>
+            <div class="bar scheduled">Channel Partner portal
+              <small>CP auth · Dashboard · Referral links · Invites · Commissions · Admin Partners</small>
             </div>
           </div>
           <div class="cell"></div>
         </div>
 
+        <!-- Sprint 11 + 12 + 13 -->
         <div class="row">
           <div class="row-label">
-            <span class="row-name">QA &amp; release</span>
-            <span class="row-meta">us</span>
+            <span class="row-name">Sprint 11 — Creatives + WA</span>
+            <span class="row-meta">follows 10</span>
           </div>
           <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
           <div style="grid-column: 6 / 7;">
-            <div class="bar scheduled">Full regression
-              <small>Leak test · access matrix · cross-browser · Lighthouse · UAT</small>
+            <div class="bar scheduled">Creatives + WhatsApp
+              <small>Co-branded gallery · Admin templates · WA Phase 1</small>
             </div>
           </div>
-          <div style="grid-column: 7 / 8;">
-            <div class="bar launch">Launch
-              <small>15 Sep</small>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Sprint 12 — Mobile</span>
+            <span class="row-meta">PWA or Capacitor</span>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 6 / 7;">
+            <div class="bar scheduled">Mobile build
+              <small>PWA service worker · or Capacitor APK</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Sprint 13 — QA &amp; Launch</span>
+            <span class="row-meta">final</span>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 6 / 7;">
+            <div class="bar launch">🚀 QA + LAUNCH
+              <small>Regression · cross-browser · Lighthouse · domain cutover · deploy · 15 Sep</small>
             </div>
           </div>
         </div>
@@ -714,52 +746,186 @@
 
     <div class="legend">
       <div><span class="sw d"></span> Shipped</div>
-      <div><span class="sw s"></span> Scheduled — we can execute</div>
-      <div><span class="sw w"></span> Waiting on client input</div>
-      <div><span class="sw b"></span> Blocked — cannot start</div>
+      <div><span class="sw s"></span> Scheduled</div>
+      <div><span class="sw w"></span> Waiting on client</div>
+      <div><span class="sw b"></span> Blocked</div>
+    </div>
+  </section>
+
+  <!-- ============================================ SPRINT DETAILS -->
+  <section>
+    <div class="sec-head">
+      <h2>What each sprint delivers</h2>
+    </div>
+
+    <div class="sprint-grid">
+      <div class="sprint-card">
+        <span class="week-tag">Week 1 · 10–16 Aug</span>
+        <h4>Sprint 6 — Profile &amp; Debt</h4>
+        <ul>
+          <li>Profile My Alerts tab (real)</li>
+          <li>Profile My Details full build</li>
+          <li>/search email-alerts banner</li>
+          <li>Protect /partner/dashboard</li>
+          <li>Dead code + data audit</li>
+          <li>DB password rotation</li>
+        </ul>
+      </div>
+      <div class="sprint-card">
+        <span class="week-tag">Week 2 · 17–23 Aug</span>
+        <h4>Sprint 3.5 — Razorpay</h4>
+        <ul>
+          <li>₹999 subscription checkout</li>
+          <li>₹9,999 per-auction package</li>
+          <li>Webhook verification</li>
+          <li>Entitlement + failure handling</li>
+          <li>Wire pricing/listing CTAs</li>
+        </ul>
+      </div>
+      <div class="sprint-card">
+        <span class="week-tag">Week 2 · 17–23 Aug</span>
+        <h4>Sprint 4.5 — Email (parallel)</h4>
+        <ul>
+          <li>Resend SDK setup</li>
+          <li>Welcome email (3-part)</li>
+          <li>Payment receipt email</li>
+          <li>Callback acknowledgement</li>
+        </ul>
+      </div>
+      <div class="sprint-card">
+        <span class="week-tag">Week 3 · 24–30 Aug</span>
+        <h4>Sprint 7 — Admin Finance</h4>
+        <ul>
+          <li>Payments tab (real)</li>
+          <li>Subscriptions tab</li>
+          <li>Success Fee Tracker</li>
+          <li>Users tab with filters</li>
+          <li>Revenue chart + Activity feed</li>
+        </ul>
+      </div>
+      <div class="sprint-card">
+        <span class="week-tag">Week 3 · 24–30 Aug</span>
+        <h4>Sprint 8 — User Services</h4>
+        <ul>
+          <li>Admin Service Pipeline</li>
+          <li>Admin Report Upload</li>
+          <li>Profile My Subscription</li>
+          <li>Profile My Services</li>
+          <li>Profile My Reports</li>
+        </ul>
+      </div>
+      <div class="sprint-card">
+        <span class="week-tag">Week 3 · 24–30 Aug</span>
+        <h4>Sprint 5.5 — Content &amp; Legal</h4>
+        <ul>
+          <li>Privacy Policy + Terms pages</li>
+          <li>Real headline statistics</li>
+          <li>Contact number + WhatsApp</li>
+          <li>Brand assets swap</li>
+          <li>Font resolution</li>
+        </ul>
+      </div>
+      <div class="sprint-card">
+        <span class="week-tag">Week 4 · 31 Aug–6 Sep</span>
+        <h4>Sprint 9 — Engagement</h4>
+        <ul>
+          <li>Property match alert engine</li>
+          <li>Email lifecycle (10 templates)</li>
+          <li>Credit + subscription nudges</li>
+          <li>Cross-sell flow</li>
+          <li>Admin engagement tools</li>
+        </ul>
+      </div>
+      <div class="sprint-card">
+        <span class="week-tag">Week 4 · 31 Aug–6 Sep</span>
+        <h4>Sprint 10 — Channel Partners</h4>
+        <ul>
+          <li>CP auth + onboarding</li>
+          <li>Dashboard &amp; earnings</li>
+          <li>Referral links + invites</li>
+          <li>Commission calculation</li>
+          <li>Admin Partners + Commission Settings</li>
+        </ul>
+      </div>
+      <div class="sprint-card">
+        <span class="week-tag">Week 5 · 7–15 Sep</span>
+        <h4>Sprint 11 — Creatives + WA</h4>
+        <ul>
+          <li>Co-branded creatives</li>
+          <li>Admin template management</li>
+          <li>WhatsApp Phase 1</li>
+        </ul>
+      </div>
+      <div class="sprint-card">
+        <span class="week-tag">Week 5 · 7–15 Sep</span>
+        <h4>Sprint 12 — Mobile</h4>
+        <ul>
+          <li>PWA service worker</li>
+          <li>Install prompt</li>
+          <li>Or Capacitor APK build</li>
+        </ul>
+      </div>
+      <div class="sprint-card" style="border-left: 3px solid var(--amber);">
+        <span class="week-tag" style="color: var(--amber);">Week 5 · 11–15 Sep</span>
+        <h4>Sprint 13 — QA &amp; Launch 🚀</h4>
+        <ul>
+          <li>Full regression (testing_guide.md)</li>
+          <li>Cross-browser QA</li>
+          <li>Lighthouse ≥90</li>
+          <li>Domain cutover + deploy</li>
+          <li>Razorpay live keys</li>
+          <li>Client walkthrough</li>
+        </ul>
+      </div>
     </div>
   </section>
 
   <!-- ============================================ GATES -->
   <section>
     <div class="sec-head">
-      <h2>What we need from the client, by date</h2>
-      <p class="sec-note">Each missed date pushes launch by roughly the same amount.</p>
+      <h2>Client deadlines — hard dates</h2>
+      <p class="sec-note">Each missed date pushes launch by the same amount.</p>
     </div>
 
     <div class="gates">
       <div class="gate critical">
         <span class="gate-d">By 17 August — critical</span>
         <ul>
-          <li><b>Razorpay test keys</b> — self-serve, no KYC, ~10 minutes</li>
-          <li><b>Razorpay live KYC started</b> — takes days to weeks</li>
+          <li><b>Razorpay test keys</b> (~10 min self-serve)</li>
+          <li><b>Razorpay live KYC started</b></li>
           <li><b>Resend API key</b></li>
         </ul>
       </div>
-      <div class="gate">
-        <span class="gate-d">By 24 August</span>
+      <div class="gate critical">
+        <span class="gate-d">By 24 August — content</span>
         <ul>
-          <li><b>Real contact number</b>, WhatsApp, email, social links</li>
-          <li><b>Channel Partner scope</b> — ship the portal or delete the route</li>
-          <li><b>Which admin tabs</b> are launch-critical</li>
-        </ul>
-      </div>
-      <div class="gate">
-        <span class="gate-d">By 31 August</span>
-        <ul>
-          <li><b>Headline statistics</b> — real figures or written sign-off</li>
-          <li><b>Privacy Policy and Terms</b> copy</li>
-          <li><b>DNS records</b> for the Resend sending domain</li>
+          <li><b>Privacy Policy + Terms</b> copy</li>
+          <li><b>Real contact number</b> + WhatsApp</li>
+          <li><b>Headline statistics</b> sign-off</li>
           <li><b>Definitive bank list</b></li>
         </ul>
       </div>
       <div class="gate">
-        <span class="gate-d">By 7 September</span>
+        <span class="gate-d">By 31 August — brand</span>
         <ul>
-          <li><b>Production domain</b> and registrar access</li>
-          <li><b>Brand assets</b> — logo, favicon, share image</li>
-          <li><b>Listing photography</b>, or accept placeholders</li>
+          <li><b>Brand assets</b> (logo, favicon, OG image)</li>
+          <li><b>DNS records</b> for Resend domain</li>
+          <li><b>Listing photography</b> or accept placeholders</li>
+        </ul>
+      </div>
+      <div class="gate">
+        <span class="gate-d">By 7 September — infra</span>
+        <ul>
+          <li><b>Production domain</b> + registrar</li>
           <li><b>Razorpay live activation</b> complete</li>
+        </ul>
+      </div>
+      <div class="gate" style="border-top-color: var(--amber);">
+        <span class="gate-d" style="color: var(--amber);">11 September — code freeze</span>
+        <ul>
+          <li><b>No new features</b> after this date</li>
+          <li>QA + bug fixes only</li>
+          <li>Final regression begins</li>
         </ul>
       </div>
     </div>
@@ -773,34 +939,23 @@
 
     <div class="callout">
       <h3>One chain governs the date</h3>
-
       <div class="chain">
-        <b>Razorpay test keys</b> → Sprint 3.5 build (~2 weeks) → admin Packages / Payments / Success Fees → full regression → <b>launch</b>
+        <b>Razorpay test keys (17 Aug)</b> → 3.5 build (1 wk) → Admin + User Services (1 wk) → Engagement + CP Portal (1 wk) → Creatives + Mobile + QA (1 wk) → <b>🚀 15 Sep</b>
       </div>
-
       <p>
-        Razorpay is commonly misread as a configuration step. It is not — there is
-        <b>no payment code in the repo at all</b> today. Once credentials arrive it is
-        roughly two weeks of build plus test, and it cannot start early.
+        Every week the credentials slip, launch slips a week. There is <b>no slack</b> in this plan.
+        Weeks 3–5 run 2–3 sprints in parallel — this requires dedicated focus and zero blockers.
       </p>
       <p>
-        Working backwards from 15 September: release prep needs Week 5, admin
-        completion needs Week 4, so the Razorpay build must run Weeks 2–3 —
-        which means <b>credentials by 17 August</b>. Every week they slip moves
-        launch by a week, because nothing else can fill that slot.
-      </p>
-      <p>
-        If they slip past <b>31 August</b>, the realistic choice is to move the date or
-        launch without payments — shipping the free tier and lead capture, with paid
-        tiers as a fast-follow. That fallback is genuinely viable: everything except
-        payments is already built and tested.
+        <b>Code freeze is 11 September.</b> The last 4 days are QA, regression, domain cutover, and deploy only.
+        No new features land after that date.
       </p>
     </div>
   </section>
 
   <footer>
-    Generated 9 August 2026 from <code>MEMORY.md</code> §14–§15.
-    Detail on every blocker in <code>blockers.md</code>; test procedures in
-    <code>testing_guide.md</code>.
+    Generated 9 August 2026 from <code>SCOPE_AUDIT.md</code>, <code>MEMORY.md</code>,
+    <code>boliwala_features.txt</code>. Sprint details: <code>SPRINT_CALENDAR.md</code>.
+    Test procedures: <code>testing_guide.md</code>. Blockers: <code>blockers.md</code>.
   </footer>
 </div>

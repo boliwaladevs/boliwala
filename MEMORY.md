@@ -1,5 +1,13 @@
 # BOLIWALA.COM — PROJECT MEMORY & HANDOFF
 
+> **🔄 UPDATE RULE (MANDATORY):** On every code change and commit, the following files
+> MUST be updated to reflect the current state:
+> - `MEMORY.md` — update the relevant sprint section, add new sections as needed
+> - `project_calendar.html` — mark completed sprints, update timelines
+> - `SPRINT_CALENDAR.md` — mark completed tasks `[x]`, update statuses and dates
+>
+> This rule is non-negotiable. No commit goes out without these three files in sync.
+
 **Purpose:** single source of truth for project state across sessions. If a
 context window fills up, open a new session and point it at this file first.
 
@@ -11,11 +19,16 @@ context window fills up, open a new session and point it at this file first.
 > 4. `plans/boliwala-phase1-sprint-plan.md` (master plan — **includes Sprint
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
-**Last updated:** 2026-08-09. Sprints 2.1 (`5f6f771`), 2.7 (`2ee35a1`),
+**Last updated:** 2026-08-09.
+
+> **15 SEP LAUNCH PLAN & SCOPE AUDIT**
+> A comprehensive `SCOPE_AUDIT.md` was run on 9 Aug, finding 22 unscoped URD features (Channel Partner portal, Marketing engine, full Profile, Capacitor APK).
+> Following this, `SPRINT_CALENDAR.md` and `project_calendar.html` were rebuilt into a **5-week compressed timeline** to deliver all remaining sprints (Sprint 6 through 13) by the non-negotiable **15 September 2026** launch date.
+> There is no Phase 2 — everything ships.
+
+**Recent History:** Sprints 2.1 (`5f6f771`), 2.7 (`2ee35a1`),
 3 (`74ba69a`), 4 (`54714f8`), 2.5 (`c48559d`) and 5 (`0b88cb6`, docs in
-`d6d952d`) are all committed and pushed — §15 said "not yet committed"
-when written but was pushed shortly after from a second machine working
-in parallel; corrected here after pulling, see §17.
+`d6d952d`) are all committed and pushed.
 
 **If you're picking this up fresh, read §14 and §15 first** — §14 is the
 Sprint 5/5.5 split plus this machine's environment quirks (no `project/`
@@ -24,19 +37,16 @@ the four things it found but deliberately did not fix. Then §11/§12
 (Sprint 4), §10 (Sprint 3), §9 (the 3/3.5 split), §8 (2.1 + 2.7),
 §13 (2.5).
 
-**There is nothing unblocked left to build.** Everything remaining waits
-on the client, verified empirically against `.env.local` on 2026-08-09,
-not assumed:
+**Current Unblocked Work:** Sprint 6 (Profile My Alerts, My Details, `/search` alerts, `/partner/dashboard` protection, dead code cleanup, data audit, DB password rotation) is **UNBLOCKED** and starts immediately.
+
+**Blocked Work:** The remaining sprints wait on the client. **All credentials MUST arrive by 17 August** for the 15 Sep launch to be possible:
 
 | Blocked work | Waiting on |
 |---|---|
-| Sprint 3.5 — Razorpay integration | `RAZORPAY_KEY_ID` / `_KEY_SECRET` / `_WEBHOOK_SECRET`, all empty |
-| Sprint 4.5 — Resend transactional email | `RESEND_API_KEY` / `RESEND_FROM_EMAIL`, both empty, plus DNS |
-| Privacy Policy + Terms pages | Client copy (footer links are still `href="#"`) |
-| C5 headline statistics | Client sign-off on real numbers |
-| Real contact number / WhatsApp link | `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CONTACT_PHONE`, both empty |
-| Production domain cutover | Client; `NEXT_PUBLIC_SITE_URL` is still `http://localhost:3000` |
-| Real brand assets (logo, favicon, OG) | Client; placeholders generated in §15.5 |
+| Sprint 3.5 — Razorpay integration | `RAZORPAY_KEY_ID` / `_KEY_SECRET` / `_WEBHOOK_SECRET` |
+| Sprint 4.5 — Resend transactional email | `RESEND_API_KEY` / `RESEND_FROM_EMAIL`, plus DNS |
+| Sprint 5.5 — Content & Legal | Privacy Policy, Terms, contact numbers, brand assets |
+| Sprints 7, 8, 9, 10, 11 | Blocked on Sprint 3.5 (Razorpay) completion |
 
 Re-check `.env.local` before assuming any of these cleared. **The 20 Aug
 M3 "production launch" milestone is not reachable** while payments and
