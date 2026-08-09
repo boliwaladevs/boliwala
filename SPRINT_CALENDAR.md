@@ -112,9 +112,9 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 
 ---
 
-### Week 3 (24–30 Aug) — Sprint 7 + Sprint 8 + Sprint 5.5 (Parallel)
+### Week 3 (24–30 Aug) — Sprint 7 + Sprint 8 + Sprint 5.5 + Sprint 10 (Parallel)
 
-**Duration:** Sprint 3.5 wraps up early this week. Three sprints run in parallel.
+**Duration:** Sprint 3.5 wraps up early this week. Four sprints run in parallel.
 
 #### Sprint 7 — Admin Completion (Finance & Users)
 
@@ -150,12 +150,6 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 | 5.5.6 | **Brand assets swap** (logo, favicon, OG image) | §7 | `[ ]` |
 | 5.5.7 | **Font resolution** (Satoshi licence or switch to Plus Jakarta Sans) | Debt | `[ ]` |
 
-**Verify:** All admin tabs show real data · all 6 profile tabs real · Privacy/Terms render · footer links work · real contact info
-
----
-
-### Week 4 (31 Aug–6 Sep) — Sprint 10 + Sprint 11 (Parallel)
-
 #### Sprint 10 — Channel Partner Portal
 
 | # | Task | URD Ref | Status |
@@ -169,6 +163,12 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 | 10.7 | Admin **Partners tab** (real): approve/reject, assign tier | §5.9 | `[ ]` |
 | 10.8 | Admin **Commission Settings**: 3 editable rates, audit-logged | §5.10 | `[ ]` |
 
+**Verify:** All admin tabs show real data · all 6 profile tabs real · Privacy/Terms render · footer links work · CP onboarding works.
+
+---
+
+### Week 4 (31 Aug–6 Sep) — Sprint 11 + Sprint 12 (Parallel)
+
 #### Sprint 11 — CP Creatives & WhatsApp
 
 | # | Task | URD Ref | Status |
@@ -179,7 +179,15 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 | 11.4 | **WhatsApp Phase 1**: click-to-chat links, manual alert queue, segment export | §6.6 | `[ ]` |
 | 11.5 | Admin **WhatsApp Tools panel** | §6.7 | `[ ]` |
 
-**Verify:** Partner can sign up, get approved, log in · commissions calculate · referral tracking works · co-branded templates render properly.
+#### Sprint 12 — Mobile
+
+| # | Task | URD Ref | Status |
+|---|---|---|---|
+| 12.1 | **PWA enhancement**: service worker for offline shell, install prompt | — | `[ ]` |
+| 12.2 | **Push notifications** setup (if PWA) | — | `[ ]` |
+| 12.3 | **Or Capacitor APK** build if client requires native app | — | `[ ]` |
+
+**Verify:** Co-branded templates render properly · Mobile PWA/APK builds successfully.
 
 ---
 
@@ -216,15 +224,14 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 
 ---
 
-### Week 6 (16 Sep onwards) — Post Launch Phase 2
+### Week 6 (16 Sep onwards) — Hypercare & Live Ops
 
-#### Sprint 12 — Mobile
+#### Sprint 14 — Post-Launch Observation & Bug Fixing
 
 | # | Task | URD Ref | Status |
 |---|---|---|---|
-| 12.1 | **PWA enhancement**: service worker for offline shell, install prompt | — | `[ ]` |
-| 12.2 | **Push notifications** setup (if PWA) | — | `[ ]` |
-| 12.3 | **Or Capacitor APK** build if client requires native app | — | `[ ]` |
+| 14.1 | **Hands-on observation**: monitoring app works in production deployment | — | `[ ]` |
+| 14.2 | **Instant bug fixing sprints**: if any errors pop | — | `[ ]` |
 
 ---
 
@@ -235,12 +242,12 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 │  WEEK 1 │  WEEK 2 │  WEEK 3 │  WEEK 4 │  WEEK 5   │ 15 SEP │  WEEK 6        │
 │ 10–16   │ 17–23   │ 24–30   │ 31–6    │ 7–14      │ LAUNCH │ 16–22 Post-L.  │
 ├─────────┼─────────┼─────────┼─────────┼───────────┼────────┼────────────────┤
-│Sprint 6 │Sprint3.5│Spr3.5fin│Sprint 10│Sprint 9   │  🚀    │ Sprint 12      │
-│Profile  │Razorpay │Sprint 7 │Chan.Part│Mktg+Eng   │LAUNCH  │ Mobile App     │
-│  Debt   │────────►│Admin Fin│Sprint 11│──────────►│        │                │
-│         │Sprint4.5│Sprint 8 │Creatives│Sprint 13  │        │                │
-│         │Email    │Spr 5.5  │+ WA     │QA+Deploy  │        │                │
-│         │         │Content  │         │           │        │                │
+│Sprint 6 │Sprint3.5│Spr3.5fin│Sprint 11│Sprint 9   │  🚀    │ Sprint 14      │
+│Profile  │Razorpay │Sprint 7 │Creatives│Mktg+Eng   │LAUNCH  │ Hypercare      │
+│  Debt   │────────►│Admin Fin│+ WA     │──────────►│        │ + Bug Fixes    │
+│         │Sprint4.5│Sprint 8 │Sprint 12│Sprint 13  │        │                │
+│         │Email    │Spr 5.5  │Mobile   │QA+Deploy  │        │                │
+│         │         │Spr 10 CP│App      │           │        │                │
 └─────────┴─────────┴─────────┴─────────┴───────────┴────────┴────────────────┘
 ```
 
