@@ -204,7 +204,7 @@
 
   .gantt-head {
     display: grid;
-    grid-template-columns: 195px repeat(5, 1fr);
+    grid-template-columns: 195px repeat(6, 1fr);
     gap: 3px;
     margin-bottom: 6px;
   }
@@ -246,7 +246,7 @@
 
   .row {
     display: grid;
-    grid-template-columns: 195px repeat(5, 1fr);
+    grid-template-columns: 195px repeat(6, 1fr);
     gap: 3px;
     margin-bottom: 3px;
     align-items: stretch;
@@ -574,6 +574,7 @@
           <div class="wk"><span class="wk-n">Week 3</span><span class="wk-d">24–30 Aug</span></div>
           <div class="wk"><span class="wk-n">Week 4</span><span class="wk-d">31 Aug–6 Sep</span></div>
           <div class="wk launch"><span class="wk-n">Week 5</span><span class="wk-d">7–15 Sep</span></div>
+          <div class="wk"><span class="wk-n">Week 6</span><span class="wk-d">16–22 Sep</span></div>
         </div>
 
         <!-- Sprint 6 -->
@@ -587,7 +588,7 @@
               <small>My Alerts · My Details · /search alerts · dead code · DB rotation</small>
             </div>
           </div>
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
         </div>
 
         <!-- Sprint 3.5 -->
@@ -606,7 +607,7 @@
               <small>₹999 sub · ₹9,999 pkg · webhooks · entitlement</small>
             </div>
           </div>
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
         </div>
 
         <!-- Sprint 4.5 -->
@@ -625,7 +626,7 @@
               <small>Welcome · receipt · callback ack</small>
             </div>
           </div>
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
         </div>
 
         <!-- Sprint 7 + 8 -->
@@ -640,7 +641,7 @@
               <small>Payments · Subs · Success Fees · Users · Packages · Chart · Feed</small>
             </div>
           </div>
-          <div class="cell"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
         </div>
 
         <div class="row">
@@ -654,7 +655,7 @@
               <small>My Subscription · My Services · My Reports · Service Pipeline · Doc Upload</small>
             </div>
           </div>
-          <div class="cell"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
         </div>
 
         <!-- Sprint 5.5 -->
@@ -669,24 +670,10 @@
               <small>Privacy · Terms · stats · contacts · brand · fonts</small>
             </div>
           </div>
-          <div class="cell"></div><div class="cell"></div>
-        </div>
-
-        <!-- Sprint 9 + 10 -->
-        <div class="row">
-          <div class="row-label">
-            <span class="row-name">Sprint 9 — Engagement</span>
-            <span class="row-meta">follows 3.5 + 4.5</span>
-          </div>
           <div class="cell"></div><div class="cell"></div><div class="cell"></div>
-          <div style="grid-column: 5 / 6;">
-            <div class="bar scheduled">Marketing engine
-              <small>Alert engine · Email lifecycle · Credit nudges · Sub lifecycle · Cross-sell · Admin tools</small>
-            </div>
-          </div>
-          <div class="cell"></div>
         </div>
 
+        <!-- Sprint 10 + 11 (Week 4) -->
         <div class="row">
           <div class="row-label">
             <span class="row-name">Sprint 10 — Channel Partners</span>
@@ -698,34 +685,36 @@
               <small>CP auth · Dashboard · Referral links · Invites · Commissions · Admin Partners</small>
             </div>
           </div>
-          <div class="cell"></div>
+          <div class="cell"></div><div class="cell"></div>
         </div>
 
-        <!-- Sprint 11 + 12 + 13 -->
         <div class="row">
           <div class="row-label">
             <span class="row-name">Sprint 11 — Creatives + WA</span>
             <span class="row-meta">follows 10</span>
           </div>
-          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
-          <div style="grid-column: 6 / 7;">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 5 / 6;">
             <div class="bar scheduled">Creatives + WhatsApp
               <small>Co-branded gallery · Admin templates · WA Phase 1</small>
             </div>
           </div>
+          <div class="cell"></div><div class="cell"></div>
         </div>
 
+        <!-- Sprint 9 + 13 (Week 5) -->
         <div class="row">
           <div class="row-label">
-            <span class="row-name">Sprint 12 — Mobile</span>
-            <span class="row-meta">PWA or Capacitor</span>
+            <span class="row-name">Sprint 9 — Engagement</span>
+            <span class="row-meta">follows 3.5 + 4.5</span>
           </div>
           <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
           <div style="grid-column: 6 / 7;">
-            <div class="bar scheduled">Mobile build
-              <small>PWA service worker · or Capacitor APK</small>
+            <div class="bar scheduled">Marketing engine
+              <small>Alert engine · Email lifecycle · Credit nudges · Sub lifecycle · Cross-sell · Admin tools</small>
             </div>
           </div>
+          <div class="cell"></div>
         </div>
 
         <div class="row">
@@ -737,6 +726,21 @@
           <div style="grid-column: 6 / 7;">
             <div class="bar launch">🚀 QA + LAUNCH
               <small>Regression · cross-browser · Lighthouse · domain cutover · deploy · 15 Sep</small>
+            </div>
+          </div>
+          <div class="cell"></div>
+        </div>
+
+        <!-- Sprint 12 (Week 6) -->
+        <div class="row">
+          <div class="row-label">
+            <span class="row-name">Sprint 12 — Mobile</span>
+            <span class="row-meta">PWA or Capacitor</span>
+          </div>
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div style="grid-column: 7 / 8;">
+            <div class="bar scheduled">Mobile build
+              <small>PWA service worker · or Capacitor APK</small>
             </div>
           </div>
         </div>
@@ -826,7 +830,7 @@
         </ul>
       </div>
       <div class="sprint-card">
-        <span class="week-tag">Week 4 · 31 Aug–6 Sep</span>
+        <span class="week-tag">Week 5 · 7–15 Sep</span>
         <h4>Sprint 9 — Engagement</h4>
         <ul>
           <li>Property match alert engine</li>
@@ -848,7 +852,7 @@
         </ul>
       </div>
       <div class="sprint-card">
-        <span class="week-tag">Week 5 · 7–15 Sep</span>
+        <span class="week-tag">Week 4 · 31 Aug–6 Sep</span>
         <h4>Sprint 11 — Creatives + WA</h4>
         <ul>
           <li>Co-branded creatives</li>
@@ -857,8 +861,8 @@
         </ul>
       </div>
       <div class="sprint-card">
-        <span class="week-tag">Week 5 · 7–15 Sep</span>
-        <h4>Sprint 12 — Mobile</h4>
+        <span class="week-tag">Week 6 · 16–22 Sep</span>
+        <h4>Sprint 12 — Mobile (Phase 2)</h4>
         <ul>
           <li>PWA service worker</li>
           <li>Install prompt</li>
@@ -940,7 +944,7 @@
     <div class="callout">
       <h3>One chain governs the date</h3>
       <div class="chain">
-        <b>Razorpay test keys (17 Aug)</b> → 3.5 build (1 wk) → Admin + User Services (1 wk) → Engagement + CP Portal (1 wk) → Creatives + Mobile + QA (1 wk) → <b>🚀 15 Sep</b>
+        <b>Razorpay test keys (17 Aug)</b> → 3.5 build (1 wk) → Admin + User Services (1 wk) → CP Portal + Creatives (1 wk) → Engagement + QA (1 wk) → <b>🚀 15 Sep</b> → Mobile App (Phase 2)
       </div>
       <p>
         Every week the credentials slip, launch slips a week. There is <b>no slack</b> in this plan.

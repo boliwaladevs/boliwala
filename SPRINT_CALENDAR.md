@@ -154,7 +154,36 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 
 ---
 
-### Week 4 (31 Aug–6 Sep) — Sprint 9 + Sprint 10 (Parallel)
+### Week 4 (31 Aug–6 Sep) — Sprint 10 + Sprint 11 (Parallel)
+
+#### Sprint 10 — Channel Partner Portal
+
+| # | Task | URD Ref | Status |
+|---|---|---|---|
+| 10.1 | **CP Auth system**: `profiles.role = 'partner'`, login, email verification, onboarding | §4.1 | `[ ]` |
+| 10.2 | **CP Dashboard & Earnings**: 5 KPI cards, earnings breakdown, total earnings | §4.2 | `[ ]` |
+| 10.3 | **Referral Link system**: unique `ref=CP_xxx`, copy button, link tracking | §4.3 | `[ ]` |
+| 10.4 | **Unlimited Invites**: paste emails/phones, send invite, status tracking | §4.3 | `[ ]` |
+| 10.5 | **Commission calculation**: auto-commission on all 3 revenue streams | §4.5 | `[ ]` |
+| 10.6 | **Referral table**: filterable list | §4.2 | `[ ]` |
+| 10.7 | Admin **Partners tab** (real): approve/reject, assign tier | §5.9 | `[ ]` |
+| 10.8 | Admin **Commission Settings**: 3 editable rates, audit-logged | §5.10 | `[ ]` |
+
+#### Sprint 11 — CP Creatives & WhatsApp
+
+| # | Task | URD Ref | Status |
+|---|---|---|---|
+| 11.1 | **Co-Branded Creatives**: auto-personalized (partner name/phone/link), 4 formats | §4.4 | `[ ]` |
+| 11.2 | Admin **Creative Templates Management**: upload base templates, auto-personalize | §5.11 | `[ ]` |
+| 11.3 | Partner **creatives gallery** `/channel-partner/creatives` | §4.4 | `[ ]` |
+| 11.4 | **WhatsApp Phase 1**: click-to-chat links, manual alert queue, segment export | §6.6 | `[ ]` |
+| 11.5 | Admin **WhatsApp Tools panel** | §6.7 | `[ ]` |
+
+**Verify:** Partner can sign up, get approved, log in · commissions calculate · referral tracking works · co-branded templates render properly.
+
+---
+
+### Week 5 (7–14 Sep) — Sprint 9 + Sprint 13 (Parallel → QA)
 
 #### Sprint 9 — Marketing & Engagement Engine
 
@@ -169,43 +198,6 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 | 9.7 | Admin **Email Campaigns panel** | §6.7 | `[ ]` |
 | 9.8 | Admin **Segments & Export** | §6.7 | `[ ]` |
 | 9.9 | Admin **Engagement Analytics** | §6.7 | `[ ]` |
-
-#### Sprint 10 — Channel Partner Portal (runs Week 4 → early Week 5)
-
-| # | Task | URD Ref | Status |
-|---|---|---|---|
-| 10.1 | **CP Auth system**: `profiles.role = 'partner'`, login, email verification, onboarding | §4.1 | `[ ]` |
-| 10.2 | **CP Dashboard & Earnings**: 5 KPI cards, earnings breakdown, total earnings | §4.2 | `[ ]` |
-| 10.3 | **Referral Link system**: unique `ref=CP_xxx`, copy button, link tracking | §4.3 | `[ ]` |
-| 10.4 | **Unlimited Invites**: paste emails/phones, send invite, status tracking | §4.3 | `[ ]` |
-| 10.5 | **Commission calculation**: auto-commission on all 3 revenue streams | §4.5 | `[ ]` |
-| 10.6 | **Referral table**: filterable list | §4.2 | `[ ]` |
-| 10.7 | Admin **Partners tab** (real): approve/reject, assign tier | §5.9 | `[ ]` |
-| 10.8 | Admin **Commission Settings**: 3 editable rates, audit-logged | §5.10 | `[ ]` |
-
-**Verify:** Alert engine triggers · email lifecycle fires · partner can sign up, get approved, log in · commissions calculate · referral tracking works
-
----
-
-### Week 5 (7–14 Sep) — Sprint 11 + Sprint 12 + Sprint 13 (Parallel → QA)
-
-#### Sprint 11 — CP Creatives & WhatsApp (7–10 Sep)
-
-| # | Task | URD Ref | Status |
-|---|---|---|---|
-| 11.1 | **Co-Branded Creatives**: auto-personalized (partner name/phone/link), 4 formats | §4.4 | `[ ]` |
-| 11.2 | Admin **Creative Templates Management**: upload base templates, auto-personalize | §5.11 | `[ ]` |
-| 11.3 | Partner **creatives gallery** `/channel-partner/creatives` | §4.4 | `[ ]` |
-| 11.4 | **WhatsApp Phase 1**: click-to-chat links, manual alert queue, segment export | §6.6 | `[ ]` |
-| 11.5 | Admin **WhatsApp Tools panel** | §6.7 | `[ ]` |
-
-#### Sprint 12 — Mobile (7–10 Sep, parallel with 11)
-
-| # | Task | URD Ref | Status |
-|---|---|---|---|
-| 12.1 | **PWA enhancement**: service worker for offline shell, install prompt | — | `[ ]` |
-| 12.2 | **Push notifications** setup (if PWA) | — | `[ ]` |
-| 12.3 | **Or Capacitor APK** build if client requires native app | — | `[ ]` |
 
 #### Sprint 13 — Final QA & Launch (11–15 Sep)
 
@@ -224,20 +216,32 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 
 ---
 
-## Part 3 — 5-Week Timeline at a Glance
+### Week 6 (16 Sep onwards) — Post Launch Phase 2
+
+#### Sprint 12 — Mobile
+
+| # | Task | URD Ref | Status |
+|---|---|---|---|
+| 12.1 | **PWA enhancement**: service worker for offline shell, install prompt | — | `[ ]` |
+| 12.2 | **Push notifications** setup (if PWA) | — | `[ ]` |
+| 12.3 | **Or Capacitor APK** build if client requires native app | — | `[ ]` |
+
+---
+
+## Part 3 — Timeline at a Glance
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│  WEEK 1 │  WEEK 2 │  WEEK 3 │  WEEK 4 │  WEEK 5 │ 15 SEP │
-│ 10–16   │ 17–23   │ 24–30   │ 31–6    │ 7–14    │ LAUNCH │
-├─────────┼─────────┼─────────┼─────────┼─────────┼────────┤
-│Sprint 6 │Sprint3.5│Spr3.5fin│Sprint 9 │Sprint 11│  🚀    │
-│Profile  │Razorpay │Sprint 7 │Mktg+Eng │Creatives│LAUNCH  │
-│  Debt   │────────►│Admin Fin│Sprint 10│Sprint 12│        │
-│         │Sprint4.5│Sprint 8 │Chan.Part│Mobile   │        │
-│         │Email    │Spr 5.5  │────────►│Sprint 13│        │
-│         │         │Content  │         │QA+Deploy│        │
-└─────────┴─────────┴─────────┴─────────┴─────────┴────────┘
+┌───────────────────────────────────────────────────────────────────────────────┐
+│  WEEK 1 │  WEEK 2 │  WEEK 3 │  WEEK 4 │  WEEK 5   │ 15 SEP │  WEEK 6        │
+│ 10–16   │ 17–23   │ 24–30   │ 31–6    │ 7–14      │ LAUNCH │ 16–22 Post-L.  │
+├─────────┼─────────┼─────────┼─────────┼───────────┼────────┼────────────────┤
+│Sprint 6 │Sprint3.5│Spr3.5fin│Sprint 10│Sprint 9   │  🚀    │ Sprint 12      │
+│Profile  │Razorpay │Sprint 7 │Chan.Part│Mktg+Eng   │LAUNCH  │ Mobile App     │
+│  Debt   │────────►│Admin Fin│Sprint 11│──────────►│        │                │
+│         │Sprint4.5│Sprint 8 │Creatives│Sprint 13  │        │                │
+│         │Email    │Spr 5.5  │+ WA     │QA+Deploy  │        │                │
+│         │         │Content  │         │           │        │                │
+└─────────┴─────────┴─────────┴─────────┴───────────┴────────┴────────────────┘
 ```
 
 ## Part 4 — Client Deadlines (Hard)
