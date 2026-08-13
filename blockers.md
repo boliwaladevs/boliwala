@@ -36,6 +36,47 @@ Every credential claim below was checked against `.env.local` on
 
 ---
 
+## Can we act on this today? — audit of 2026-08-09
+
+Every item below was re-checked against the running code and a live
+database introspection, not against this document. **Most of the register
+is more actionable than it first appears.**
+
+The actionable work is scheduled as **Sprint 6 in `SPRINT_CALENDAR.md`**;
+the findings that change specific tasks in it are in `MEMORY.md` §18.
+
+| Status | Items | Meaning |
+|---|---|---|
+| ✅ **Do now** | T1 T2 T3 T4 T6 T8 | No client input needed at all |
+| 🟨 **Half now** | B4 B5 B6 B9 B10 B12 | Engineering half lands now; only content is missing |
+| ⛔ **Cannot start** | B1 B2 B3 B7 B8 B11 E2 E3 | Genuinely waiting on someone else |
+
+**Three corrections this audit made to the register:**
+
+1. **B4 named only two files.** `components/auth-view.tsx` carries
+   fabricated statistics too ("40+ banks", "12,400+"). Three files, not two.
+2. **T3 is far cheaper than stated.** `alert_subscriptions` already has a
+   `filters jsonb` column — the schema has been ready since Sprint 0, so
+   wiring the banner is a mapping job, not a migration.
+3. **T4 has a compliance dimension, not just dead UI.** `profiles` has no
+   `city`/`pan`/`aadhaar` columns, and **Aadhaar storage is regulated
+   under UIDAI rules**. The fix is to remove those fields, not add columns.
+
+**What is derivable for B4:** live auctions, cities and banks can all be
+computed from live data. The historical claims (₹2,100Cr won, 840+
+auctions, 28% saving) cannot — there is no outcome data in the schema.
+Note that *average discount of reserve price to estimated market value*
+**is** computable and is an honest number — but it is a different claim
+from "our buyers saved 28%" and must not be dressed up as one.
+
+**Live row counts**, for calibration on what any new admin screen would
+show: `profiles` 2 · `banks` 6 · `listings` 12 · `listing_views` 21 ·
+`credit_transactions` 2 · `settings` 7 · **everything else 0**, including
+`channel_partner_applications`, `payments`, `subscriptions`,
+`listing_images` and `callback_requests`.
+
+---
+
 # Group A — Hard external blockers (code cannot be written)
 
 ## 🔴 B1 — Razorpay credentials → the entire payments sprint

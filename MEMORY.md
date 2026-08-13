@@ -1519,3 +1519,113 @@ claim, fixed above once `git log` confirmed both commits were on
 **Practical implication for whoever reads this next:** `git fetch`/`git
 log HEAD..origin/main` before assuming this file reflects the remote —
 main is no longer only touched by one machine at a time.
+
+---
+
+## 18. Blocker audit — findings that change `SPRINT_CALENDAR.md` (2026-08-09)
+
+Written on the `C:\Users\AARYAN KALE\...` machine (§14.1) **after** pulling
+the other machine's `SCOPE_AUDIT.md` / `SPRINT_CALENDAR.md` / rebuilt
+`project_calendar.html`. Asked to audit `blockers.md` for what is
+executable today with zero client input and turn it into sprints — which
+turned out to be the same ground `SPRINT_CALENDAR.md`'s Sprint 6 already
+covers, so **that plan stands and this section does not replace it.**
+
+What this section adds is a set of findings from **direct inspection** —
+a live introspection of every public table plus reading the actual
+components — that were not available when Sprint 6 was written. Three of
+them change specific tasks. `blockers.md` carries the same audit in its
+"Can we act on this today?" section.
+
+### 18.1 🔴 Sprint 6.2 plans to store Aadhaar. It should not.
+
+`SPRINT_CALENDAR.md` task 6.2 reads: *"add `city`, `panNumber`,
+`aadhaarNumber`, `preferences` columns + form fields"*, tracing to URD
+§3.2 Tab 6.
+
+Confirmed by introspection that `profiles` currently has **exactly eight
+columns** — `id, fullName, email, phone, role, creditsBalance, createdAt,
+updatedAt` — so City / PAN / Aadhaar render on `/profile` today and
+silently discard whatever the user types (this is `blockers.md` T4).
+
+**Recommendation: remove those fields rather than add the columns.**
+Aadhaar storage is regulated in India under the Aadhaar Act and UIDAI
+rules — collecting and storing Aadhaar numbers requires a lawful purpose,
+consent, and specific security safeguards, and there is no identified
+purpose for it in this product. A property-auction marketplace does not
+need Aadhaar to function. PAN is less restricted but still sensitive
+personal data with no current use.
+
+If the client genuinely requires them (for example because *they* handle
+KYC for the ₹9,999 service package), that is a scoped conversation with
+its own encryption, retention and access-control requirements — **not a
+column added during a debt-cleanup sprint.** Flagged inline in
+`SPRINT_CALENDAR.md` at 6.2. This needs a client decision before 6.2 is
+built either way.
+
+### 18.2 Sprint 6.3 is cheaper than budgeted
+
+`alert_subscriptions` **already has a `filters jsonb` column** (full
+shape: `id, userId, email, whatsapp, filters, isActive, createdAt`). The
+schema has been ready since Sprint 0, so wiring the dead `/search` alerts
+banner is a filter-to-JSON mapping job with no migration. Same applies to
+6.1 (Profile → My Alerts), which can read straight back out of it.
+
+### 18.3 The headline statistics split cleanly, and one file was missed
+
+**`components/auth-view.tsx` is a third file carrying fabricated
+figures** — "40+ banks" (line 110) and "12,400+" (line 118). `blockers.md`
+B4 and §15 named only `hero.tsx` and `about-view.tsx`. Any C5 fix must
+cover all three or the numbers will disagree with each other, which is
+already the case today (homepage says 18+ banks, auth-view and About say
+40+).
+
+The figures divide into two groups, and only one needs the client:
+
+- **Derivable from live data now** — live auctions, cities, banks. These
+  can be made true by construction and will grow on their own. No client
+  input required.
+- **Not derivable** — "₹2,100Cr won", "840+ auctions", "28% average
+  saving". There is no historical-outcome data anywhere in the schema.
+  These genuinely need client sign-off or removal.
+
+One nuance to avoid a subtle dishonesty: the *average discount of reserve
+price to `estimatedMarketValue`* **is** computable from existing columns
+and is a defensible number — but it is a different claim from "our buyers
+saved 28%" and must not be presented as the latter.
+
+### 18.4 Live row counts, for anyone planning an admin screen
+
+`profiles` 2 · `banks` 6 · `listings` 12 · `listing_views` 21 ·
+`credit_transactions` 2 · `settings` 7 · **everything else 0** —
+`channel_partner_applications`, `payments`, `subscriptions`,
+`service_packages`, `listing_images`, `callback_requests`, `shortlists`,
+`unlocks`, `admin_audit_log`, `bulk_upload_batches`.
+
+Relevant to Sprint 7's admin work: the Partners screen has **real
+plumbing but zero rows** until someone actually applies, and the finance
+screens have nothing to show until Razorpay lands. Neither is a reason not
+to build them, but neither will demo well without seeded data.
+
+### 18.5 Smaller items
+
+- **`/partner/dashboard` has literally no auth code** — the page is four
+  lines rendering a client component. Confirms the severity of Sprint 6.4
+  and `blockers.md` B9. Worth doing first in Sprint 6; it is a public page
+  today.
+- **A stray `_prisma_migrations` table (1 row)** survives from the
+  abandoned Prisma setup. Harmless, should be dropped.
+- **Contact details are still hardcoded** — `components/footer.tsx` has
+  `tel:+1234567890` / "+1 (234) 567-890", a **US placeholder on an
+  India-only product**, plus a hardcoded `hello@boliwala.com`. Making
+  these env-driven and hiding the block when unset is a few lines and can
+  land now; only the real number has to wait. Not currently an explicit
+  task in any sprint.
+- **Satoshi never loads** (§16.4) — not currently an explicit task either.
+
+### 18.6 Where this leaves the plan
+
+`SPRINT_CALENDAR.md` Sprint 6 stays as the next thing to build. Before
+starting it: get a client answer on 18.1 (Aadhaar/PAN), and consider
+folding the derivable-statistics work and the contact-details wiring into
+Sprint 6 or 5.5 — both are unblocked, small, and currently unowned.

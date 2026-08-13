@@ -69,14 +69,31 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 | # | Task | URD Ref | Status |
 |---|---|---|---|
 | 6.1 | Profile — **My Alerts tab**: wire to `alert_subscriptions`, show saved search criteria, manage/delete | §3.2 Tab 2 | `[ ]` |
-| 6.2 | Profile — **My Details tab** full build: add `city`, `panNumber`, `aadhaarNumber`, `preferences` columns + form fields | §3.2 Tab 6 | `[ ]` |
+| 6.2 | Profile — **My Details tab**: add `city` + `preferences` columns + form fields. ⚠️ **PAN/Aadhaar on hold — see note below** | §3.2 Tab 6 | `[ ]` |
 | 6.3 | `/search` **email-alerts banner**: wire to `alert_subscriptions` with filter-to-JSON mapping | §2.2 | `[ ]` |
 | 6.4 | **Protect `/partner/dashboard`**: add auth guard (redirect guests to `/login`) | §4 / Security | `[ ]` |
 | 6.5 | **Dead code cleanup**: remove `components/projects.tsx` + unreferenced images | Debt | `[ ]` |
 | 6.6 | **Data audit**: fix `flatNumber`/`addressLine` overlap on Jaipur listing | Debt | `[ ]` |
 | 6.7 | **DB password rotation** | Security | `[ ]` |
+| 6.8 | **Statistics from live data**: wire live-auction / city / bank counts in `hero.tsx`, `about-view.tsx` **and `auth-view.tsx`** (third file, previously missed) | C5 / §2.1 | `[ ]` |
+| 6.9 | **Contact details env-driven**: delete the `+1 (234) 567-890` US placeholder in `footer.tsx`, hide the block when unset | C3 | `[ ]` |
 
-**Verify:** `tsc --noEmit` clean · `pnpm build` clean · leak test + access matrix pass · Profile My Alerts real
+> ⚠️ **6.2 — PAN and Aadhaar are on hold pending a client decision.**
+> Aadhaar storage is regulated under the Aadhaar Act and UIDAI rules: it
+> needs a lawful purpose, consent, and specific security safeguards, and
+> this product has no identified use for it. PAN is less restricted but is
+> still sensitive personal data with no current use. Ship `city` and
+> `preferences`; **remove** the PAN/Aadhaar fields from the form rather
+> than adding columns. If the client needs them for ₹9,999-package KYC,
+> that is a scoped piece of work with its own encryption, retention and
+> access-control requirements — not a column added during a cleanup
+> sprint. Detail in `MEMORY.md` §18.1.
+
+> **6.3 and 6.1 are cheaper than they look.** `alert_subscriptions`
+> already has a `filters jsonb` column, so both are mapping jobs with no
+> migration. See `MEMORY.md` §18.2.
+
+**Verify:** `tsc --noEmit` clean · `pnpm build` clean · leak test + access matrix pass · Profile My Alerts real · publishing a 13th listing changes the homepage count
 
 ---
 
