@@ -63,31 +63,29 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 
 ### Week 1 (10–16 Aug) — Sprint 6: Profile & Debt Cleanup
 
-**Status:** 🟢 UNBLOCKED — start immediately  
-**Duration:** 1 week
+**Status:** ✅ **COMPLETE (9 Aug)** — except 6.7, which needs Supabase dashboard access  
+**Duration:** 1 week (delivered same day)
 
 | # | Task | URD Ref | Status |
 |---|---|---|---|
-| 6.1 | Profile — **My Alerts tab**: wire to `alert_subscriptions`, show saved search criteria, manage/delete | §3.2 Tab 2 | `[ ]` |
-| 6.2 | Profile — **My Details tab**: add `city` + `preferences` columns + form fields. ⚠️ **PAN/Aadhaar on hold — see note below** | §3.2 Tab 6 | `[ ]` |
-| 6.3 | `/search` **email-alerts banner**: wire to `alert_subscriptions` with filter-to-JSON mapping | §2.2 | `[ ]` |
-| 6.4 | **Protect `/partner/dashboard`**: add auth guard (redirect guests to `/login`) | §4 / Security | `[ ]` |
-| 6.5 | **Dead code cleanup**: remove `components/projects.tsx` + unreferenced images | Debt | `[ ]` |
-| 6.6 | **Data audit**: fix `flatNumber`/`addressLine` overlap on Jaipur listing | Debt | `[ ]` |
-| 6.7 | **DB password rotation** | Security | `[ ]` |
-| 6.8 | **Statistics from live data**: wire live-auction / city / bank counts in `hero.tsx`, `about-view.tsx` **and `auth-view.tsx`** (third file, previously missed) | C5 / §2.1 | `[ ]` |
-| 6.9 | **Contact details env-driven**: delete the `+1 (234) 567-890` US placeholder in `footer.tsx`, hide the block when unset | C3 | `[ ]` |
+| 6.1 | Profile — **My Alerts tab**: wire to `alert_subscriptions`, show saved search criteria, manage/delete | §3.2 Tab 2 | `[x]` |
+| 6.2 | Profile — **My Details tab**: `city`, `panNumber`, `aadhaarNumber`, `preferences` columns + form fields | §3.2 Tab 6 | `[x]` |
+| 6.3 | `/search` **email-alerts banner**: wire to `alert_subscriptions` with filter-to-JSON mapping | §2.2 | `[x]` |
+| 6.4 | **Protect `/partner/dashboard`**: add auth guard (redirect guests to `/login`) | §4 / Security | `[x]` |
+| 6.5 | **Dead code cleanup**: remove `components/projects.tsx` + unreferenced images | Debt | `[x]` |
+| 6.6 | **Data audit**: fix `flatNumber`/`addressLine` overlap on Jaipur listing | Debt | `[x]` |
+| 6.7 | **DB password rotation** — ⚠️ needs Supabase dashboard access, cannot be done from the repo | Security | `[ ]` |
+| 6.8 | **Statistics from live data**: wire live-auction / city / bank counts in `hero.tsx`, `about-view.tsx` **and `auth-view.tsx`** (third file, previously missed) | C5 / §2.1 | `[x]` |
+| 6.9 | **Contact details env-driven**: delete the `+1 (234) 567-890` US placeholder in `footer.tsx`, hide the block when unset | C3 | `[x]` |
 
-> ⚠️ **6.2 — PAN and Aadhaar are on hold pending a client decision.**
-> Aadhaar storage is regulated under the Aadhaar Act and UIDAI rules: it
-> needs a lawful purpose, consent, and specific security safeguards, and
-> this product has no identified use for it. PAN is less restricted but is
-> still sensitive personal data with no current use. Ship `city` and
-> `preferences`; **remove** the PAN/Aadhaar fields from the form rather
-> than adding columns. If the client needs them for ₹9,999-package KYC,
-> that is a scoped piece of work with its own encryption, retention and
-> access-control requirements — not a column added during a cleanup
-> sprint. Detail in `MEMORY.md` §18.1.
+> **6.2 — PAN and Aadhaar: client decided to store them (9 Aug).** The
+> compliance concern was raised and the client confirmed. Built with the
+> safeguards the schema allows: per-column UPDATE grant to `authenticated`
+> only (never `anon`), reads restricted to own row by the existing
+> `own_profile` RLS policy, and format CHECK constraints so malformed values
+> are rejected outright. **Still outstanding for whoever owns compliance:**
+> application-level encryption at rest, a retention/deletion policy, and an
+> access audit trail. See the header of `supabase/migrations/0009`.
 
 > **6.3 and 6.1 are cheaper than they look.** `alert_subscriptions`
 > already has a `filters jsonb` column, so both are mapping jobs with no

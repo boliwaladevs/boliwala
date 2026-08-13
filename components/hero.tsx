@@ -3,8 +3,9 @@
 import { useEffect, useRef } from "react"
 import Image from "next/image"
 import { ArrowDown } from "lucide-react"
+import { displayCount, type SiteStats } from "@/lib/stats"
 
-export function Hero() {
+export function Hero({ stats }: { stats: SiteStats }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const heroRef = useRef<HTMLDivElement>(null)
   const backgroundRef = useRef<HTMLDivElement>(null)
@@ -94,15 +95,15 @@ export function Hero() {
 
             <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 text-white/90 drop-shadow-md">
               <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white mb-2">12,400+</span>
+                <span className="text-3xl md:text-4xl font-bold text-white mb-2">{displayCount(stats.liveAuctions)}</span>
                 <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">Live Auctions</span>
               </div>
               <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white mb-2">140+</span>
+                <span className="text-3xl md:text-4xl font-bold text-white mb-2">{displayCount(stats.cities)}</span>
                 <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">Cities</span>
               </div>
               <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white mb-2">18+</span>
+                <span className="text-3xl md:text-4xl font-bold text-white mb-2">{displayCount(stats.banks)}</span>
                 <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">Banks</span>
               </div>
               <div className="flex flex-col items-center">

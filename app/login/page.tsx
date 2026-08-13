@@ -1,5 +1,10 @@
 import { AuthView } from "@/components/auth-view"
+import { getSiteStats } from "@/lib/data/stats"
 import { pageMetadata } from "@/lib/seo"
+
+// Statistics on this page come from live data, so it revalidates rather than
+// baking counts in at build time. Matches app/sitemap.ts.
+export const revalidate = 3600
 
 export const metadata = pageMetadata({
   title: "Log In",
@@ -8,10 +13,12 @@ export const metadata = pageMetadata({
   noIndex: true,
 })
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const stats = await getSiteStats()
+
   return (
     <main>
-      <AuthView defaultTab="login" />
+      <AuthView defaultTab="login" stats={stats} />
     </main>
   )
 }

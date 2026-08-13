@@ -1,11 +1,12 @@
 import Link from "next/link"
-import { Bell, MapPin, Home, X, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
+import { MapPin, Home, X, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { getBanksWithCounts, parseSearchFilters, searchListings, PAGE_SIZE, type SearchParamsInput } from "@/lib/data/listings"
 import { buildSearchHref, filterHref, toggleArrayValue } from "@/lib/search-url"
 import { formatINR } from "@/lib/format"
 import { SearchSortSelect } from "@/components/search-sort-select"
 import { PropertyGrid } from "@/components/property-grid"
+import { SearchAlertBanner } from "@/components/search-alert-banner"
 
 const PROPERTY_TYPES: { value: string; label: string }[] = [
   { value: "residential", label: "Residential" },
@@ -111,35 +112,15 @@ export async function PropertyResults({ searchParams }: { searchParams: SearchPa
         </div>
       )}
 
-      {/* Alert Banner */}
-      <div className="bg-background border border-border rounded-xl shadow-sm p-5 md:p-6 mb-8 flex flex-col lg:flex-row items-start lg:items-center gap-5">
-        <div className="w-12 h-12 rounded-lg bg-orange-400/10 flex items-center justify-center shrink-0">
-          <Bell className="w-6 h-6 text-orange-400" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-base font-semibold text-foreground mb-1">Get email alerts for this search</h3>
-          <p className="text-sm text-muted-foreground">
-            {summaryParts.length > 0
-              ? `New properties matching ${summaryParts.join(" · ")} will be emailed to you automatically.`
-              : "New properties matching this search will be emailed to you automatically."}
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
-          <input
-            type="email"
-            placeholder="your@email.com"
-            className="h-10 px-4 border border-border rounded-md text-sm bg-background w-full sm:w-[220px] focus:outline-none focus:border-orange-400/50 placeholder:text-muted-foreground/60"
-          />
-          <select className="h-10 px-3 border border-border rounded-md text-sm bg-background w-full sm:w-[130px] focus:outline-none focus:border-orange-400/50 appearance-none text-foreground/90">
-            <option>Instant</option>
-            <option>Daily digest</option>
-            <option>Weekly</option>
-          </select>
-          <button className="h-10 px-5 bg-orange-400 hover:bg-orange-500 text-white border-none rounded-md text-sm font-semibold whitespace-nowrap w-full sm:w-auto transition-colors shadow-sm">
-            Set Alert
-          </button>
-        </div>
-      </div>
+      <SearchAlertBanner
+        queryString={new URLSearchParams(
+          Object.entries(searchParams).flatMap(([k, v]) =>
+            v === undefined ? [] : Array.isArray(v) ? v.map((x) => [k, x] as [string, string]) : [[k, v] as [string, string]],
+          ),
+        ).toString()}
+        summary={summaryParts}
+        defaultEmail={user?.email ?? undefined}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8">
         {/* Sidebar */}

@@ -1,6 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Logo } from "@/components/logo"
+import { CONTACT } from "@/lib/contact"
 
 export function Footer() {
   return (
@@ -49,15 +50,31 @@ export function Footer() {
             <h4 className="text-sm font-medium mb-4">Connect</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li>
-                <a href="mailto:hello@boliwala.com" className="hover:text-foreground transition-colors">
-                  hello@boliwala.com
+                <a href={`mailto:${CONTACT.email}`} className="hover:text-foreground transition-colors">
+                  {CONTACT.email}
                 </a>
               </li>
-              <li>
-                <a href="tel:+1234567890" className="hover:text-foreground transition-colors">
-                  +1 (234) 567-890
-                </a>
-              </li>
+              {/* Rendered only once a real number is configured — showing
+                  nothing beats showing a placeholder someone might dial. */}
+              {CONTACT.phoneHref && (
+                <li>
+                  <a href={CONTACT.phoneHref} className="hover:text-foreground transition-colors">
+                    {CONTACT.phoneDisplay}
+                  </a>
+                </li>
+              )}
+              {CONTACT.whatsappHref && (
+                <li>
+                  <a
+                    href={CONTACT.whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    WhatsApp
+                  </a>
+                </li>
+              )}
               <li>
                 <a href="#" className="hover:text-foreground transition-colors">
                   Instagram

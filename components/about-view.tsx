@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
+import { displayCount, type SiteStats } from "@/lib/stats"
 import { Search, Scale, Handshake, MapPin } from "lucide-react"
 import { FAQ } from "@/components/faq"
 
-export function AboutView() {
+export function AboutView({ stats }: { stats: SiteStats }) {
   return (
     <div className="w-full flex flex-col pt-32 pb-0 bg-background">
       
@@ -107,30 +108,37 @@ export function AboutView() {
         <div className="container mx-auto px-6">
           <div className="mb-12">
             <span className="text-[rgb(251,146,60)] text-xs font-bold tracking-[1.2px] uppercase mb-4 inline-block">
-              Impact So Far
+              On The Platform Today
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground font-display">
-              What Boliwala Has Done
+              What Boliwala Tracks
             </h2>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Computed from live data — see lib/data/stats.ts. The previous
+                tiles ("₹2,100Cr won", "840+ auctions", "28% average saving for
+                clients") asserted outcomes nothing in the schema records. Those
+                remain open as blocker C5/B4; do not restore them without
+                signed-off figures. */}
             <div className="bg-background rounded-2xl p-8 text-center border border-border shadow-sm hover:-translate-y-1 transition-transform">
-              <span className="font-display text-4xl font-extrabold text-blue-600 block mb-3">₹2,100Cr</span>
-              <span className="text-sm text-muted-foreground leading-relaxed block">Total value of properties won for clients</span>
+              <span className="font-display text-4xl font-extrabold text-blue-600 block mb-3">{displayCount(stats.liveAuctions)}</span>
+              <span className="text-sm text-muted-foreground leading-relaxed block">Live auctions listed and kept current</span>
             </div>
             <div className="bg-background rounded-2xl p-8 text-center border border-border shadow-sm hover:-translate-y-1 transition-transform">
-              <span className="font-display text-4xl font-extrabold text-emerald-600 block mb-3">840+</span>
-              <span className="text-sm text-muted-foreground leading-relaxed block">Auctions bid and won on behalf of clients</span>
+              <span className="font-display text-4xl font-extrabold text-emerald-600 block mb-3">{displayCount(stats.cities)}</span>
+              <span className="text-sm text-muted-foreground leading-relaxed block">Cities with auctions on the platform</span>
             </div>
             <div className="bg-background rounded-2xl p-8 text-center border border-border shadow-sm hover:-translate-y-1 transition-transform">
-              <span className="font-display text-4xl font-extrabold text-amber-500 block mb-3">40+</span>
-              <span className="text-sm text-muted-foreground leading-relaxed block">Banks & NBFCs whose auctions we track daily</span>
+              <span className="font-display text-4xl font-extrabold text-amber-500 block mb-3">{displayCount(stats.banks)}</span>
+              <span className="text-sm text-muted-foreground leading-relaxed block">Banks &amp; NBFCs whose auctions we track</span>
             </div>
-            <div className="bg-background rounded-2xl p-8 text-center border border-border shadow-sm hover:-translate-y-1 transition-transform">
-              <span className="font-display text-4xl font-extrabold text-purple-600 block mb-3">28%</span>
-              <span className="text-sm text-muted-foreground leading-relaxed block">Average saving vs market price for clients</span>
-            </div>
+            {stats.avgDiscountPct !== null && (
+              <div className="bg-background rounded-2xl p-8 text-center border border-border shadow-sm hover:-translate-y-1 transition-transform">
+                <span className="font-display text-4xl font-extrabold text-purple-600 block mb-3">{stats.avgDiscountPct}%</span>
+                <span className="text-sm text-muted-foreground leading-relaxed block">Average reserve price below estimated market value</span>
+              </div>
+            )}
           </div>
         </div>
       </section>

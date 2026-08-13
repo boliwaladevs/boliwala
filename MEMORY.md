@@ -37,7 +37,9 @@ the four things it found but deliberately did not fix. Then §11/§12
 (Sprint 4), §10 (Sprint 3), §9 (the 3/3.5 split), §8 (2.1 + 2.7),
 §13 (2.5).
 
-**Current Unblocked Work:** Sprint 6 (Profile My Alerts, My Details, `/search` alerts, `/partner/dashboard` protection, dead code cleanup, data audit, DB password rotation) is **UNBLOCKED** and starts immediately.
+**Sprint 6 is DONE (9 Aug) — see §19.** 8 of 9 tasks built and verified; only 6.7 (DB password rotation) remains, and it needs Supabase dashboard access. Three migrations (0009–0011) are applied to the live database.
+
+**Next unblocked work:** nothing. Sprint 7 onward waits on Razorpay (see below).
 
 **Blocked Work:** The remaining sprints wait on the client. **All credentials MUST arrive by 17 August** for the 15 Sep launch to be possible:
 
@@ -1629,3 +1631,164 @@ to build them, but neither will demo well without seeded data.
 starting it: get a client answer on 18.1 (Aadhaar/PAN), and consider
 folding the derivable-statistics work and the contact-details wiring into
 Sprint 6 or 5.5 — both are unblocked, small, and currently unowned.
+
+---
+
+## 19. Sprint 6 — completion record (2026-08-09)
+
+`SPRINT_CALENDAR.md` Sprint 6 built and verified. **8 of 9 tasks done**;
+6.7 (DB password rotation) needs Supabase dashboard access and cannot be
+done from the repo. Three migrations applied to the live database.
+
+### 19.1 The PAN/Aadhaar decision
+
+§18.1 recommended removing these fields rather than adding columns. The
+concern was put to the user, who confirmed they want them stored. Built as
+instructed, with the safeguards the schema allows — see
+`supabase/migrations/0009_profile_details_columns.sql`:
+
+- **Per-column UPDATE grant to `authenticated` only**, never `anon`.
+  0005 had revoked the table-level UPDATE grant precisely so new columns
+  cannot become client-writable by accident, so this had to be explicit.
+- **Reads restricted to own row** by the pre-existing `own_profile` RLS
+  policy. Verified: no new SELECT grant was needed or given.
+- **Format CHECK constraints** — PAN `^[A-Z]{5}[0-9]{4}[A-Z]$`, Aadhaar
+  `^[2-9][0-9]{11}$`. Verified by attempting bad values through the
+  service-role connection: `NOTAPAN`, `123` and `012345678901` were all
+  rejected by name; `ABCDE1234F` and `234567890123` accepted.
+- Client-side validation mirrors the constraints so the user sees a plain
+  explanation rather than a Postgres constraint name.
+- Empty input is stored as `NULL`, not `''` — `''` fails the CHECK.
+
+**Still outstanding for whoever owns compliance, and deliberately not
+invented here:** application-level encryption at rest, a retention and
+deletion policy, and an access audit trail. Supabase encrypts the volume,
+which is not the same as protecting the value from anyone holding a valid
+session or the service key. Recorded in the migration header too, so it
+travels with the schema.
+
+### 19.2 A gap found while building: alerts could never be switched off
+
+`alert_subscriptions` had policies for INSERT (anon + authenticated) and
+SELECT (authenticated, own rows) but **none for UPDATE**. With RLS on and
+no UPDATE policy every update is denied — and PostgREST reports that as a
+*successful* call affecting zero rows. The "My Alerts" pause toggle would
+have appeared to work and silently done nothing.
+
+`0010` adds an authenticated-only `own_alert_update` policy and, in the
+same spirit as 0005, narrows the client-writable surface to `isActive`
+alone so a session cannot rewrite the email or filters on a row.
+
+Guest unsubscribe is deliberately **not** solved: there is no way to prove
+a guest owns an email address until there is an email flow to confirm it.
+That belongs with Sprint 4.5, via a signed token in the message footer.
+
+`0011` adds `frequency` (`instant`/`daily`/`weekly`, CHECK-constrained).
+The banner had always shown that selector with nothing behind it; wiring
+the banner without the column would have meant silently discarding the
+choice — the same bug class as the profile fields.
+
+### 19.3 Statistics are now true by construction
+
+Three files carried fabricated figures, and they disagreed with each other
+(homepage said 18+ banks, auth-view and About said 40+). All now derive
+from live data via `lib/data/stats.ts`:
+
+| | Was | Now |
+|---|---|---|
+| Live auctions | "12,400+" | **12** |
+| Cities | "140+" | **11** |
+| Banks | "18+" / "40+" | **6** |
+
+`displayCount()` only rounds to "N+" at 100 and above — below that the
+exact number is both more credible and more informative than "10+".
+
+**About's "What Boliwala Has Done" section was the hard case.** Three of
+its four tiles asserted outcomes nothing in the schema records —
+"₹2,100Cr won", "840+ auctions", "28% average saving for clients".
+Replaced with figures that are computable, and the heading changed from
+"What Boliwala Has Done" to "What Boliwala Tracks", because the section was
+claiming a track record the data cannot support.
+
+One genuinely interesting result: the **average discount of reserve price
+to `estimatedMarketValue` across the 12 live listings computes to exactly
+28%** — the same number that was hardcoded. So the figure survives, but now
+with the correct meaning ("reserve prices sit 28% below estimated market
+value") rather than the unverifiable one ("our clients saved 28%"). The
+distinction is written into the type's doc comment so it is not re-conflated
+later. **The new About wording should still go to the client for review.**
+
+### 19.4 Everything else
+
+- **`/partner/dashboard` now redirects guests** — was 200 to the open
+  internet, now 307 to `/login`. Guard is "is signed in" only, matching
+  `/profile`; there is no partner role in the schema and inventing one
+  ahead of the client's scope decision would fork the access model.
+- **Contact details are env-driven** (`lib/contact.ts`). The
+  `+1 (234) 567-890` US placeholder is gone; the phone and WhatsApp entries
+  render only when the env vars are set. The homepage `Organization`
+  JSON-LD picks up `telephone` the moment a number exists.
+- **Data audit across all 12 live listings found exactly one overlap** —
+  the known Jaipur one. Fixed by generalising the public `addressLine` from
+  "Khasra 210, Village Bhankrota" to "Village Bhankrota", so the Khasra
+  number (the agricultural equivalent of a flat number, and precisely what
+  a buyer pays to unlock) is genuinely gated. `leak-test.mjs` now reports
+  zero overlaps.
+- **Dead code removed** — `components/projects.tsx` and six unreferenced
+  images. `public/images` is down from 3.0 MB to 1.1 MB and now contains
+  only files that are actually referenced. The stray `_prisma_migrations`
+  table was dropped.
+
+### 19.5 A build failure worth remembering
+
+`hero.tsx`, `auth-view.tsx` and `about-view.tsx` are all **client**
+components. Importing anything from `lib/data/stats.ts` — even a pure
+formatter or a bare type — pulls its `import "server-only"` into the
+browser bundle and fails the production build. `tsc --noEmit` passes
+regardless, so this only surfaces at `pnpm build`.
+
+Split into `lib/stats.ts` (client-safe: the `SiteStats` type and
+`displayCount`) and `lib/data/stats.ts` (server-only fetch, re-exporting
+both). **If you add a shared helper to a `lib/data/*` module, check who
+imports it before assuming it is safe.**
+
+Related: `/about`, `/login` and `/signup` prerender statically, so their
+stats would have baked in at build time. All three now carry
+`export const revalidate = 3600`, matching `app/sitemap.ts`.
+
+### 19.6 Verification
+
+- `tsc --noEmit` clean · `pnpm build` clean with type validation, 24 routes.
+- **Leak test PASS** — 12/12 listings, 96 column-key + 96 value checks, and
+  the overlap warning is now absent rather than reporting one row.
+- **Access matrix PASS** — 49 assertions, 7 viewer states.
+- **Alert filter round-trip PASS** — for six filter combinations the stored
+  JSON rebuilds an href that returns the identical result set (Pune 2,
+  physical 8, residential 6, price band 6, bank 2). `sort` and `page` are
+  confirmed stripped, so "page 2, cheapest first" does not become part of
+  what someone is subscribed to.
+- **Alert RLS PASS** — guest INSERT allowed; guest SELECT returns nothing;
+  guest UPDATE cannot deactivate; `frequency='hourly'` rejected by CHECK.
+  Test rows cleaned up and confirmed gone.
+- **Route sweep, 24 routes** — `/partner/dashboard` now 307 alongside
+  `/profile` and `/admin`; everything else unchanged.
+- Homepage renders 12 / 11 / 6 where it used to render 12,400+ / 140+ / 18+.
+
+### 19.7 What Sprint 6 leaves open
+
+- **6.7 DB password rotation** — needs the Supabase dashboard. Still the
+  right thing to do: the password was pasted into a chat transcript during
+  the original build.
+- **The three historical claims** (₹2,100Cr, 840+ auctions, 28% client
+  saving) are removed from the site but still unanswered as C5/B4. Do not
+  restore them without signed-off figures.
+- **New About copy needs client review** — the wording is mine, chosen to
+  be accurate; it is not client-approved marketing.
+- **A wider hardening item spotted in passing:** `anon` and `authenticated`
+  hold blanket table-level `DELETE`, `INSERT` and `TRUNCATE` grants on
+  `profiles` (the Supabase default). RLS denies DELETE and INSERT because
+  no policy grants them — but **TRUNCATE is not subject to RLS at all**.
+  There is no known path to invoke it through PostgREST, so this is
+  defence-in-depth rather than an open hole, and revoking blanket grants
+  across every table deserves its own careful pass rather than being done
+  mid-sprint. Worth folding into the same session as 6.7.

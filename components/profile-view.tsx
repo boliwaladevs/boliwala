@@ -7,8 +7,11 @@ import { Bookmark, Bell, Briefcase, User, LogOut, MapPin, Scale, MessageCircle, 
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { toggleShortlist } from "@/app/actions/shortlist"
+import { setAlertActive } from "@/app/actions/alerts"
 import { formatDateShort, formatINR } from "@/lib/format"
+import { describeAlertFilters, searchHrefFromAlertFilters } from "@/lib/alerts"
 import type { SearchListing } from "@/lib/data/listings"
+import type { AlertSubscription } from "@/lib/data/alerts"
 
 type Tab = "saved" | "alerts" | "services" | "info"
 
@@ -18,13 +21,48 @@ interface Profile {
   phone: string | null
   creditsBalance: number
   memberSince: string
+  city: string | null
+  panNumber: string | null
+  aadhaarNumber: string | null
 }
 
-export function ProfileView({ profile, shortlisted }: { profile: Profile; shortlisted: SearchListing[] }) {
+/**
+ * Mirrors the CHECK constraints in migration 0009. Validating here as well as
+ * in the database is not redundancy for its own sake: without it the user's
+ * only feedback would be a raw Postgres constraint name in a toast.
+ */
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/
+const AADHAAR_RE = /^[2-9][0-9]{11}$/
+
+/** Aadhaar is usually written in groups of four; keep only the digits. */
+function normaliseAadhaar(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 12)
+}
+
+function formatAadhaarForDisplay(value: string): string {
+  return value.replace(/(\d{4})(?=\d)/g, "$1 ").trim()
+}
+
+export function ProfileView({
+  profile,
+  shortlisted,
+  alerts,
+}: {
+  profile: Profile
+  shortlisted: SearchListing[]
+  alerts: AlertSubscription[]
+}) {
   const [activeTab, setActiveTab] = useState<Tab>("saved")
   const [fullName, setFullName] = useState(profile.fullName ?? "")
   const [phone, setPhone] = useState(profile.phone ?? "")
+  const [city, setCity] = useState(profile.city ?? "")
+  const [panNumber, setPanNumber] = useState(profile.panNumber ?? "")
+  const [aadhaarNumber, setAadhaarNumber] = useState(
+    profile.aadhaarNumber ? formatAadhaarForDisplay(profile.aadhaarNumber) : "",
+  )
   const [savingDetails, setSavingDetails] = useState(false)
+  const [alertRows, setAlertRows] = useState(alerts)
+  const [, startAlertTransition] = useTransition()
   const [savedListings, setSavedListings] = useState(shortlisted)
   const [, startShortlistTransition] = useTransition()
   const router = useRouter()
@@ -56,18 +94,62 @@ export function ProfileView({ profile, shortlisted }: { profile: Profile; shortl
 
   const handleSaveDetails = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const pan = panNumber.trim().toUpperCase()
+    const aadhaar = normaliseAadhaar(aadhaarNumber)
+
+    if (pan && !PAN_RE.test(pan)) {
+      toast({
+        variant: "destructive",
+        title: "Check the PAN number",
+        description: "A PAN is ten characters — five letters, four digits, then a letter. For example ABCDE1234F.",
+      })
+      return
+    }
+    if (aadhaar && !AADHAAR_RE.test(aadhaar)) {
+      toast({
+        variant: "destructive",
+        title: "Check the Aadhaar number",
+        description: "An Aadhaar number is twelve digits and does not start with 0 or 1.",
+      })
+      return
+    }
+
     setSavingDetails(true)
     const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase
       .from("profiles")
-      .update({ fullName, phone })
+      // Empty strings would fail the format CHECK constraints, so a cleared
+      // field is stored as NULL rather than "".
+      .update({
+        fullName,
+        phone,
+        city: city.trim() || null,
+        panNumber: pan || null,
+        aadhaarNumber: aadhaar || null,
+      })
       .eq("id", user?.id)
     setSavingDetails(false)
     if (error) {
       toast({ variant: "destructive", title: "Couldn't save changes", description: error.message })
       return
     }
+    setAadhaarNumber(aadhaar ? formatAadhaarForDisplay(aadhaar) : "")
+    setPanNumber(pan)
     toast({ title: "Details saved" })
+  }
+
+  const handleToggleAlert = (alertId: string, nextActive: boolean) => {
+    const previous = alertRows
+    setAlertRows((rows) => rows.map((r) => (r.id === alertId ? { ...r, isActive: nextActive } : r)))
+
+    startAlertTransition(async () => {
+      const result = await setAlertActive(alertId, nextActive)
+      if (result && "error" in result) {
+        setAlertRows(previous)
+        toast({ variant: "destructive", title: "Couldn't update that alert", description: result.error })
+      }
+    })
   }
 
   return (
@@ -128,7 +210,7 @@ export function ProfileView({ profile, shortlisted }: { profile: Profile; shortl
                 }`}
               >
                 <Bell className="w-4 h-4" />
-                My Alerts (2)
+                My Alerts ({alertRows.filter((a) => a.isActive).length})
               </button>
 
               <button 
@@ -240,70 +322,85 @@ export function ProfileView({ profile, shortlisted }: { profile: Profile; shortl
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-2xl font-bold text-foreground font-display">Your Property Alerts</h2>
-                    <p className="text-sm text-muted-foreground mt-1">You'll be emailed when new matching properties are listed.</p>
+                    <p className="text-sm text-muted-foreground mt-1">You&apos;ll be emailed when new matching properties are listed.</p>
                   </div>
-                  <button className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl transition-colors hidden sm:block">
+                  <Link href="/search" className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl transition-colors hidden sm:block">
                     + Create Alert
-                  </button>
+                  </Link>
                 </div>
 
-                <div className="flex flex-col gap-4">
-                  {/* Alert 1 */}
-                  <div className="bg-background rounded-2xl border border-border p-6 shadow-sm flex flex-col sm:flex-row gap-6 justify-between items-start sm:items-center">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
-                        <Bell className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-foreground text-base mb-1">Mumbai • Residential • Physical</h3>
-                        <p className="text-sm text-muted-foreground mb-3">Budget: ₹1.4Cr — ₹11.2Cr • Any bank</p>
-                        <div className="flex flex-wrap gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-secondary/50 px-2 py-1 rounded text-muted-foreground">Mumbai</span>
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-secondary/50 px-2 py-1 rounded text-muted-foreground">Residential</span>
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-secondary/50 px-2 py-1 rounded text-muted-foreground">Physical</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6 w-full sm:w-auto border-t border-border sm:border-0 pt-4 sm:pt-0">
-                      <div className="text-center">
-                        <div className="text-xl font-display font-extrabold text-foreground">24</div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Matched</div>
-                      </div>
-                      <div className="flex flex-col gap-2 w-full sm:w-auto">
-                        <button className="text-xs font-bold border border-border px-4 py-2 rounded-lg hover:bg-secondary/50 transition-colors">Edit</button>
-                        <button className="text-xs font-bold text-red-600 border border-red-200 hover:bg-red-50 px-4 py-2 rounded-lg transition-colors">Delete</button>
-                      </div>
-                    </div>
+                {alertRows.length === 0 ? (
+                  <div className="bg-background rounded-2xl border border-border shadow-sm p-10 text-center">
+                    <Bell className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                    <h3 className="font-bold text-foreground mb-1">No alerts yet</h3>
+                    <p className="text-sm text-muted-foreground mb-5">
+                      Run a search, then use &ldquo;Get email alerts for this search&rdquo; to be told when new properties match.
+                    </p>
+                    <Link href="/search" className="inline-block text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-xl transition-colors">
+                      Search properties
+                    </Link>
                   </div>
-
-                  {/* Alert 2 */}
-                  <div className="bg-background rounded-2xl border border-border p-6 shadow-sm flex flex-col sm:flex-row gap-6 justify-between items-start sm:items-center">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
-                        <Bell className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-foreground text-base mb-1">Navi Mumbai • Airoli • Bank of Baroda</h3>
-                        <p className="text-sm text-muted-foreground mb-3">Budget: Any • Physical Possession only</p>
-                        <div className="flex flex-wrap gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-secondary/50 px-2 py-1 rounded text-muted-foreground">Airoli</span>
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-secondary/50 px-2 py-1 rounded text-muted-foreground">BOB</span>
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-secondary/50 px-2 py-1 rounded text-muted-foreground">Instant Email</span>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {alertRows.map((alert) => {
+                      const chips = describeAlertFilters(alert.filters)
+                      return (
+                        <div
+                          key={alert.id}
+                          className={`bg-background rounded-2xl border border-border p-6 shadow-sm flex flex-col sm:flex-row gap-6 justify-between items-start sm:items-center transition-opacity ${
+                            alert.isActive ? "" : "opacity-60"
+                          }`}
+                        >
+                          <div className="flex items-start gap-4 min-w-0">
+                            <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                              <Bell className="w-5 h-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-bold text-foreground text-base mb-1 truncate">
+                                {chips.join(" • ")}
+                              </h3>
+                              <p className="text-sm text-muted-foreground mb-3">
+                                {alert.frequency === "daily"
+                                  ? "Daily digest"
+                                  : alert.frequency === "weekly"
+                                    ? "Weekly digest"
+                                    : "Instant email"}
+                                {" • "}
+                                Created {formatDateShort(alert.createdAt)}
+                                {alert.isActive ? "" : " • Paused"}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {chips.map((chip) => (
+                                  <span key={chip} className="text-[10px] font-bold uppercase tracking-wider bg-secondary/50 px-2 py-1 rounded text-muted-foreground">
+                                    {chip}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 w-full sm:w-auto border-t border-border sm:border-0 pt-4 sm:pt-0 shrink-0">
+                            <Link
+                              href={searchHrefFromAlertFilters(alert.filters)}
+                              className="text-xs font-bold border border-border px-4 py-2 rounded-lg hover:bg-secondary/50 transition-colors"
+                            >
+                              View matches
+                            </Link>
+                            <button
+                              onClick={() => handleToggleAlert(alert.id, !alert.isActive)}
+                              className={`text-xs font-bold px-4 py-2 rounded-lg border transition-colors ${
+                                alert.isActive
+                                  ? "text-red-600 border-red-200 hover:bg-red-50"
+                                  : "text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                              }`}
+                            >
+                              {alert.isActive ? "Pause" : "Resume"}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6 w-full sm:w-auto border-t border-border sm:border-0 pt-4 sm:pt-0">
-                      <div className="text-center">
-                        <div className="text-xl font-display font-extrabold text-foreground">3</div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Matched</div>
-                      </div>
-                      <div className="flex flex-col gap-2 w-full sm:w-auto">
-                        <button className="text-xs font-bold border border-border px-4 py-2 rounded-lg hover:bg-secondary/50 transition-colors">Edit</button>
-                        <button className="text-xs font-bold text-red-600 border border-red-200 hover:bg-red-50 px-4 py-2 rounded-lg transition-colors">Delete</button>
-                      </div>
-                    </div>
+                      )
+                    })}
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -394,8 +491,7 @@ export function ProfileView({ profile, shortlisted }: { profile: Profile; shortl
 
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">City</label>
-                        <input type="text" placeholder="Mumbai" disabled className="h-12 px-4 rounded-xl border border-border bg-secondary/10 text-muted-foreground outline-none text-sm cursor-not-allowed" />
-                        <span className="text-xs text-muted-foreground">Coming soon.</span>
+                        <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Mumbai" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
                       </div>
                     </div>
                     
@@ -405,14 +501,35 @@ export function ProfileView({ profile, shortlisted }: { profile: Profile; shortl
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="flex flex-col gap-2">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">PAN Number</label>
-                          <input type="text" placeholder="ABCDE1234F" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm uppercase" />
+                          <label htmlFor="pan" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">PAN Number</label>
+                          <input
+                            id="pan"
+                            type="text"
+                            value={panNumber}
+                            onChange={(e) => setPanNumber(e.target.value.toUpperCase().slice(0, 10))}
+                            maxLength={10}
+                            autoComplete="off"
+                            placeholder="ABCDE1234F"
+                            className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm uppercase"
+                          />
                         </div>
                         <div className="flex flex-col gap-2">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Aadhaar Number</label>
-                          <input type="text" placeholder="1234 5678 9012" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                          <label htmlFor="aadhaar" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Aadhaar Number</label>
+                          <input
+                            id="aadhaar"
+                            type="text"
+                            inputMode="numeric"
+                            value={aadhaarNumber}
+                            onChange={(e) => setAadhaarNumber(formatAadhaarForDisplay(normaliseAadhaar(e.target.value)))}
+                            autoComplete="off"
+                            placeholder="1234 5678 9012"
+                            className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm"
+                          />
                         </div>
                       </div>
+                      <p className="text-xs text-muted-foreground mt-4">
+                        Both are optional and are only visible to you. Leave them blank if you would rather not share them.
+                      </p>
                     </div>
 
                     <div className="border-t border-border pt-6 mt-2 flex justify-end">

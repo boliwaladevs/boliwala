@@ -4,6 +4,7 @@ import { Footer } from "@/components/footer"
 import { ProfileView } from "@/components/profile-view"
 import { createClient } from "@/lib/supabase/server"
 import { getShortlistedListings } from "@/lib/data/listings"
+import { getAlertSubscriptions } from "@/lib/data/alerts"
 import { pageMetadata } from "@/lib/seo"
 
 export const metadata = pageMetadata({
@@ -23,9 +24,14 @@ export default async function ProfilePage() {
     redirect("/login")
   }
 
-  const [{ data: profile }, shortlisted] = await Promise.all([
-    supabase.from("profiles").select("fullName, email, phone, creditsBalance, createdAt").eq("id", user.id).single(),
+  const [{ data: profile }, shortlisted, alerts] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select('fullName, email, phone, creditsBalance, createdAt, city, "panNumber", "aadhaarNumber"')
+      .eq("id", user.id)
+      .single(),
     getShortlistedListings(user.id),
+    getAlertSubscriptions(user.id),
   ])
 
   return (
@@ -39,8 +45,12 @@ export default async function ProfilePage() {
             phone: profile?.phone ?? null,
             creditsBalance: profile?.creditsBalance ?? 0,
             memberSince: profile?.createdAt ?? user.created_at,
+            city: profile?.city ?? null,
+            panNumber: profile?.panNumber ?? null,
+            aadhaarNumber: profile?.aadhaarNumber ?? null,
           }}
           shortlisted={shortlisted}
+          alerts={alerts}
         />
       </div>
       <Footer />

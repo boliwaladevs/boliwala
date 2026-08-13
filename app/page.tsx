@@ -10,6 +10,8 @@ import { CallToAction } from "@/components/call-to-action"
 import { Footer } from "@/components/footer"
 import { createClient } from "@/lib/supabase/server"
 import { JsonLd } from "@/components/json-ld"
+import { getSiteStats } from "@/lib/data/stats"
+import { CONTACT } from "@/lib/contact"
 import { absoluteUrl, SITE_NAME, SITE_TAGLINE } from "@/lib/seo"
 
 // Title and description come from the root layout's defaults; the homepage
@@ -18,9 +20,9 @@ export const metadata = {
   alternates: { canonical: absoluteUrl("/") },
 }
 
-// No `telephone` or `sameAs` yet — the real contact number and social handles
-// are still open client questions (C3), and inventing them would publish false
-// contact details as structured data.
+// `telephone` appears only once a real number is configured (C3). No `sameAs`
+// yet either — the social handles are still an open client question, and
+// inventing them would publish false contact details as structured data.
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -30,7 +32,8 @@ const organizationJsonLd = {
   description:
     "India's dedicated platform for SARFAESI bank auction properties, covering listings, due diligence, bidding, and possession support.",
   areaServed: { "@type": "Country", name: "India" },
-  email: "hello@boliwala.com",
+  email: CONTACT.email,
+  ...(CONTACT.phoneDisplay ? { telephone: CONTACT.phoneDisplay } : {}),
 }
 
 const websiteJsonLd = {
@@ -50,18 +53,17 @@ const websiteJsonLd = {
 
 export default async function Home() {
   const supabase = await createClient()
-  const { data: banks } = await supabase
-    .from("banks")
-    .select("id, name, shortName")
-    .eq("isActive", true)
-    .order("name")
+  const [{ data: banks }, stats] = await Promise.all([
+    supabase.from("banks").select("id, name, shortName").eq("isActive", true).order("name"),
+    getSiteStats(),
+  ])
 
   return (
     <main className="min-h-screen">
       <JsonLd data={organizationJsonLd} />
       <JsonLd data={websiteJsonLd} />
       <Header />
-      <Hero />
+      <Hero stats={stats} />
       <SearchSection banks={banks ?? []} />
       <TrustBanner />
       <Philosophy />

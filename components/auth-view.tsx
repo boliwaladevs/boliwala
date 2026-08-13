@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { displayCount, type SiteStats } from "@/lib/stats"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -8,9 +9,10 @@ import { useToast } from "@/hooks/use-toast"
 
 interface AuthViewProps {
   defaultTab?: "login" | "signup"
+  stats: SiteStats
 }
 
-export function AuthView({ defaultTab = "login" }: AuthViewProps) {
+export function AuthView({ defaultTab = "login", stats }: AuthViewProps) {
   const [activeTab, setActiveTab] = useState<"login" | "signup">(defaultTab)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
@@ -107,7 +109,7 @@ export function AuthView({ defaultTab = "login" }: AuthViewProps) {
               <em className="text-amber-300 not-italic">Found, Bid & Won.</em>
             </h1>
             <p className="text-white/60 text-lg leading-relaxed max-w-md">
-              Join thousands of buyers finding verified SARFAESI & NPA listings from 40+ banks at 20-40% below market value.
+              {`Verified SARFAESI and NPA listings from ${displayCount(stats.banks)} banks, with reserve prices well below market value.`}
             </p>
           </div>
         </div>
@@ -115,12 +117,12 @@ export function AuthView({ defaultTab = "login" }: AuthViewProps) {
         <div className="relative z-10 mt-16">
           <div className="flex gap-8 border-t border-white/10 pt-8">
             <div>
-              <div className="font-display text-2xl font-extrabold text-white">12,400+</div>
+              <div className="font-display text-2xl font-extrabold text-white">{displayCount(stats.liveAuctions)}</div>
               <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mt-1">Live Listings</div>
             </div>
             <div>
-              <div className="font-display text-2xl font-extrabold text-white">₹2.1K Cr</div>
-              <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mt-1">Properties Won</div>
+              <div className="font-display text-2xl font-extrabold text-white">{displayCount(stats.cities)}</div>
+              <div className="text-xs font-semibold text-white/50 uppercase tracking-wider mt-1">Cities Covered</div>
             </div>
           </div>
         </div>

@@ -285,6 +285,12 @@
     margin-top: 1px;
   }
 
+  .bar.shipped {
+    background: var(--ship-wash);
+    border-color: var(--hairline);
+    border-left-color: var(--ship);
+    color: var(--ink);
+  }
   .bar.blocked {
     background: var(--block-wash);
     border-color: var(--hairline);
@@ -581,11 +587,11 @@
         <div class="row">
           <div class="row-label">
             <span class="row-name">Sprint 6 — Profile &amp; Debt</span>
-            <span class="row-meta">unblocked</span>
+            <span class="row-meta">done · 9 Aug</span>
           </div>
           <div style="grid-column: 2 / 3;">
-            <div class="bar scheduled">Profile + cleanup
-              <small>My Alerts · My Details · /search alerts · dead code · DB rotation</small>
+            <div class="bar shipped">✓ Delivered
+              <small>8 of 9 done · only DB password rotation left (needs dashboard access)</small>
             </div>
           </div>
           <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
@@ -780,14 +786,16 @@
     <div class="sprint-grid">
       <div class="sprint-card">
         <span class="week-tag">Week 1 · 10–16 Aug</span>
-        <h4>Sprint 6 — Profile &amp; Debt</h4>
+        <h4>Sprint 6 — Profile &amp; Debt <span style="color:var(--ship)">✓</span></h4>
         <ul>
-          <li>Profile My Alerts tab (real)</li>
-          <li>Profile My Details full build</li>
-          <li>/search email-alerts banner</li>
-          <li>Protect /partner/dashboard</li>
-          <li>Dead code + data audit</li>
-          <li>DB password rotation</li>
+          <li>✓ Profile My Alerts tab (real)</li>
+          <li>✓ Profile My Details full build</li>
+          <li>✓ /search email-alerts banner</li>
+          <li>✓ Protect /partner/dashboard</li>
+          <li>✓ Dead code + data audit</li>
+          <li>✓ Live statistics (was 12,400+, now 12)</li>
+          <li>✓ Contact details env-driven</li>
+          <li>⚠ DB password rotation — needs dashboard</li>
         </ul>
       </div>
       <div class="sprint-card">
