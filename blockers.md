@@ -1,6 +1,6 @@
 # Boliwala.com — Blockers, Risks & Open Questions
 
-**As of:** 2026-08-09, after Sprint 5.
+**As of:** 2026-08-09, after **Sprint 6**.
 **Target launch:** 15 September 2026.
 **Companion docs:** `testing_guide.md`, `MEMORY.md` (§14/§15 are current),
 `project_calendar.html`.
@@ -36,46 +36,36 @@ Every credential claim below was checked against `.env.local` on
 
 ---
 
-## Can we act on this today? — audit of 2026-08-09
+## Status after Sprint 6 — 2026-08-09
 
-Every item below was re-checked against the running code and a live
-database introspection, not against this document. **Most of the register
-is more actionable than it first appears.**
+Sprint 6 shipped and closed or part-closed eight items on this register.
+This section is the current state; each entry below carries its own note.
 
-The actionable work is scheduled as **Sprint 6 in `SPRINT_CALENDAR.md`**;
-the findings that change specific tasks in it are in `MEMORY.md` §18.
-
-| Status | Items | Meaning |
+| | Items | |
 |---|---|---|
-| ✅ **Do now** | T1 T2 T3 T4 T6 T8 | No client input needed at all |
-| 🟨 **Half now** | B4 B5 B6 B9 B10 B12 | Engineering half lands now; only content is missing |
-| ⛔ **Cannot start** | B1 B2 B3 B7 B8 B11 E2 E3 | Genuinely waiting on someone else |
+| ✅ **Resolved** | T1 T2 T3 · B9 (security half) | Done in Sprint 6, verified |
+| 🟨 **Engineering done, content pending** | B4 B6 | Only the client's copy or number is missing now |
+| 🟠 **Open, actionable by us** | T4 T5 T6 T7 T8 · **T9 T10 (new)** · E1 | No client input needed |
+| ⛔ **Cannot start** | B1 B2 B3 B5 B7 B8 B10 B11 B12 · E2 E3 | Genuinely waiting on someone else |
 
-**Three corrections this audit made to the register:**
+**What Sprint 6 closed:**
 
-1. **B4 named only two files.** `components/auth-view.tsx` carries
-   fabricated statistics too ("40+ banks", "12,400+"). Three files, not two.
-2. **T3 is far cheaper than stated.** `alert_subscriptions` already has a
-   `filters jsonb` column — the schema has been ready since Sprint 0, so
-   wiring the banner is a mapping job, not a migration.
-3. **T4 has a compliance dimension, not just dead UI.** `profiles` has no
-   `city`/`pan`/`aadhaar` columns, and **Aadhaar storage is regulated
-   under UIDAI rules**. The fix is to remove those fields, not add columns.
+- **T1** — all 12 live listings audited; exactly one gated/public overlap
+  existed and is fixed. `scripts/leak-test.mjs` now reports zero.
+- **T2** — `components/projects.tsx` and six unreferenced images deleted;
+  `public/images` down from 3.0 MB to 1.1 MB. Stray `_prisma_migrations`
+  table dropped.
+- **T3** — `/search` alerts banner wired end to end. Filters round-trip to
+  identical result sets; `sort` and `page` are stripped so "page 2,
+  cheapest first" never becomes part of a subscription.
+- **B9 security half** — `/partner/dashboard` no longer serves a fabricated
+  mockup to the open internet. The **scope decision is still open.**
+- **B4 derivable half** — live auction / city / bank counts now computed
+  from the database in all three files that carried invented figures.
 
-**What is derivable for B4:** live auctions, cities and banks can all be
-computed from live data. The historical claims (₹2,100Cr won, 840+
-auctions, 28% saving) cannot — there is no outcome data in the schema.
-Note that *average discount of reserve price to estimated market value*
-**is** computable and is an honest number — but it is a different claim
-from "our buyers saved 28%" and must not be dressed up as one.
-
-**Live row counts**, for calibration on what any new admin screen would
-show: `profiles` 2 · `banks` 6 · `listings` 12 · `listing_views` 21 ·
-`credit_transactions` 2 · `settings` 7 · **everything else 0**, including
-`channel_partner_applications`, `payments`, `subscriptions`,
-`listing_images` and `callback_requests`.
-
----
+**Two new items found while building:** T9 (`anon` holds table-level
+TRUNCATE on `profiles`, which RLS does not cover) and T10 (Satoshi has
+never actually loaded). Both in Group D.
 
 # Group A — Hard external blockers (code cannot be written)
 
@@ -161,15 +151,33 @@ launch.
 
 # Group B — Content and asset waits (development proceeds; launch does not)
 
-## 🟠 B4 — C5: headline statistics have never been verified
+## 🟨 B4 — C5: headline statistics — **derivable half resolved in Sprint 6**
 
-**Blocks:** launch. These are **public marketing claims**.
+**Blocks:** launch, for the three remaining claims only.
 
-**Where they are:**
-- `components/hero.tsx` — "12,400+ Live Auctions", "140+ Cities",
-  "18+ Banks"
-- `components/about-view.tsx` — "₹2,100Cr won", "840+ auctions",
-  "28% average saving"
+**Resolved:** live auctions, cities and banks are computed from the
+database in `hero.tsx`, `auth-view.tsx` and `about-view.tsx` — they read
+**12 / 11 / 6** and grow on their own. The site no longer contradicts
+itself on bank count.
+
+**Still open — three claims with no data behind them:**
+
+- "₹2,100Cr total value won for clients"
+- "840+ auctions bid and won"
+- "28% average saving vs market for clients"
+
+These were removed from `about-view.tsx` in Sprint 6 rather than left
+published. **Do not restore them without signed-off figures.**
+
+One nuance worth keeping straight: the average discount of reserve price
+to `estimatedMarketValue` computes to **exactly 28%** across the live
+listings, and that tile now ships with that meaning. It is *not* the same
+claim as "our clients saved 28%" and must not be relabelled as such.
+
+The About section heading also changed from "What Boliwala Has Done" to
+"What Boliwala Tracks", because the original asserted a track record the
+data cannot support. **That wording is ours, not client-approved — it
+needs review.
 
 **Why it matters.** The database currently holds **12 listings and 6
 banks**. Publishing "12,400+ live auctions" is not a rounding difference,
@@ -211,14 +219,19 @@ links.
 
 ---
 
-## 🟠 B6 — Real contact details (C3)
+## 🟨 B6 — Real contact details (C3) — **engineering done in Sprint 6**
 
-**Blocks:** launch, and it makes the primary lead-generation CTA
-non-functional.
+**Blocks:** launch. The code is ready; only the number is missing.
 
-**Evidence:** `NEXT_PUBLIC_WHATSAPP_NUMBER` and
-`NEXT_PUBLIC_CONTACT_PHONE` are both **empty**. The footer currently shows
-`+1 (234) 567-890` — a **US placeholder** on an India-only product.
+**Resolved:** contact details come from the environment via
+`lib/contact.ts`. The `+1 (234) 567-890` US placeholder is deleted, and
+the phone and WhatsApp entries render only once the vars are set — an
+unset value shows nothing rather than something false. The homepage
+`Organization` JSON-LD picks up `telephone` automatically when it exists.
+
+**Still needed:** real values for `NEXT_PUBLIC_CONTACT_PHONE` and
+`NEXT_PUBLIC_WHATSAPP_NUMBER`, both still empty. Setting them is now a
+config change, not a code change.
 
 **Also needs confirming:** whether `hello@boliwala.com` is real (it is
 currently published in the homepage `Organization` JSON-LD), and the real
@@ -264,11 +277,14 @@ the marketing copy claims 18+ or 40+ (see B4).
 
 ## 🟠 B9 — Is the Channel Partner portal in or out of scope?
 
-**Why it is urgent:** `/partner/dashboard` **returns 200 to a signed-out
-guest today.** It is a static mockup with no auth guard and no real data,
-so nothing leaks — but it should not be publicly reachable at launch.
-Sprint 5 added `noindex` and a robots disallow, which is **not the same as
-protecting it**.
+**Security half resolved in Sprint 6.** `/partner/dashboard` used to
+return 200 to a signed-out guest — a mockup full of fabricated partner
+earnings served to the open internet. It now redirects to `/login`, the
+same as `/profile` and `/admin`. The guard is deliberately "is signed in"
+only: there is no partner role in the schema, and inventing one ahead of
+this decision would fork the access model.
+
+**The scope decision is still open**, and still needs answering:
 
 The scope documents disagree with the code: `boliwala_features.txt` §2.6
 says "no partner portal or directory at launch", yet
@@ -351,14 +367,16 @@ the production domain before launch.
 
 | ID | Item | Detail | Severity |
 |---|---|---|---|
-| **T1** | Gated data duplicates public data | Jaipur agricultural listing: gated `flatNumber` is `"Khasra 210"`, and the **public** `addressLine` is `"Khasra 210, Village Bhankrota"`. A buyer spends a credit and receives a string already visible for free. Not a security bug — a data-entry/monetisation bug. Audit the other 11 listings for the same pattern. | 🟡 |
-| **T2** | Dead code | `components/projects.tsx` (~170 lines) is imported by nothing. Its images `hously-1/2/3.png` plus unreferenced `desk.png`, `premium_property_bg.png`, `hously-4.png` total ~1.6 MB. | 🔵 |
-| **T3** | `/search` alerts banner | "Get email alerts for this search" is decorative — never wired to `alert_subscriptions`. Needs a filter→JSON mapping. | 🔵 |
-| **T4** | Profile fields with no columns | City / PAN / Aadhaar render on `/profile` but have no DB columns and silently do nothing. Either add columns or remove the fields. | 🟡 |
+| ~~**T1**~~ ✅ | ~~Gated data duplicates public data~~ | Jaipur agricultural listing: gated `flatNumber` is `"Khasra 210"`, and the **public** `addressLine` is `"Khasra 210, Village Bhankrota"`. **Fixed in Sprint 6.** All 12 live listings audited; this was the only overlap. Public `addressLine` generalised to "Village Bhankrota" so the Khasra number — the parcel identifier a buyer pays to unlock — is genuinely gated. `leak-test.mjs` reports zero overlaps. | ✅ |
+| ~~**T2**~~ ✅ | ~~Dead code~~ | **Fixed in Sprint 6.** `projects.tsx` and six unreferenced images deleted; `public/images` 3.0 MB → 1.1 MB. Stray `_prisma_migrations` table dropped. | ✅ |
+| ~~**T3**~~ ✅ | ~~`/search` alerts banner~~ | **Fixed in Sprint 6.** Wired to `alert_subscriptions.filters`, with a Profile → My Alerts tab to view, follow and pause them. Guests can subscribe; guest *unsubscribe* is deferred to Sprint 4.5, since proving email ownership needs an email flow. | ✅ |
+| **T4** | Profile PAN/Aadhaar — stored, compliance work outstanding | Columns added per client decision (migration 0009), with per-column grants to `authenticated` only, own-row RLS, and format CHECK constraints. **Not yet done and needed before launch:** application-level encryption at rest, a retention/deletion policy, and an access audit trail. Volume encryption is not the same as protecting the value from anyone holding a session or the service key. | 🟠 |
 | **T5** | Supabase DB password rotation | Was pasted into a chat transcript during the original build. Should be rotated before launch. | 🟠 |
-| **T6** | `SUPABASE_ANON_PUBLIC_KEY` | Present in `.env.local` but referenced by no code. Confirm whether it was meant to replace something, or delete it. | 🔵 |
+| **T6** | `SUPABASE_ANON_PUBLIC_KEY` | Re-checked after Sprint 6: still in `.env.local`, still referenced by no code. Confirm whether it was meant to replace something, or delete it. | 🔵 |
 | **T7** | Service worker / offline PWA | Manifest and icons ship; no service worker. Original plan **R7** names this the first thing to cut. | 🔵 |
-| **T8** | No test runner | The codebase has no unit-test framework. Coverage today is the two scripts in `scripts/` plus manual QA. Adding Vitest is worthwhile post-launch. | 🔵 |
+| **T8** | No test runner | No unit-test framework. Coverage today is the two scripts in `scripts/` plus manual QA. Adding Vitest is worthwhile post-launch. | 🔵 |
+| **T9** | **`anon` holds TRUNCATE on `profiles`** | Blanket table-level `DELETE`/`INSERT`/`TRUNCATE` grants to `anon` and `authenticated` (the Supabase default). RLS denies DELETE and INSERT because no policy permits them — but **TRUNCATE is not subject to RLS at all**. No known path to invoke it via PostgREST, so this is defence-in-depth rather than an open hole. Revoking blanket grants across every table deserves its own careful pass — pair it with T5. | 🟠 |
+| **T10** | Satoshi font never loads | The three `app/fonts/Satoshi-*.woff2` files are 609-byte CSS stubs pointing at `cdn.fontshare.com`, not fonts, and nothing imports them. `--font-sans` names Satoshi, so the app silently falls back to `system-ui`. Also means **R4's licence question may be moot** — nothing is being self-hosted. The fix depends on the licence answer. | 🔵 |
 
 ---
 
@@ -415,13 +433,15 @@ client can do today is create a Razorpay test key** (self-serve, no KYC,
 | **17 Aug** | Razorpay **test** keys | B1 |
 | **17 Aug** | Resend API key | B2 |
 | **17 Aug** | Razorpay live-mode KYC **started** | B1 |
-| **24 Aug** | Real contact number, WhatsApp, email, socials | B6 |
-| **24 Aug** | Channel Partner scope decision | B9 |
+| **24 Aug** | Real contact number + WhatsApp — *now just env vars* | B6 |
+| **24 Aug** | Channel Partner scope decision — *page is secured; scope still open* | B9 |
 | **24 Aug** | Which admin tabs are launch-critical | B10 |
-| **31 Aug** | Headline statistics resolved | B4 |
+| **24 Aug** | **Sign-off on the new About wording** written in Sprint 6 | B4 |
+| **31 Aug** | The three historical claims: ₹2,100Cr, 840+ auctions, 28% saving | B4 |
 | **31 Aug** | Privacy Policy + Terms copy | B5 |
 | **31 Aug** | DNS records for Resend | B2 |
 | **31 Aug** | Definitive bank list | B8 |
+| **31 Aug** | **PAN/Aadhaar compliance:** retention policy + who may access | T4 |
 | **7 Sep** | Production domain + registrar access | B3 |
 | **7 Sep** | Brand assets | B7 |
 | **7 Sep** | Listing photography (or accept placeholders) | B11 |
