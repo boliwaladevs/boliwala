@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { displayCount, type SiteStats } from "@/lib/stats"
+import { landingPathForRole } from "@/lib/auth/landing"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -43,13 +44,22 @@ export function AuthView({ defaultTab = "login", stats }: AuthViewProps) {
       return
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     setSubmitting(false)
     if (error) {
       toast({ variant: "destructive", title: "Couldn't log in", description: error.message })
       return
     }
-    router.push("/profile")
+
+    // Staff skip the customer profile page. There is no separate admin login —
+    // the account's own role decides where it lands.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single()
+
+    router.push(landingPathForRole(profile?.role))
     router.refresh()
   }
 
@@ -245,13 +255,6 @@ export function AuthView({ defaultTab = "login", stats }: AuthViewProps) {
                 <path d="M1 1h22v22H1z" fill="none"/>
               </svg>
               Google
-            </button>
-            
-            <button type="button" onClick={() => router.push('/partner/dashboard')} className="w-full flex items-center justify-center gap-3 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-600 font-semibold h-12 rounded-xl transition-colors text-sm mt-2">
-              Login as Channel Partner
-            </button>
-            <button type="button" onClick={() => router.push('/admin')} className="w-full flex items-center justify-center gap-3 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-600 font-semibold h-12 rounded-xl transition-colors text-sm mt-2">
-              Login as Admin
             </button>
             
           </form>

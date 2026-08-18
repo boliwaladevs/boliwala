@@ -2,11 +2,15 @@ import "server-only"
 
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { isAdminRole } from "@/lib/auth/landing"
 
 export interface AdminUser {
   userId: string
   fullName: string | null
   email: string
+  role: string
+  /** superadmin is the owner account; admin is staff. See lib/auth/landing.ts. */
+  isSuperadmin: boolean
 }
 
 /**
@@ -26,7 +30,13 @@ export async function requireAdmin(): Promise<AdminUser> {
 
   const { data: profile } = await supabase.from("profiles").select("role, fullName, email").eq("id", user.id).single()
 
-  if (profile?.role !== "admin") redirect("/")
+  if (!isAdminRole(profile?.role)) redirect("/")
 
-  return { userId: user.id, fullName: profile.fullName, email: profile.email }
+  return {
+    userId: user.id,
+    fullName: profile!.fullName,
+    email: profile!.email,
+    role: profile!.role,
+    isSuperadmin: profile!.role === "superadmin",
+  }
 }
