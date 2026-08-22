@@ -19,7 +19,14 @@ context window fills up, open a new session and point it at this file first.
 > 4. `plans/boliwala-phase1-sprint-plan.md` (master plan — **includes Sprint
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
-**Last updated:** 2026-08-09.
+**Last updated:** 2026-08-22.
+
+> **🔴 22 AUG — PRODUCTION HAD BEEN STUCK ON `0e6cfd5` SINCE 9 AUG.**
+> Every build from `e7cac13` onward failed at prerender, so all of Sprint 6
+> and the superadmin role were built, pushed, and never deployed. Root cause
+> and fix in **§21**; the full audit that found it is `codebase_audit.md`.
+> **Read §21 before believing any "this feature is broken" report** — several
+> were only ever testing a three-commit-old build.
 
 > **15 SEP LAUNCH PLAN & SCOPE AUDIT**
 > A comprehensive `SCOPE_AUDIT.md` was run on 9 Aug, finding 22 unscoped URD features (Channel Partner portal, Marketing engine, full Profile, Capacitor APK).
@@ -1792,3 +1799,137 @@ stats would have baked in at build time. All three now carry
   defence-in-depth rather than an open hole, and revoking blanket grants
   across every table deserves its own careful pass rather than being done
   mid-sprint. Worth folding into the same session as 6.7.
+
+---
+
+## 20. Codebase audit — `codebase_audit.md` (2026-08-22)
+
+Written at the user's request after they tested the deployed site and filed a
+list of failures. Answers two scope questions (is admin real? is channel
+partner real?) and triages 15 reported issues. Method was direct file reads
+plus live introspection of the Supabase project — nothing carried forward
+from this file on trust.
+
+**The two headline answers:**
+
+- **Admin is real but incomplete, and the admin user is already assigned.**
+  `boliwaladevs@gmail.com` holds `superadmin` in the live DB (not `user`, as
+  reported — see §21 for why the site said otherwise). Role separation is
+  genuinely enforced by `requireAdmin()` against the caller's own session,
+  and `0005` still blocks self-promotion. **5 of 13 admin sections are real**
+  (Dashboard, Listings, Add/Edit, Bulk Upload, Callbacks, Settings); the rest
+  are the original mockup. The account's password is a bcrypt hash and is not
+  retrievable by anyone — recover via `Forgot password?` or the Supabase
+  dashboard, do not go looking for it in the repo.
+- **Channel partner functionality does not exist.** A `channel_partner` value
+  sits in the `Role` enum and **zero lines of code reference it** — the only
+  two `channel_partner` hits in the repo are both against the *applications*
+  table. `/partner/dashboard` is a 583-line static mockup whose guard is
+  `if (!user)`, i.e. "is signed in", not "is a partner". Any customer account
+  can open it. Assigning the role to somebody today would change nothing.
+  Still the open scope question from §7.
+
+**Confirmed real bugs, independent of the deployment problem** (full detail
+and suggested order of work in `codebase_audit.md` §3/§6):
+
+1. `app/globals.css:22-23` sets `--destructive` and `--destructive-foreground`
+   to the **identical** oklch value in light mode. Every destructive toast is
+   red text on the same red — this is the "error popup is illegible" report,
+   and it means *all* login/signup error messages are invisible. Dark mode is
+   unaffected. One-line fix.
+2. `components/header.tsx` has **no Login/Signup link at all**, desktop or
+   mobile. Nothing routes a visitor to `/login` from any marketing page.
+3. `app/search/page.tsx:24` gates `<PropertyResults>` — which *contains the
+   entire filter sidebar* — behind `hasSearched`. "Browse More →" on
+   `/profile` links to bare `/search`, so it lands on an empty page with no
+   filters. This is the "no dropdowns in browse more" report.
+4. No password show/hide toggle, no delete-account path, no change-password
+   from the profile, and alerts support only Pause/Resume — no edit, no
+   delete. All genuinely unbuilt, not regressions.
+
+Also flagged: `NEXT_PUBLIC_SITE_URL` is `http://localhost:3000` in
+`.env.local`. **Check the Vercel value** — if it matches, every canonical,
+sitemap entry, OG tag and OAuth redirect in production points at localhost.
+
+---
+
+## 21. The production build failure, and the fix (2026-08-22)
+
+### 21.1 What was actually wrong
+
+Production had been serving `0e6cfd5` since 9 August. `e7cac13` (Sprint 6),
+`7575bc4` and `ddbadb1` (superadmin) all built locally, all pushed, and all
+failed on Vercel at the prerender step:
+
+```
+Error occurred prerendering page "/about"
+Error: supabaseKey is required.
+```
+
+The chain: `/about`, `/login` and `/signup` each set `revalidate = 3600`
+(added in §19.5, for good reasons) → they prerender at build time → all three
+call `getSiteStats()` → which called `createAdminClient()` → which reads
+`SUPABASE_SERVICE_ROLE_KEY` → **which is not present in the Vercel build
+environment** → the supabase-js constructor throws on a falsy key.
+
+`/about` merely failed first and aborted the build; the other two would have
+failed identically.
+
+**This one fact explains most of the bug report.** "Create alert doesn't
+work" and "boliwaladevs' role is `user`" were both testing a build that
+predates the alerts feature and the superadmin role respectively. The
+database was correct the whole time.
+
+### 21.2 The fix
+
+`lib/data/stats.ts` now builds a **plain anon-key client** instead of the
+service-role one. Verified against the live DB before changing anything —
+every column the function reads carries a `SELECT` grant for `anon`:
+
+```
+anon → id, status, city, reservePrice, estimatedMarketValue
+```
+
+So nothing there ever needed to bypass RLS. Deliberately *not* the
+cookie-bound `lib/supabase/server.ts` client either — reading cookies would
+force those three pages dynamic and undo §19.5.
+
+This is also the better security posture: aggregate public counts on a
+marketing page should not depend on a key that bypasses RLS.
+
+### 21.3 How it was verified
+
+Not just "the build passes here" — the failure was **reproduced and then
+shown to be gone**, by blanking the variable Vercel is missing:
+
+```
+$env:SUPABASE_SERVICE_ROLE_KEY = ""; pnpm run build
+```
+
+- `tsc --noEmit` clean.
+- Build exit 0, 24 routes, `/about` `/login` `/signup` all `○ (Static)` with
+  1h revalidate — i.e. still prerendered, not silently downgraded to dynamic.
+- **The prerendered HTML carries real numbers, not zeros** — `.next/server/
+  app/login.html` contains `12` Live Listings / `11` Cities Covered, and
+  `about.html` contains 12 / 11 / 6. This mattered: if RLS had blocked the
+  anon read the build would still have passed while quietly rendering `0`
+  everywhere, which is worse than a red build.
+
+### 21.4 Still to do on Vercel — this fix alone is not sufficient
+
+**`SUPABASE_SERVICE_ROLE_KEY` must still be added to the Vercel project.**
+`lib/supabase/admin.ts` is used at *runtime* by listing redaction
+(`getListingBySlug`), view tracking, the unlock RPC path, every admin data
+function, and the alert duplicate check. If that variable is genuinely absent
+from the environment rather than just from the build step, those paths are
+broken in production too — and this build failure was the least of it.
+
+Do both: set the env var (runtime correctness) **and** keep `stats.ts` on the
+anon client (so a marketing page never depends on a bypass key to prerender).
+
+### 21.5 Note on the update rule
+
+`SPRINT_CALENDAR.md` and `project_calendar.html` were **not** touched for
+this commit. No sprint changed status — this is a hotfix to a build that was
+already meant to be shipped, not new scope. The substance belongs here and in
+`codebase_audit.md`; inventing a calendar row for it would be noise.

@@ -2,7 +2,8 @@ import "server-only"
 
 import { cache } from "react"
 
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+
 import type { SiteStats } from "@/lib/stats"
 
 /**
@@ -26,9 +27,22 @@ export type { SiteStats } from "@/lib/stats"
 export { displayCount } from "@/lib/stats"
 
 export const getSiteStats = cache(async (): Promise<SiteStats> => {
-  // Admin client: these are aggregate counts over public data, and using the
-  // cookie-bound client would make every marketing page dynamic per request.
-  const supabase = createAdminClient()
+  // A plain anon-key client, deliberately neither of the two usual ones.
+  //
+  // Not the cookie-bound server client: /about, /login and /signup all set
+  // revalidate = 3600, and reading cookies would force them dynamic per request.
+  //
+  // Not the service-role client either. Every column read below — status, city,
+  // reservePrice, estimatedMarketValue — already carries a SELECT grant for
+  // anon, so nothing here needs to bypass RLS. Depending on
+  // SUPABASE_SERVICE_ROLE_KEY was also what broke the production build: these
+  // pages prerender, and that variable is not present in the build environment,
+  // so the client constructor threw "supabaseKey is required".
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
 
   const [{ count: liveAuctions }, { data: rows }, { count: banks }] = await Promise.all([
     supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "live"),
