@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
+import { AccountHeader } from "@/components/account-header"
 import { ProfileView } from "@/components/profile-view"
 import { createClient } from "@/lib/supabase/server"
 import { getShortlistedListings } from "@/lib/data/listings"
@@ -36,7 +35,7 @@ export default async function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground flex flex-col">
-      <Header />
+      <AccountHeader />
       <div className="flex-1">
         <ProfileView
           profile={{
@@ -53,7 +52,6 @@ export default async function ProfilePage() {
           alerts={alerts}
         />
       </div>
-      <Footer />
     </main>
   )
 }

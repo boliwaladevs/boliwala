@@ -153,7 +153,7 @@ export function ProfileView({
   }
 
   return (
-    <div className="w-full flex flex-col pt-32 pb-20 bg-background min-h-screen">
+    <div className="w-full flex flex-col pb-20 bg-background min-h-screen">
       
       {/* HERO SECTION */}
       <section className="bg-secondary/30 py-12 mb-8 border-b border-border">

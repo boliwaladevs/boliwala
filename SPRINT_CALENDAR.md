@@ -7,7 +7,7 @@
 > and repeated in `CLAUDE.md`, `MEMORY.md`, and `project_calendar.html`.
 
 **Created:** 9 August 2026  
-**Last Updated:** 9 August 2026  
+**Last Updated:** 22 August 2026  
 **Launch date:** 🚀 **15 September 2026** — non-negotiable  
 **Source of truth:** `boliwala_features.txt` (URD v2.0) + `SCOPE_AUDIT.md` + `MEMORY.md`
 
@@ -29,6 +29,41 @@ All verified, committed, and pushed to `main`.
 | 3 | Admin Core | 5 Aug | Admin auth guard, live KPIs, listings CRUD, Storage image upload, bulk Excel upload | ✅ Done |
 | 4 | Admin & Pages | 5 Aug | Callback pipeline, admin callbacks workflow, pricing settings, partner enrolment form | ✅ Done |
 | 5 | QA, SEO, Perf | 9 Aug | Sitemap, robots, canonicals, per-listing metadata, JSON-LD, icons, manifest, typechecking on, leak test + access matrix scripts, image optimisation (98% reduction) | ✅ Done |
+
+---
+
+## Part 1b — Post-Audit Remediation (22 Aug)
+
+A full codebase audit on 22 Aug (`codebase_audit.md`) found that **production
+had been stuck on `0e6cfd5` since 9 Aug** — every build since failed at
+prerender, so Sprint 6 and the superadmin role were never deployed. Fixed in
+`375a160`. The audit also found five real defects in current code, planned in
+`post_audit_plan.md` and delivered as Sprint 15.
+
+| Sprint | Name | Date | Key Deliverables | Status |
+|---|---|---|---|---|
+| — | Build hotfix | 22 Aug | `getSiteStats()` off the service-role client; production build unblocked | ✅ Done |
+| 15 | Critical UX & Auth Repair | 22 Aug | Destructive-token fix (errors were invisible), header Login/Sign Up + signed-in state, `/search` renders without params, password show/hide, account header on `/profile` | ✅ Done |
+
+### Sprint 15 — task detail
+
+| # | Task | Status |
+|---|---|---|
+| 15.1 | **Destructive colour token**: `--destructive-foreground` was identical to `--destructive` in light mode, making every error toast red-on-red. Fixed in both themes. | `[x]` |
+| 15.2 | **Header Login / Sign Up** + signed-in "My Account", desktop and mobile. Header previously had no auth link anywhere. | `[x]` |
+| 15.3 | **`/search` with no params** now renders listings and the filter sidebar (was gated behind `hasSearched`, so "Browse More" landed on an empty page). | `[x]` |
+| 15.4 | **Password show/hide toggle** on `auth-view` and `reset-password-view`. | `[x]` |
+| 15.5 | **Account header on `/profile`** — replaces the marketing `<Header>`/`<Footer>` so the portal no longer wears the public site's nav. | `[x]` |
+
+**Verified:** `tsc --noEmit` clean · `pnpm build` clean **with
+`SUPABASE_SERVICE_ROLE_KEY` blanked** (guards the `375a160` regression) · leak
+test PASS 12/12 · access matrix PASS 49/7 · route sweep 20 routes unchanged ·
+`/search` returns 12 cards with no params.
+
+> **Still open from the audit** — see `post_audit_plan.md`: Sprint 15.5
+> (Vercel/Supabase dashboard config, DB password rotation), Sprint 16 (change
+> password, delete account, alert edit/delete), Sprint 16.5 (Resend-blocked),
+> Sprint 17 (Channel Partner scope decision).
 
 ---
 

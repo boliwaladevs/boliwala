@@ -1933,3 +1933,104 @@ anon client (so a marketing page never depends on a bypass key to prerender).
 this commit. No sprint changed status — this is a hotfix to a build that was
 already meant to be shipped, not new scope. The substance belongs here and in
 `codebase_audit.md`; inventing a calendar row for it would be noise.
+
+
+---
+
+## 22. Sprint 15 — Critical UX & Auth Repair, completion record (2026-08-22)
+
+Executed from `post_audit_plan.md` §3. All five tasks built and verified.
+The other sprints in that plan (15.5 env config, 16 account self-service,
+16.5 Resend/compliance, 17 partner scope) are **not** started.
+
+### 22.1 What was fixed
+
+- **15.1 — the invisible-error bug.** `app/globals.css` had
+  `--destructive-foreground` set to the *same* oklch value as `--destructive`
+  in light mode, so `bg-destructive text-destructive-foreground` (the toast's
+  destructive variant, the only consumer) rendered red text on the same red.
+  Every login/signup/reset error in the app was unreadable.
+
+  **Dark mode was also changed, and the audit was slightly wrong about it.**
+  The audit called dark mode "fine". It was legible but only ~3.3:1 contrast
+  (L 0.396 bg vs 0.637 fg) — below WCAG AA, and the same underlying mistake
+  (a *red* used as a foreground rather than a contrasting colour). Both themes
+  now use `oklch(0.985 0 0)`, the shadcn default. Verified in the shipped CSS:
+  `--destructive-foreground:#fafafa`, twice, with the old red value gone.
+
+- **15.2 — header auth links.** `components/header.tsx` had **no auth link at
+  all**, desktop or mobile — nothing routed a visitor to `/login` from any
+  marketing page. Added Log In + Sign Up when signed out, "My Account" when
+  signed in, in both the desktop cluster and the mobile menu.
+
+  The header is a client component, so session state is read client-side via
+  `getUser()` plus an `onAuthStateChange` subscription. **The cluster renders
+  `null` until the session resolves** — deliberately, so a signed-in user does
+  not see "Log In" flash before it corrects itself. Consequence worth knowing:
+  the auth links are **not in the SSR HTML**, they appear on hydration.
+
+  "My Account" links to `/profile` for everyone, including admins. Fetching
+  `profiles.role` in a global header would add a DB query to every page load
+  for every signed-in user, which is not worth it — staff already land on
+  `/admin` at sign-in via `landingPathForRole`. `Free Consultation` moved to
+  `hidden lg:inline-flex` so the right-hand cluster is not crowded at `md`.
+
+- **15.3 — `/search` with no params.** `app/search/page.tsx` gated
+  `<PropertyResults>` behind `hasSearched`. The filter sidebar lives *inside*
+  that component, so bare `/search` — where "Browse More" on `/profile` and
+  the nav's "Properties" both point — rendered neither listings nor filters.
+  Now rendered unconditionally. Checked `applyNonBankFilters` first: it always
+  applies `status = 'live'` and every other filter is conditional, so empty
+  params correctly return all live listings. Verified: 12 cards.
+
+- **15.4 — password show/hide** on `auth-view.tsx` and
+  `reset-password-view.tsx`. `type="password"` was hardcoded with no toggle
+  anywhere in the codebase. Both are `type="button"` so they cannot submit the
+  form, and carry `aria-label` + `aria-pressed`.
+
+- **15.5 — account header.** New `components/account-header.tsx` replaces the
+  marketing `<Header>`/`<Footer>` on `/profile`. **`/profile` was the only
+  authenticated page carrying the marketing chrome** — `/admin` already has
+  its own 240px sidebar shell and imports neither. Credit balance and sign-out
+  are deliberately *not* duplicated in the new header; the profile sidebar
+  already carries both. `profile-view.tsx`'s `pt-32` (which existed only to
+  clear the fixed marketing header) was dropped to match.
+
+### 22.2 Verification
+
+- `tsc --noEmit` clean.
+- `pnpm build` clean **with `SUPABASE_SERVICE_ROLE_KEY` blanked** — this is
+  now standing practice so the §21 regression cannot come back. 24 routes.
+- **Leak test PASS** — 12/12 listings, 96 column-key + 96 value checks. Worth
+  re-running specifically because 15.3 changed what `/search` renders by
+  default; the search-card column allowlist still holds.
+- **Access matrix PASS** — 49 assertions, 7 viewer states.
+- **Route sweep, 20 routes** against the production build — identical to the
+  §19.6 baseline: public 200, `/listing` 307, `/profile` `/admin`
+  `/partner/dashboard` 307 for a guest, bad slug 404.
+- `/search` with no params returns **12 listing cards** plus the bank filter
+  list — was 0 cards and no sidebar.
+
+**Not verified in a browser** — the user explicitly asked to skip browser
+steps this session. So the *visual* result of 15.1/15.2/15.5 (toast legibility,
+header layout at each breakpoint, the account header's appearance) is
+confirmed only at the markup/CSS/bundle level, not by looking at it. Worth an
+eyeball pass before it goes to the client.
+
+### 22.3 Running the verification scripts on this machine
+
+Both need flags that are not in their header comments, and one needs a server:
+
+```
+node --experimental-strip-types --import ./scripts/ts-resolve-hook.mjs scripts/access-matrix-test.mjs
+node scripts/leak-test.mjs http://127.0.0.1:3100      # needs a server already running
+```
+
+`pnpm` does not resolve from the Bash tool here (§15.9). To start a production
+server for the leak test, invoke Next directly and kill it via CIM afterwards
+(§12.5 — `Start-Process pnpm` silently fails):
+
+```
+Start-Process -FilePath "node" -ArgumentList "node_modules/next/dist/bin/next","start","--port","3100" -WindowStyle Hidden
+Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -match 'next.*start' } | Stop-Process -Force
+```

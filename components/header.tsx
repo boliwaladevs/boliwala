@@ -8,12 +8,17 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { Logo } from "@/components/logo"
 import { usePathname } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  // null = not yet known. Rendering the signed-out links while the session is
+  // still resolving would flash "Log In" at someone who is already signed in,
+  // so the cluster stays empty until we know which state to show.
+  const [signedIn, setSignedIn] = useState<boolean | null>(null)
   const pathname = usePathname()
-  
+
   const isHome = pathname === "/"
   const isDarkBg = isHome || scrolled || mobileMenuOpen
 
@@ -23,6 +28,28 @@ export function Header() {
     }
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  useEffect(() => {
+    const supabase = createClient()
+    let active = true
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (active) setSignedIn(!!data.user)
+    })
+
+    // Keeps the header honest after a sign-in or sign-out that happens on
+    // another tab, or on the same tab without a full navigation.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) setSignedIn(!!session?.user)
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const closeMobileMenu = () => {
@@ -70,17 +97,42 @@ export function Header() {
           ))}
         </ul>
 
-        <Link
-          href="/contact"
-          className={cn(
-            "hidden md:inline-flex items-center gap-2 text-sm px-5 py-2.5 transition-all duration-300",
-            scrolled
-              ? "bg-white text-foreground border border-foreground/20 hover:bg-foreground hover:text-white"
-              : "bg-white text-foreground border border-foreground/20 hover:bg-foreground hover:text-white",
+        <div className="hidden md:flex items-center gap-4">
+          {/* Only shows once there is room for it alongside the auth links. */}
+          <Link
+            href="/contact"
+            className="hidden lg:inline-flex items-center gap-2 text-sm px-5 py-2.5 bg-white text-foreground border border-foreground/20 hover:bg-foreground hover:text-white transition-all duration-300"
+          >
+            Free Consultation
+          </Link>
+
+          {signedIn === null ? null : signedIn ? (
+            <Link
+              href="/profile"
+              className="inline-flex items-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
+            >
+              My Account
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className={cn(
+                  "text-sm tracking-wide hover:text-[rgb(251,146,60)] transition-colors duration-300",
+                  isDarkBg ? "text-white" : "text-foreground font-medium",
+                )}
+              >
+                Log In
+              </Link>
+              <Link
+                href="/signup"
+                className="inline-flex items-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
+              >
+                Sign Up
+              </Link>
+            </>
           )}
-        >
-          Free Consultation
-        </Link>
+        </div>
 
         <button
           className={cn(
@@ -131,13 +183,42 @@ export function Header() {
             ))}
           </ul>
 
-          <Link
-            href="/contact"
-            className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 bg-white text-foreground border border-foreground/20 hover:bg-foreground hover:text-white transition-all duration-300 mb-4"
-            onClick={closeMobileMenu}
-          >
-            Free Consultation
-          </Link>
+          <div className="flex flex-col gap-3 mb-4">
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 bg-white text-foreground border border-foreground/20 hover:bg-foreground hover:text-white transition-all duration-300"
+              onClick={closeMobileMenu}
+            >
+              Free Consultation
+            </Link>
+
+            {signedIn === null ? null : signedIn ? (
+              <Link
+                href="/profile"
+                className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
+                onClick={closeMobileMenu}
+              >
+                My Account
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 border border-white/30 text-white hover:bg-white/10 transition-all duration-300"
+                  onClick={closeMobileMenu}
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
+                  onClick={closeMobileMenu}
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>

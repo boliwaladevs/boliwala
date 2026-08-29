@@ -21,7 +21,6 @@ export default async function SearchPage({
   searchParams: Promise<SearchParamsInput>
 }) {
   const params = await searchParams
-  const hasSearched = Object.keys(params).length > 0
 
   const supabase = await createClient()
   const { data: banks } = await supabase
@@ -35,7 +34,11 @@ export default async function SearchPage({
       <Header />
       <div className="flex-1 pt-24 md:pt-28">
         <SearchSection banks={banks ?? []} initialParams={params} />
-        {hasSearched && <PropertyResults searchParams={params} />}
+        {/* Rendered unconditionally: the filter sidebar lives inside
+            PropertyResults, so gating this on "has the user searched yet"
+            meant /search with no params — which is where "Browse More" and
+            the nav both point — showed neither listings nor filters. */}
+        <PropertyResults searchParams={params} />
       </div>
       <Footer />
     </main>
