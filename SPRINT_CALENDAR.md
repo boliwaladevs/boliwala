@@ -44,6 +44,7 @@ prerender, so Sprint 6 and the superadmin role were never deployed. Fixed in
 |---|---|---|---|---|
 | — | Build hotfix | 22 Aug | `getSiteStats()` off the service-role client; production build unblocked | ✅ Done |
 | 15 | Critical UX & Auth Repair | 22 Aug | Destructive-token fix (errors were invisible), header Login/Sign Up + signed-in state, `/search` renders without params, password show/hide, account header on `/profile` | ✅ Done |
+| 16 | Account Self-Service | 22 Aug | Change password (re-auth required), alert frequency edit, alert delete, honest create-alert label, delete account with cascade | ✅ Done |
 
 ### Sprint 15 — task detail
 
@@ -60,10 +61,29 @@ prerender, so Sprint 6 and the superadmin role were never deployed. Fixed in
 test PASS 12/12 · access matrix PASS 49/7 · route sweep 20 routes unchanged ·
 `/search` returns 12 cards with no params.
 
+### Sprint 16 — task detail
+
+| # | Task | Status |
+|---|---|---|
+| 16.1 | **Change password** from the profile, current password required first (Supabase's `updateUser` does not ask for it). | `[x]` |
+| 16.2 | **Edit alert** — frequency picker. Filter editing deliberately not built; "View matches" routes to `/search` where the real filter UI already lives. | `[x]` |
+| 16.3 | **Delete alert**, distinct from Pause. | `[x]` |
+| 16.4 | **"+ Create Alert"** relabelled — it was a bare link to `/search`, a button whose label lied. | `[x]` |
+| 16.5 | **Delete account** — cascades profile, credits, shortlists, unlocks, alerts. Closes the PAN/Aadhaar deletion gap. | `[x]` |
+
+> **16.2/16.3 needed no migration but could not be client-side.** `authenticated`
+> holds `UPDATE` on `isActive` **only**, and there is no DELETE policy at all —
+> so both run service-role after an ownership check. A client-side write would
+> have been denied and reported as success-with-zero-rows, i.e. silently broken.
+
+**Verified:** `tsc --noEmit` · build clean with the service key blanked · leak
+test PASS 12/12 · access matrix PASS 49/7 · route sweep unchanged. **Not
+click-tested in a browser** — skipped at the user's request ahead of a client
+meeting; exercise the three new flows before relying on them.
+
 > **Still open from the audit** — see `post_audit_plan.md`: Sprint 15.5
-> (Vercel/Supabase dashboard config, DB password rotation), Sprint 16 (change
-> password, delete account, alert edit/delete), Sprint 16.5 (Resend-blocked),
-> Sprint 17 (Channel Partner scope decision).
+> (Vercel/Supabase dashboard config, DB password rotation), Sprint 16.5
+> (Resend-blocked), Sprint 17 (Channel Partner scope decision).
 
 ---
 

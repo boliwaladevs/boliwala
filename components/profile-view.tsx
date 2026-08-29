@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bookmark, Bell, Briefcase, User, LogOut, MapPin, Scale, MessageCircle, FileText, CheckCircle2, CircleDashed } from "lucide-react"
+import { Bookmark, Bell, Briefcase, User, LogOut, MapPin, Scale, MessageCircle, FileText, CheckCircle2, CircleDashed, Trash2, KeyRound, AlertTriangle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { toggleShortlist } from "@/app/actions/shortlist"
-import { setAlertActive } from "@/app/actions/alerts"
+import { setAlertActive, updateAlertFrequency, deleteAlert } from "@/app/actions/alerts"
+import { deleteOwnAccount } from "@/app/actions/account"
 import { formatDateShort, formatINR } from "@/lib/format"
 import { describeAlertFilters, searchHrefFromAlertFilters } from "@/lib/alerts"
 import type { SearchListing } from "@/lib/data/listings"
@@ -63,6 +64,11 @@ export function ProfileView({
   const [savingDetails, setSavingDetails] = useState(false)
   const [alertRows, setAlertRows] = useState(alerts)
   const [, startAlertTransition] = useTransition()
+  const [newPassword, setNewPassword] = useState("")
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState("")
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const [savedListings, setSavedListings] = useState(shortlisted)
   const [, startShortlistTransition] = useTransition()
   const router = useRouter()
@@ -137,6 +143,77 @@ export function ProfileView({
     setAadhaarNumber(aadhaar ? formatAadhaarForDisplay(aadhaar) : "")
     setPanNumber(pan)
     toast({ title: "Details saved" })
+  }
+
+  const handleChangeFrequency = (alertId: string, frequency: string) => {
+    const previous = alertRows
+    setAlertRows((rows) => rows.map((r) => (r.id === alertId ? { ...r, frequency } : r)))
+
+    startAlertTransition(async () => {
+      const result = await updateAlertFrequency(alertId, frequency)
+      if ("error" in result) {
+        setAlertRows(previous)
+        toast({ variant: "destructive", title: "Couldn't change that", description: result.error })
+        return
+      }
+      toast({ title: "Alert updated" })
+    })
+  }
+
+  const handleDeleteAlert = (alertId: string) => {
+    const previous = alertRows
+    setAlertRows((rows) => rows.filter((r) => r.id !== alertId))
+
+    startAlertTransition(async () => {
+      const result = await deleteAlert(alertId)
+      if ("error" in result) {
+        setAlertRows(previous)
+        toast({ variant: "destructive", title: "Couldn't delete that alert", description: result.error })
+        return
+      }
+      toast({ title: "Alert deleted" })
+    })
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setChangingPassword(true)
+
+    // Supabase's updateUser does not ask for the current password, so anyone
+    // walking up to an unlocked browser could change it. Re-authenticating
+    // first is what makes this a password *change* rather than a takeover.
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: profile.email,
+      password: currentPassword,
+    })
+    if (reauthError) {
+      setChangingPassword(false)
+      toast({ variant: "destructive", title: "Current password is wrong", description: "Check it and try again." })
+      return
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setChangingPassword(false)
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't change password", description: error.message })
+      return
+    }
+    setCurrentPassword("")
+    setNewPassword("")
+    toast({ title: "Password changed", description: "Use your new password next time you log in." })
+  }
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true)
+    const result = await deleteOwnAccount()
+    if ("error" in result) {
+      setDeletingAccount(false)
+      toast({ variant: "destructive", title: "Couldn't delete your account", description: result.error })
+      return
+    }
+    toast({ title: "Account deleted", description: "Your account and all its data have been removed." })
+    router.push("/")
+    router.refresh()
   }
 
   const handleToggleAlert = (alertId: string, nextActive: boolean) => {
@@ -325,7 +402,7 @@ export function ProfileView({
                     <p className="text-sm text-muted-foreground mt-1">You&apos;ll be emailed when new matching properties are listed.</p>
                   </div>
                   <Link href="/search" className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl transition-colors hidden sm:block">
-                    + Create Alert
+                    + Create from a search
                   </Link>
                 </div>
 
@@ -378,7 +455,20 @@ export function ProfileView({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 w-full sm:w-auto border-t border-border sm:border-0 pt-4 sm:pt-0 shrink-0">
+                          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto border-t border-border sm:border-0 pt-4 sm:pt-0 shrink-0">
+                            <label className="sr-only" htmlFor={`freq-${alert.id}`}>
+                              How often to send this alert
+                            </label>
+                            <select
+                              id={`freq-${alert.id}`}
+                              value={alert.frequency}
+                              onChange={(e) => handleChangeFrequency(alert.id, e.target.value)}
+                              className="text-xs font-bold border border-border px-3 py-2 rounded-lg bg-background hover:bg-secondary/50 transition-colors cursor-pointer"
+                            >
+                              <option value="instant">Instant</option>
+                              <option value="daily">Daily digest</option>
+                              <option value="weekly">Weekly</option>
+                            </select>
                             <Link
                               href={searchHrefFromAlertFilters(alert.filters)}
                               className="text-xs font-bold border border-border px-4 py-2 rounded-lg hover:bg-secondary/50 transition-colors"
@@ -389,11 +479,18 @@ export function ProfileView({
                               onClick={() => handleToggleAlert(alert.id, !alert.isActive)}
                               className={`text-xs font-bold px-4 py-2 rounded-lg border transition-colors ${
                                 alert.isActive
-                                  ? "text-red-600 border-red-200 hover:bg-red-50"
+                                  ? "text-amber-700 border-amber-200 hover:bg-amber-50"
                                   : "text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                               }`}
                             >
                               {alert.isActive ? "Pause" : "Resume"}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAlert(alert.id)}
+                              aria-label="Delete this alert"
+                              className="text-xs font-bold px-3 py-2 rounded-lg border text-red-600 border-red-200 hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -538,6 +635,101 @@ export function ProfileView({
                       </button>
                     </div>
                   </form>
+                </div>
+
+                {/* CHANGE PASSWORD */}
+                <div className="bg-background rounded-2xl border border-border shadow-sm p-6 md:p-8 mt-6">
+                  <div className="flex items-center gap-3 mb-1">
+                    <KeyRound className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-lg font-bold text-foreground font-display">Change password</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    You&apos;ll be asked for your current password first.
+                  </p>
+
+                  <form className="flex flex-col gap-5" onSubmit={handleChangePassword}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="flex flex-col gap-2">
+                        <label htmlFor="current-password" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Current password
+                        </label>
+                        <input
+                          id="current-password"
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          required
+                          autoComplete="current-password"
+                          className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label htmlFor="new-password" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          New password
+                        </label>
+                        <input
+                          id="new-password"
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          required
+                          minLength={6}
+                          autoComplete="new-password"
+                          className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        disabled={changingPassword}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-12 px-8 rounded-xl transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5"
+                      >
+                        {changingPassword ? "Changing…" : "Change password"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* DELETE ACCOUNT */}
+                <div className="bg-background rounded-2xl border border-red-200 dark:border-red-900/50 shadow-sm p-6 md:p-8 mt-6">
+                  <div className="flex items-center gap-3 mb-1">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    <h3 className="text-lg font-bold text-foreground font-display">Delete account</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    This permanently removes your account, saved properties, alerts, unlocked
+                    details, credit history and any personal details you have entered.
+                  </p>
+                  <p className="text-sm font-semibold text-red-600 mb-6">
+                    This cannot be undone, and your remaining {profile.creditsBalance} credit
+                    {profile.creditsBalance === 1 ? "" : "s"} will be lost.
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                    <div className="flex flex-col gap-2 flex-1">
+                      <label htmlFor="delete-confirm" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Type DELETE to confirm
+                      </label>
+                      <input
+                        id="delete-confirm"
+                        type="text"
+                        value={deleteConfirm}
+                        onChange={(e) => setDeleteConfirm(e.target.value)}
+                        autoComplete="off"
+                        placeholder="DELETE"
+                        className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all text-sm"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={deleteConfirm !== "DELETE" || deletingAccount}
+                      className="bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold h-12 px-8 rounded-xl transition-all"
+                    >
+                      {deletingAccount ? "Deleting…" : "Delete my account"}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

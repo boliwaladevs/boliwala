@@ -108,3 +108,94 @@ export async function setAlertActive(
   revalidatePath("/profile")
   return { ok: true }
 }
+
+/**
+ * Changes how often an alert is sent.
+ *
+ * Goes through the admin client rather than the caller's own session on
+ * purpose. Migration 0010 deliberately narrowed the client-writable surface on
+ * alert_subscriptions to `isActive` alone, so a direct PATCH of `frequency`
+ * would be denied by RLS — and PostgREST reports that denial as a *successful*
+ * call affecting zero rows, i.e. the picker would appear to work and silently
+ * do nothing. That is the exact bug 0010's own header warns about.
+ *
+ * Ownership is verified here instead, before the write. Widening the RLS policy
+ * would have been the alternative; this keeps the client-writable surface as
+ * narrow as 0010 intended.
+ */
+export async function updateAlertFrequency(
+  alertId: string,
+  frequency: string,
+): Promise<{ ok: true } | { error: string }> {
+  if (!["instant", "daily", "weekly"].includes(frequency)) {
+    return { error: "Pick instant, daily or weekly." }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "not_authenticated" }
+
+  const admin = createAdminClient()
+  const { data: owned } = await admin
+    .from("alert_subscriptions")
+    .select("id")
+    .eq("id", alertId)
+    .eq("userId", user.id)
+    .maybeSingle()
+
+  if (!owned) return { error: "That alert doesn't exist, or isn't yours." }
+
+  const { error } = await admin
+    .from("alert_subscriptions")
+    .update({ frequency })
+    .eq("id", alertId)
+    .eq("userId", user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath("/profile")
+  return { ok: true }
+}
+
+/**
+ * Deletes an alert outright.
+ *
+ * Same reasoning as updateAlertFrequency: there is no DELETE policy on
+ * alert_subscriptions for any client role, so this runs as service-role after
+ * an explicit ownership check. The `userId` filter is repeated on the delete
+ * itself so a race between the check and the write cannot remove someone
+ * else's row.
+ *
+ * Distinct from setAlertActive, which pauses. Pausing keeps a record of what
+ * was asked for; deleting is for when the user wants it gone.
+ */
+export async function deleteAlert(alertId: string): Promise<{ ok: true } | { error: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "not_authenticated" }
+
+  const admin = createAdminClient()
+  const { data: owned } = await admin
+    .from("alert_subscriptions")
+    .select("id")
+    .eq("id", alertId)
+    .eq("userId", user.id)
+    .maybeSingle()
+
+  if (!owned) return { error: "That alert doesn't exist, or isn't yours." }
+
+  const { error } = await admin
+    .from("alert_subscriptions")
+    .delete()
+    .eq("id", alertId)
+    .eq("userId", user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath("/profile")
+  return { ok: true }
+}

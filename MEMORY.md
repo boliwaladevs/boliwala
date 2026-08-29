@@ -19,7 +19,7 @@ context window fills up, open a new session and point it at this file first.
 > 4. `plans/boliwala-phase1-sprint-plan.md` (master plan — **includes Sprint
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
-**Last updated:** 2026-08-22.
+**Last updated:** 2026-08-22 (Sprints 15 + 16 delivered, see §22/§23).
 
 > **🔴 22 AUG — PRODUCTION HAD BEEN STUCK ON `0e6cfd5` SINCE 9 AUG.**
 > Every build from `e7cac13` onward failed at prerender, so all of Sprint 6
@@ -2034,3 +2034,105 @@ server for the leak test, invoke Next directly and kill it via CIM afterwards
 Start-Process -FilePath "node" -ArgumentList "node_modules/next/dist/bin/next","start","--port","3100" -WindowStyle Hidden
 Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -match 'next.*start' } | Stop-Process -Force
 ```
+
+
+---
+
+## 23. Sprint 16 — Account Self-Service, completion record (2026-08-22)
+
+From `post_audit_plan.md` §5. All five tasks built. Sprints 15.5 (env config),
+16.5 (Resend/compliance) and 17 (partner scope) remain untouched.
+
+### 23.1 The RLS constraint that shaped this sprint
+
+Two of the five tasks looked like UI work and were not. Verified by live
+introspection **before** writing either one:
+
+- `alert_subscriptions` grants `UPDATE` to `authenticated` on **`isActive`
+  alone** (migration 0010 narrowed it deliberately).
+- There is **no DELETE policy** on the table for any client role.
+
+So a client-side `frequency` update or a delete would have been denied — and
+PostgREST reports that denial as a **successful call affecting zero rows**. The
+frequency picker would have appeared to work and silently done nothing: exactly
+the bug class §19.2 warned about when it found the missing UPDATE policy.
+
+`updateAlertFrequency` and `deleteAlert` therefore run through the service-role
+client **after an explicit ownership check**, with the `userId` filter repeated
+on the write itself so a race between check and write cannot touch someone
+else's row. This was `post_audit_plan.md` §5's option (a), chosen over widening
+the RLS policy so the client-writable surface stays as narrow as 0010 intended.
+**No migration was needed.**
+
+### 23.2 What was built
+
+- **16.1 Change password** (`components/profile-view.tsx`). Supabase's
+  `updateUser` does **not** require the current password, so on its own it
+  would let anyone at an unlocked browser take the account over. The handler
+  re-authenticates with `signInWithPassword` first and only then updates.
+- **16.2 Edit alert** — frequency picker on each row, optimistic with rollback.
+
+  **Scope call:** editing *filters* was not built. Re-scoping an alert would
+  mean rebuilding the whole search UI inside the profile, when "View matches"
+  already round-trips to `/search` where the filters and the save banner live.
+  Frequency is the part with no other route to it. Flagged rather than
+  half-built.
+- **16.3 Delete alert** — a bin button, distinct from Pause. Pause keeps a
+  record of what was asked for; delete is for when it should be gone.
+- **16.4 "+ Create Alert"** was a bare `<Link href="/search">` — a button whose
+  label lied. Relabelled **"+ Create from a search"**. The real create flow is
+  the `/search` banner, and Sprint 15.3 made bare `/search` render properly, so
+  that link now lands somewhere useful.
+- **16.5 Delete account** — new `app/actions/account.ts`. Deletes the
+  `auth.users` row via `auth.admin.deleteUser`, never an id from the request,
+  only the session's own. Migration 0003's `ON DELETE CASCADE` clears profile,
+  credit ledger, shortlists, unlocks, alerts and views. Deleting the *profile*
+  row instead would strand the auth user and let them sign in to a broken
+  account. UI requires typing `DELETE` and states that remaining credits are
+  lost.
+
+  **This closes the "no deletion path at all" gap** flagged against migration
+  0009 (PAN/Aadhaar) — the weakest point in the compliance posture per
+  `codebase_audit.md`. It is deletion, not anonymised retention; if a retention
+  obligation is later identified, `deleteOwnAccount` is the function that
+  changes. Plan §16.5.3 (encryption, retention policy, audit trail) is still
+  open and still needs an owner.
+
+### 23.3 Verification
+
+`tsc --noEmit` clean · `pnpm build` clean with `SUPABASE_SERVICE_ROLE_KEY`
+blanked · leak test PASS 12/12 (96+96 checks) · access matrix PASS 49/7 · route
+sweep unchanged from the §19.6 baseline.
+
+**Not verified in a browser** — the user asked to skip browser steps for both
+Sprint 15 and 16, ahead of a client meeting. The RLS reasoning behind 16.2/16.3
+was verified directly against the live database (§23.1), which is the part that
+could have silently failed. **The click-paths themselves have not been
+exercised** — change-password, delete-alert and delete-account have never been
+run end to end. Do that before anyone relies on them. `deleteOwnAccount` in
+particular is irreversible and has not been executed once.
+
+---
+
+## 24. `show.md` — client demo script (2026-08-22)
+
+Written for a client meeting the same day. A step-by-step walkthrough of
+everything real, ordered to build: live statistics → real search → **the
+gating/credit model** → account self-service → admin.
+
+Three things in it are worth keeping for whoever demos next:
+
+- **The view-source moment (step 11).** Open a listing signed out, search the
+  page source for `authorisedOfficerPhone`, get zero hits. It proves the
+  paywall is a server boundary, not a CSS blur — the whole revenue model in
+  one gesture.
+- **The two round-trips (steps 23 and 26).** Create a listing in admin and
+  watch the public count go 12 → 13; change Annual Price in admin and watch
+  `/pricing` change. These show admin and the public site are one system.
+- **A list of what NOT to click** — the eleven admin mockups, the Service
+  Requests tab, `/partner/dashboard` — so nobody opens a placeholder in front
+  of the client.
+
+It tells the demoer to **run on localhost unless the Vercel deploy is confirmed
+green**, since production had been stale for two weeks and today's fix had not
+been observed deploying at the time of writing.
