@@ -20,14 +20,13 @@ context window fills up, open a new session and point it at this file first.
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
 **Last updated:** 2026-08-30 (infra direction change + roadmap reset, see §25;
-Cloudflare agent tooling installed + Item 1a execution plan, see §26; **Item 1a
-spike executed — steps 1-4 pass, step 5 blocked on a Windows-only adapter bug,
-see §27**).
+Cloudflare agent tooling installed + Item 1a execution plan, see §26; Item 1a
+spike executed, see §27; **Workers Builds connected, plus a Next 16.0.10
+packaging bug that blocks every cold build — see §28**).
 
-> **▶ STARTING A CLOUDFLARE SESSION? READ §27 FIRST (live spike state),
-> THEN §26, THEN §25.** §26 is the live handoff: what tooling is already
-> installed, what still needs authenticating, the exact Item 1a step order,
-> and the one failure mode most likely to produce a false "pass".
+> **▶ NEW SESSION? READ §28 FIRST — it is the live handoff (what is committed,
+> what is on a branch, and the one bug blocking every build). Then §27 (the
+> Item 1a spike record), then §26, then §25.**
 
 > **🟢 30 AUG — READ `ROADMAP.md` FIRST FOR SEQUENCING.**
 > A brainstorm on 2026-08-30 changed the infra direction and the launch
@@ -2586,3 +2585,202 @@ Workers secrets via `wrangler secret put`, never the repo.
 
 **Do not record a no-go on the basis of anything in §27.2.** Those are
 Windows problems and they disappear on Linux.
+
+
+---
+
+## 28. Session handoff — Workers Builds connected, one hard blocker (2026-08-30, later same day)
+
+**▶ START HERE. This supersedes §27.9 as the live next action.** §27 is still
+the correct record of the Item 1a spike; this section is what happened after it.
+
+### 28.1 State in one screen
+
+| | |
+|---|---|
+| `main` HEAD | `9c5fd41` (was `093b7ff` at the start of the day) |
+| Branch `item5-navbar-partner-auth` | `a9c12af`, pushed, **not merged** — see §28.5 |
+| Cloudflare Workers Builds | **Connected.** GitHub App authorised on `boliwaladevs`, Worker `boliwala` |
+| Last Cloudflare build | **Failed at install** — fixed by `9c5fd41`, not yet retried |
+| **The blocker** | **Next 16.0.10 ships a broken `@vercel/og` — no cold build succeeds anywhere. §28.4.** |
+| Local production build | **Broken** (same bug). `tsc --noEmit` and the access matrix both pass. |
+| Leak test | **Not run this session** — needs a production server, which needs a build |
+
+### 28.2 Commits made
+
+- **`03c0836`** — the §25 planning docs (`ROADMAP.md`,
+  `INFRA_R2_SCALING_ANALYSIS.md`, `coparison.md`, `upper.md`) had never been
+  committed; they are now. Plus `open-next.config.ts`, `wrangler.toml`, the
+  adapter devDependencies, the `pnpm-workspace.yaml` `allowBuilds` fix, and
+  `.gitignore` entries. Also brought `SPRINT_CALENDAR.md` and
+  `project_calendar.html` in line with the dead 15 Sep date (§26.6's owed docs
+  pass — done, both now carry a superseded notice with the task detail intact).
+- **`9c5fd41`** — pins `packageManager: "pnpm@11.1.3"`. See §28.3.
+
+### 28.3 Workers Builds is connected, but the build settings are still defaults
+
+The user authorised the **Cloudflare Workers and Pages** GitHub App on the
+`boliwaladevs` org, scoped to the `boliwala` repo. Cloudflare clones the repo
+successfully — **the Git integration itself is done and working.**
+
+The first build failed at install:
+
+```
+Detected the following tools from environment: pnpm@10.11.1, nodejs@24.18.0
+Installing project dependencies: pnpm install --frozen-lockfile
+ERROR  packages field missing or empty
+```
+
+Cause: nothing pinned a pnpm version, so Cloudflare chose **10.11.1** while
+this machine runs **11.1.3**. pnpm 10 treats the presence of
+`pnpm-workspace.yaml` as declaring a workspace and demands a `packages:` field.
+Pinning was the smaller fix than adding a vestigial `packages:` entry, and it
+also avoids a second failure queued behind it: **`allowBuilds` is pnpm 11
+syntax**, so pnpm 10 would have ignored it and left `esbuild` and `workerd`
+unbuilt (gotcha #9's cousin). Fixed in `9c5fd41`; **not yet retried.**
+
+**Still wrong in the Cloudflare UI — the user was asked to change these and had
+not confirmed doing so before stepping away. Check before interpreting any
+build result:**
+
+| Field | Currently | Must be |
+|---|---|---|
+| Build command | `pnpm run build` | `pnpm exec opennextjs-cloudflare build` |
+| Deploy command | `npx wrangler deploy` | `pnpm exec opennextjs-cloudflare deploy` |
+| Build variables | `None` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
+
+Root directory `/` is correct. Worker name `boliwala` correctly matches
+`wrangler.toml` — Cloudflare fails the build if they diverge.
+
+`pnpm run build` runs plain `next build` and never produces `.open-next/worker.js`,
+so the deploy step has nothing to ship. And the two build variables are inlined
+at build time — without them `next.config.mjs` silently falls back to
+`localhost` and every listing image 400s on a green build (§27.6).
+
+### 28.4 🔴 THE BLOCKER — Next 16.0.10 ships a broken `@vercel/og`
+
+**This is the single most important thing in this section. It blocks the local
+production build, the leak test, and every Cloudflare build.**
+
+```
+Error occurred prerendering page "/apple-icon"
+Failed to load external module next/dist/compiled/@vercel/og/index.node.js:
+ENOENT: no such file or directory, open '.../@vercel/og/noto-sans-v27-latin-regular.ttf'
+```
+
+Diagnosed, not guessed:
+
+- The only font in that directory is **`noto-sans-v27-latin-regular.ttf.bin`**.
+- `index.edge.js` requests `noto-sans-v27-latin-regular.ttf.bin` — **exists**.
+- `index.node.js` requests `noto-sans-v27-latin-regular.ttf` — **not shipped**.
+
+So any cold build that prerenders an `ImageResponse` route through the **Node**
+runtime dies. This repo has three: `app/icon.tsx`, `app/apple-icon.tsx`,
+`app/opengraph-image.tsx` (all added in Sprint 5, §15.5).
+
+**It is NOT caused by the Item 5 changes and NOT a Windows problem.** Verified
+by stashing all working-tree changes and building the committed baseline: it
+fails identically (24 pages instead of 25, same error). **It is
+platform-independent and will fail on Cloudflare's Linux builders too** — so
+expect the next Workers build to reach this after the install fix.
+
+**Why it did not surface earlier today:** the successful `opennextjs-cloudflare
+build` in §27.1 ran against a warm `.next` cache that already held a rendered
+`/apple-icon`. The first `rm -rf .next` exposed it. Any CI build is cold by
+definition, so CI would always have hit this.
+
+**Fix options — NOT yet chosen, the user was mid-setup and deferred it:**
+
+1. **Copy the font inside `node_modules`** (`.ttf.bin` → `.ttf`). Unblocks a
+   local build in one command. **Does not survive a CI install, so it fixes
+   nothing on Cloudflare.** Was started this session and the user rejected the
+   tool call; treat it as a local diagnostic aid only, never the answer.
+2. **`pnpm patch next`** — commits the added file to the repo as a patch, so it
+   applies on every install including CI. Correct and durable, but pins a patch
+   to an exact Next version that must be re-cut on every upgrade.
+3. **Replace the three generated images with static files** in `public/` or
+   `app/`. Removes the `next/og` dependency at build time entirely. These are
+   *placeholder* assets that `ROADMAP.md` Item 6 says must be swapped for real
+   brand assets anyway (**D9**), so this may be work that needs doing regardless
+   — but it discards deliberate Sprint 5 work and is the largest change.
+4. **Upgrade Next** past 16.0.10 if a patched release exists. Check first; this
+   would be the cleanest outcome and costs nothing to look into.
+
+**Recommendation: check option 4 first, then take option 2 if 16.0.10 is the
+current release.** Option 3 is a real candidate but should be the user's call
+because it changes what ships as branding.
+
+### 28.5 Item 5 is built and pushed, but on a branch, not merged
+
+Branch **`item5-navbar-partner-auth`** at **`a9c12af`**, pushed to origin.
+`main` is untouched by it. Full rationale is in the commit message; summary:
+
+- **5a** — navbar Log In / Sign Up restyle, desktop and mobile
+  (`components/header.tsx`).
+- **5b** — `auth-view.tsx` gains a `variant` prop; new `app/partner/login`
+  route reuses the component; "Login as Channel Partner" link added below the
+  Google button on the customer variant.
+- **5c** — `/partner/dashboard` now requires `role = 'channel_partner'`. It
+  previously required only a signed-in session, exposing fabricated commission
+  figures to any customer. Verified against the live DB: the enum value exists
+  (`user`, `admin`, `channel_partner`, `superadmin`) and **no account holds it**
+  (3 `user`, 1 `superadmin`), so the page is now closed to everyone until an
+  admin grants the role. That is intended while the portal is a mockup.
+
+**Why a branch and not `main`:** two legs of the standing verification bar
+could not be run because of §28.4 — the production build and the leak test.
+`tsc --noEmit` is clean and the access matrix passes 49/49 across 7 viewer
+states. Merging unverified code straight to a branch that Cloudflare
+auto-deploys, while production on Vercel also tracks `main`, was not a call to
+make unattended.
+
+**To land it:** fix §28.4, run `pnpm build` and `node scripts/leak-test.mjs`
+against a production server (§22.3 has the exact incantations), then merge with
+`--rebase` per `plans/version_control.md`.
+
+**Two judgement calls inside it worth a second opinion:**
+
+1. Appendix B says Sign Up should be "white background, black text". A bare
+   white button disappears against the light header state, so it carries a
+   faint `border-black/10`. Revert if the client wants it literal.
+2. Google sign-in from `/partner/login` still routes by role through
+   `/auth/callback` rather than to the partner area. Carrying intent through
+   OAuth needs the `?next=` work in Item 2 · S9; building a second mechanism
+   now would duplicate it. Email/password does route to `/partner/dashboard`.
+
+### 28.6 Decisions and non-decisions from this session
+
+- **Push to `main` as `boliwaladevs`: authorised by the user.** They are the
+  admin who bypasses the PR requirement (`plans/version_control.md`).
+- **Workers Paid upgrade: deferred to the week of 2026-09-07** by the user.
+  Free tier fits today (2.74 MiB of a 3 MB cap) so nothing waits on it.
+- **The 12 demo listings were NOT deleted.** The user said "we can keep 4
+  listings only as they are demo ones", which is permission, not an
+  instruction. Listing count has no effect on Worker bundle size, and §8.4
+  records **12/12** as the leak-test baseline — trimming to 4 would invalidate
+  it for no gain. **If they are trimmed, restate that baseline in the same
+  commit.**
+- **Path A vs B for CI: A (Workers Builds) chosen and now live.** `ROADMAP.md`
+  Item 1c was updated to match rather than left saying "GitHub Actions".
+
+### 28.7 Next action, in order
+
+1. **Resolve §28.4.** Nothing else can be verified until a cold build succeeds.
+   Check whether Next has a release past 16.0.10 that fixes it before patching.
+2. **Confirm the three Cloudflare build settings in §28.3** are corrected, then
+   **Retry build**.
+3. Expect the first green build to produce a `*.workers.dev` preview URL. Add
+   it to **Supabase → Authentication → URL Configuration → Redirect URLs** as
+   `https://<preview>.workers.dev/**` before testing login — **do not touch
+   Site URL** (§27.5 explains why, and corrects §26.5, which asks for the wrong
+   change entirely).
+4. **Run the real Item 1a gate against the preview:** `scripts/leak-test.mjs`,
+   `scripts/access-matrix-test.mjs`, route sweep, real Supabase email login,
+   real Google login. **Only then record a go or no-go on Item 1a.**
+5. Land `item5-navbar-partner-auth` once the build works (§28.5).
+6. Remove the preview URL from Supabase Redirect URLs afterwards.
+
+**Still true from §27.2: do not record a no-go because of a Windows failure or
+because of §28.4.** Neither implicates OpenNext or Next 16 as a hosting choice.
+The size gate — the one thing Item 1a was really built to test — already
+passed at 2.74 MiB.
