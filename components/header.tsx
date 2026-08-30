@@ -117,16 +117,13 @@ export function Header() {
             <>
               <Link
                 href="/login"
-                className={cn(
-                  "text-sm tracking-wide hover:text-[rgb(251,146,60)] transition-colors duration-300",
-                  isDarkBg ? "text-white" : "text-foreground font-medium",
-                )}
+                className="inline-flex items-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
               >
                 Log In
               </Link>
               <Link
                 href="/signup"
-                className="inline-flex items-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
+                className="inline-flex items-center gap-2 text-sm px-5 py-2.5 bg-white text-black border border-black/10 hover:bg-white/90 transition-all duration-300"
               >
                 Sign Up
               </Link>
@@ -204,14 +201,14 @@ export function Header() {
               <>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 border border-white/30 text-white hover:bg-white/10 transition-all duration-300"
+                  className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
                   onClick={closeMobileMenu}
                 >
                   Log In
                 </Link>
                 <Link
                   href="/signup"
-                  className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
+                  className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 bg-white text-black border border-black/10 hover:bg-white/90 transition-all duration-300"
                   onClick={closeMobileMenu}
                 >
                   Sign Up
