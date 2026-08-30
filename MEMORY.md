@@ -25,7 +25,9 @@ Item 1a spike executed, see §27; Workers Builds connected, see §28; build
 unblocked — §29 corrects §28.4; **first green Cloudflare build + the live
 handoff is §30**).
 
-> **▶ NEW SESSION? READ §30 FIRST — it is the live handoff.** The Cloudflare
+> **▶ NEW SESSION? READ §30 FIRST — it is the live handoff. If you are an
+> overnight loop agent, read §31 too: it is your brief, and it explains why
+> "build out the channel partner dashboard" is NOT the task.** The Cloudflare
 > build is **green** and the app is deployed at
 > `https://boliwala.boliwaladevs.workers.dev`. One real defect is open: every
 > `/listing/[slug]` page 500s on the Worker (§30.4 — and the leak test's
@@ -3137,3 +3139,121 @@ what was actually finished rather than reporting motion.
   is a cheap way to confirm *which* commit a remote host is really serving.
 - §29.5 held again: the build was fine, the settings were fine, and the one
   genuine defect surfaced only after the deploy finally succeeded.
+
+---
+
+## 31. Overnight brief — and why "build the partner dashboard" is the wrong task (2026-08-30, night)
+
+**Context:** the user proposed that an overnight agent loop "build out the
+entire channel partner dashboard from the demo, as `boliwala.netlify.app` has
+it". Before accepting that brief, the repo was checked. **The premise does not
+hold, and the task as stated would waste the night.** What follows is the
+evidence, then the brief that is actually worth running.
+
+### 31.1 The dashboard is already built
+
+`components/partner-dashboard-view.tsx` is **583 lines** and already implements
+every section of the mockup:
+
+| Mockup section (`channel-partner-dashboard.html`, 742 lines, in repo) | In React? |
+|---|---|
+| Dashboard / stat tiles | ✅ |
+| Your referral link | ✅ |
+| Earnings breakdown | ✅ |
+| Invite by email or phone | ✅ |
+| How you earn | ✅ |
+| Commission structure | ✅ |
+| Payout history | ✅ |
+| **Invitation status** | ❌ **— the only genuine UI gap** |
+
+**Also note the mockup is already in the repo** as
+`channel-partner-dashboard.html`. Nobody needs to log into
+`boliwala.netlify.app` and scrape it. Read the local file.
+
+### 31.2 What is actually missing is data, and that is blocked
+
+Every figure on that dashboard is hardcoded in the JSX:
+
+- `₹31,297` total earnings, `₹799`, `₹17,998`, `₹12,500` line items
+- `8 subscribers × ₹999 × 10%`, `12 packages × ₹9,999 × 15%`,
+  `5 wins × ₹50L avg × 1% × 5%`
+- Four invented referrals with invented names and email addresses —
+  "Priya Verma", "Rajesh Sharma", "Amit Patel", "Kavya Reddy"
+
+**There is no schema behind any of it.** `grep` across
+`supabase/migrations/*.sql` finds **no** table matching
+`partner|referral|commission|payout`. So "finish the dashboard" really means
+"design and apply the commission data model", which is:
+
+- **Item 10 on `ROADMAP.md`, explicitly gated on D8** — a client commercial
+  decision. `ROADMAP.md` rule 1 says do not start an item while an earlier one
+  is unfinished, and Item 1 has an open defect (§30.4).
+- **The money model.** Those percentages are a representation about what
+  partners get paid. Inventing them overnight, unsupervised, and shipping them
+  behind a login is the single worst candidate for autonomous work in this
+  repo.
+- **Financial data needing RLS**, on a codebase where §23.1 records that RLS
+  constraints have already shaped a whole sprint.
+
+This is also exactly why §28.5 hard-gated the page in the first place. Building
+*more* fabricated-money UI deepens the problem that gate was closing.
+
+### 31.3 🔴 A real bug found while checking this — verify first thing
+
+`app/actions/partner.ts` inserts into **`channel_partner_applications`**. **No
+migration in the repo creates that table**, and `grep` finds the name nowhere
+in `supabase/migrations/` or `scripts/`.
+
+Two possibilities, and they need separating before anything else:
+
+1. The table was created by hand in the Supabase dashboard, and the repo simply
+   has no migration for it — a provenance gap, worth back-filling.
+2. **The table does not exist, and every channel-partner application ever
+   submitted has failed silently.** `submitPartnerApplication` returns the
+   Postgres error to the caller, so this would surface as a user-visible
+   failure — but nobody has checked.
+
+**Check this before writing a single line of dashboard code.** If it is (2),
+that is live data loss on a real intake form, and it outranks everything else
+in this section. Confirm against the live DB (`list_tables` via the Supabase
+MCP server, or `scripts/apply-sql.mjs`-style query against `DIRECT_URL`).
+
+Note the same grep shows **no `create table` at all** in `supabase/migrations/`
+— the base schema was built outside migrations and 0009–0013 are only `ALTER`s.
+So a missing migration is not by itself proof the table is missing. Check the
+database, not the repo.
+
+### 31.4 The overnight brief that is worth running, in order
+
+1. **§30.4 — the listing-page 500s on the Worker.** Real, on the critical path,
+   blocking the Item 1a verdict. `wrangler tail --name boliwala`, read the
+   exception, fix if the fix is in-repo. **This is the highest-value work
+   available and it needs no client decision.**
+2. **§31.3 — does `channel_partner_applications` exist?** Ten minutes, and
+   potentially a live bug. If it exists, back-fill a migration so the repo
+   matches reality. If it does not, **stop and write it up** — do not create it
+   unattended; a table that should have been holding real applications is a
+   conversation, not a task.
+3. **The "Invitation status" section** (§31.1) — the one honest UI gap. It is
+   presentation-only against the existing hardcoded shape, it changes no data
+   model, and it is genuinely closeable overnight.
+4. **Write a partner schema *proposal*** — `partner_referrals`,
+   `partner_commissions`, `partner_payouts`, with RLS sketched — as a document
+   for the user's review. **Do not apply a migration. Do not invent commission
+   rates**; leave them as parameters for D8.
+
+### 31.5 Standing constraints for the loop
+
+- **Everything in §30.6 still applies** — no Worker secrets, no Google console
+  changes, no real-login tests, no D-decisions, no touching Supabase Site URL.
+- **Do not delete or alter the 12 demo listings** — they are the leak-test
+  baseline (§28.6).
+- **Every change still clears the standing bar** before it is pushed: cold
+  build, `leak-test.mjs`, `access-matrix-test.mjs`, `tsc --noEmit`. §22.3 has
+  the invocations.
+- `/partner/dashboard` is hard-gated to `channel_partner`, and **no account
+  holds that role** (§28.5). An agent cannot sign in and look at its own work.
+  Verification is limited to build, typecheck and route-level assertions —
+  factor that into how much UI is worth writing blind.
+- **Report what was actually finished, not motion.** If the night produced one
+  fix and two write-ups, say that.
