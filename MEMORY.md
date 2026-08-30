@@ -25,9 +25,9 @@ Item 1a spike executed, see §27; Workers Builds connected, see §28; build
 unblocked — §29 corrects §28.4; **first green Cloudflare build + the live
 handoff is §30**).
 
-> **▶ NEW SESSION? READ §30 FIRST — it is the live handoff. If you are an
-> overnight loop agent, read §31 too: it is your brief, and it explains why
-> "build out the channel partner dashboard" is NOT the task.** The Cloudflare
+> **▶ NEW SESSION? READ §30 FIRST — it is the live handoff. If you are the
+> overnight loop agent, §32 IS YOUR BRIEF — read §30, then §32, then §31 for
+> why "build out the channel partner dashboard" is not the task.** The Cloudflare
 > build is **green** and the app is deployed at
 > `https://boliwala.boliwaladevs.workers.dev`. One real defect is open: every
 > `/listing/[slug]` page 500s on the Worker (§30.4 — and the leak test's
@@ -3257,3 +3257,127 @@ database, not the repo.
   factor that into how much UI is worth writing blind.
 - **Report what was actually finished, not motion.** If the night produced one
   fix and two write-ups, say that.
+
+---
+
+## 32. ▶▶ OVERNIGHT LOOP BRIEF — zero-intervention work queue (2026-08-30, night)
+
+**This section replaces §31.4 as the loop's brief.** §31 is still the correct
+record of *why* "build the partner dashboard" was rejected; this is what to do
+instead. The user is asleep until ~04:00 IST 2026-08-31 and has asked for work
+with **zero intervention**. Everything below is chosen because it needs no
+credential, no dashboard, no client decision, and can be verified by scripts
+already in the repo.
+
+### 32.0 State changes made just before the loop started
+
+- **`hridaykampani@gmail.com` (`a6e37f09-0d5f-442b-846b-7df788f49a31`) was
+  granted `role = 'channel_partner'`** at the user's explicit request, so they
+  can sign in and view `/partner/dashboard`. **§28.5's "no account holds the
+  role" is now out of date.** Distribution is now `channel_partner` 1,
+  `superadmin` 1, `user` 3 (five accounts, not the four §28.5 recorded).
+- **`channel_partner_applications` EXISTS** in the live DB, 0 rows.
+  **§31.3 is resolved to the benign branch** — a migration-provenance gap, not
+  silent data loss. Nothing was lost, and no application has ever been
+  submitted. Do not re-investigate this as a bug.
+- **Gotcha — `public.profiles` uses camelCase, quoted columns:** `fullName`,
+  `creditsBalance`, `createdAt`, `updatedAt`, `panNumber`, `aadhaarNumber`.
+  Not `full_name` / `credits`. Three queries failed on this before it was
+  noticed. Check `information_schema.columns` before writing SQL against a
+  table for the first time.
+- **`list_tables` row counts are planner estimates and are wrong here** — it
+  reported `listings` at 0 rows when the leak test uses 12, and `profiles` at 2
+  when there are 5. Use `count(*)`, never the summary figure.
+
+### 32.1 The rules, which override any item below
+
+1. **Every push clears the full standing bar first:** cold `next build`
+   (`.next` deleted, `SUPABASE_SERVICE_ROLE_KEY` blanked), `leak-test.mjs`
+   against a local production server, `access-matrix-test.mjs`,
+   `tsc --noEmit`. §22.3 has the invocations. **A failing bar means the work
+   does not land — no exceptions, and no "it's only a docs change".**
+2. **One item per commit.** Never bundle two roadmap items.
+3. **If an item turns out to be blocked, write up why and move to the next
+   one.** Do not stall the night on it, and do not invent a workaround to
+   force it through.
+4. **Never do these, whatever the reason:** create R2 buckets or DNS records ·
+   `wrangler secret put` · Google Cloud console changes · apply a migration to
+   the live database · touch Supabase Site URL · delete or edit the 12 demo
+   listings (leak-test baseline, §28.6) · change another account's role ·
+   resolve a D-decision (D0, D2, D3b, D4, D5, D6, D8).
+5. **Report what was finished, not motion.** If the night produced one fix and
+   two write-ups, the morning summary says exactly that. Do not describe a
+   branch that failed verification as "done".
+
+### 32.2 The queue, in order
+
+**1 — §30.4: listing pages 500 on the Worker.** *Critical path, blocks the
+Item 1a verdict.* `wrangler tail --name boliwala`, hit one listing URL, read
+the real exception before forming any theory (§29.5). Fix if the fix is in-repo
+and verifiable. If it needs a Cloudflare secret, **stop, write the exact
+command into MEMORY.md for the morning, and move on** — that is rule 4.
+
+**2 — Item 1a verdict.** Once listing pages render, run the whole gate against
+`https://boliwala.boliwaladevs.workers.dev`: `leak-test.mjs <url>`,
+`access-matrix-test.mjs`, route sweep. If it passes, **record a go** with the
+evidence — this is now an evidence question, not a preference, so it does not
+need the user. **The one caveat to state explicitly:** Google login against the
+Worker origin cannot be tested, because that needs the origin added in the
+Google Cloud console. **A Google failure there is expected and is NOT a
+no-go.**
+
+**3 — S9 · redirect-preserving auth (`/login?next=<url>`).** Pure code, no
+schema, no external dependency, and it closes a real conversion leak — gated
+CTAs and the pricing page currently drop the user's context on the way to
+login. **It also unblocks the second judgement call in §28.5**, where Google
+sign-in from `/partner/login` could not route to the partner area because this
+mechanism did not exist. Best value-per-risk item on the list.
+
+**4 — S7 · popularity sort + reserve price per sq ft.** Two self-contained
+pieces of the search expansion: expose the real server-side `viewCount` that is
+**already tracked** as a "Popular" sort option, and compute/display reserve
+price per sq ft on cards and the listing page. No schema change, no new data.
+Leave the rest of S7 (new filter fields) alone — those need columns that do not
+exist.
+
+**5 — S5 · SEO route scaffolding.** `ROADMAP.md` explicitly says the route
+scaffolding "can be built in parallel against the 12 listings". Build
+`/auctions/{city}` and `/auctions/{city}/{propertyType}` server-rendered, with
+breadcrumbs, `ItemList` JSON-LD, and sitemap entries. **Skip anything keyed on
+lender** — that depends on S3 below. Counts will be small and that is fine;
+the point is the scaffolding.
+
+**6 — S3 · lender model, ON A BRANCH, NOT MERGED.** `banks` → `lenders` with a
+`lender_type` enum (`bank | nbfc | arc | hfc`). `ROADMAP.md` calls it an order
+of magnitude cheaper now than after ingest, so it is worth having ready. Write
+the migration file **but do not apply it** (rule 4). Change the code and copy
+to match, verify what can be verified without the migration, push the branch,
+and **leave it unmerged with a note** — the same shape as Item 5 was.
+
+**7 — Write-ups, if time remains.** (a) A back-fill migration documenting
+`channel_partner_applications` as it actually exists in the DB, so the repo
+stops disagreeing with production — file only, not applied. (b) The partner
+schema *proposal* from §31.4 step 4: `partner_referrals`,
+`partner_commissions`, `partner_payouts` with RLS sketched, **commission rates
+left as parameters for D8, never invented.**
+
+### 32.3 What was deliberately left out, and why
+
+- **S1 (R2 storage)** — needs R2 buckets and `cdn.boliwala.com`, so it needs
+  the domain (D2) and Cloudflare dashboard access. Blocked at rule 4.
+- **S2 (PDF documents)** — needs a new table applied to the live DB, plus R2.
+  The migration could be *written*, but the feature cannot be verified without
+  it applied, so it would be unverifiable work.
+- **S4 (bulk ingest)** — hard commercial blocker on D3b (the data source).
+  Nothing in S4–S6 has real data without it.
+- **S6, S8** — blocked on S4, and S8 additionally on D5.
+- **The channel partner dashboard** — see §31. It is already built; what is
+  missing is the money model, which is Item 10 gated on D8.
+
+### 32.4 Morning summary — what the user needs from the loop
+
+Leave a new section in this file that answers, in this order: **did §30.4 get
+fixed and is Item 1a decided**; what landed on `main`; what is sitting on an
+unmerged branch and why; what was attempted and abandoned, with the reason; and
+what now needs a decision. **Anything left in a half-state must be named
+explicitly** — a fresh session should never have to discover it.
