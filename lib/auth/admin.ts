@@ -26,7 +26,7 @@ export async function requireAdmin(): Promise<AdminUser> {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect("/login")
+  if (!user) redirect("/login?next=%2Fadmin")
 
   const { data: profile } = await supabase.from("profiles").select("role, fullName, email").eq("id", user.id).single()
 

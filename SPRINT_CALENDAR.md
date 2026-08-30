@@ -388,3 +388,6 @@ gap. It should be escalated ahead of everything else in this table.
       generated from the importer's own field list. Fixed a silent
       date-corruption bug in the same commit (ISO dates were being committed as
       the year 46279). `MEMORY.md` §34.1–34.3.
+- [x] **S9 · redirect-preserving auth** — `/login?next=` honoured with a tested
+      open-redirect guard; gated CTAs, pricing CTAs and the server-side gates all
+      pass it. Header login link is a known remaining gap. `MEMORY.md` §34.4–34.5.

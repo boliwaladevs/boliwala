@@ -3628,3 +3628,72 @@ out of scope):
 - `node scripts/bulk-sample-selfcheck.mjs` — PASS.
 - **Not verified in a browser.** The button, its layout and the download gesture
   are confirmed at the code/round-trip level only. Worth one eyeball pass.
+
+### 34.4 Queue item 2 — S9 redirect-preserving auth ✅ LANDED
+
+**What shipped:**
+
+- **`lib/auth/next-param.ts`** — the guard and helpers, deliberately placed
+  beside `lib/auth/landing.ts` and client-safe for the same reason (the auth
+  form is a client component, the gated CTAs are client components, the OAuth
+  callback is a route handler).
+- **`AuthView` honours `?next=`** on email/password login, on signup, and on the
+  partner variant. A valid `next` **wins over both defaults** (`landingPathForRole`
+  and the partner destination) — that is the point of the parameter.
+- **Gated CTAs pass it:** `listing-view.tsx` (unlock-when-signed-out, and
+  save-to-shortlist) and `property-grid.tsx` (save-to-shortlist).
+- **Server-side gates pass it too** — a guest deep-linking to a private page now
+  comes back to it. Verified against the running production build:
+
+  | request | redirect |
+  |---|---|
+  | `/profile` | `307 -> /login?next=%2Fprofile` |
+  | `/admin` | `307 -> /login?next=%2Fadmin` |
+  | `/partner/dashboard` | `307 -> /login?next=%2Fpartner%2Fdashboard` |
+
+- **Pricing CTAs** — all three `/signup` links now carry `next=%2Fpricing`
+  (confirmed in the rendered HTML), so someone who signs up from the pricing
+  page lands back on it instead of on `/profile`.
+
+**Two judgement calls worth knowing about:**
+
+1. **Google OAuth carries `next` in a short-lived cookie, not on `redirectTo`.**
+   Appending `?next=` to `redirectTo` would change the callback URL Supabase
+   matches against its **redirect allowlist**, which cannot be read or edited
+   from here (rule 4 forbids touching Supabase config) and which no test
+   available to this session can exercise. The cookie keeps the callback URL
+   byte-identical to the one already working. The callback **re-validates** the
+   cookie through the same guard — it is attacker-writable exactly like the
+   query parameter — and clears it on use.
+2. **`next` is read after mount via `useEffect`, not `useSearchParams()`.**
+   `/login`, `/signup` and `/partner/login` are statically prerendered with a
+   1h revalidate; `useSearchParams()` would have demanded a Suspense boundary
+   around the whole form to keep that. **Confirmed still `○ static, 1h` in the
+   build output** after the change.
+
+### 34.5 Verification — item 2
+
+- `tsc --noEmit` clean · cold build clean, 25 routes, login/signup/partner-login
+  still static with 1h revalidate.
+- **`scripts/next-param-test.mjs` — 26 assertions PASS.** The open-redirect
+  guard is the security-critical part, so it is tested directly rather than
+  inferred: rejects `https://evil.com`, `//evil.com`, `///evil.com`,
+  `/\evil.com`, `/\/evil.com`, `\evil.com`, `javascript:`, `data:`, bare hosts,
+  and CR/LF/NUL/DEL header-injection payloads; accepts plain paths and preserves
+  query and hash. Run it with the same flags as the access matrix:
+  `node --experimental-strip-types --import ./scripts/ts-resolve-hook.mjs scripts/next-param-test.mjs`
+- **Leak test PASS** 12/12 · **Access matrix PASS 49/49** (unchanged, as §33.2
+  required) · 21-route sweep matches the §22.2 baseline.
+- **Not verified in a browser**, and two paths specifically could not be:
+  **the Google leg** (needs a real Google round trip) and **hydration of the
+  `useEffect` read**. Both are code-level correct and build-clean; neither has
+  been watched end to end.
+
+**Deliberately left in scope-adjacent state, not done:** the **header's "Log In"
+link** (`components/header.tsx:119` and `:203`) still goes to a bare `/login`.
+§33.2's done-when named gated CTAs and the pricing CTA, and that is what landed.
+Someone reading a listing who clicks the header login still gets dropped on
+`/profile` — the same leak, one link away. It is a small follow-up
+(`withNext("/login", currentPath())`, the component is already a client
+component and already imports `usePathname`) and is **the obvious next thing to
+do here**, but it was not in the agreed scope so it was not bundled in.

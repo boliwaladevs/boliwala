@@ -6,6 +6,7 @@ import { MapPin, LayoutGrid, List, Bookmark, Building2, Eye } from "lucide-react
 import { useRouter } from "next/navigation"
 import { toggleShortlist } from "@/app/actions/shortlist"
 import { useToast } from "@/hooks/use-toast"
+import { currentPath, withNext } from "@/lib/auth/next-param"
 import { formatDateShort, formatINR } from "@/lib/format"
 import type { SearchListing } from "@/lib/data/listings"
 
@@ -38,7 +39,7 @@ export function PropertyGrid({
 
     if (!isSignedIn) {
       toast({ title: "Sign in to save properties", description: "Create a free account to build your shortlist." })
-      router.push("/login")
+      router.push(withNext("/login", currentPath()))
       return
     }
 

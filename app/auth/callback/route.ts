@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 import { landingPathForRole } from "@/lib/auth/landing"
+import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-param"
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
 
@@ -22,7 +23,15 @@ export async function GET(request: Request) {
         .eq("id", data.user.id)
         .single()
 
-      return NextResponse.redirect(`${origin}${landingPathForRole(profile?.role)}`)
+      // Where the user was headed before the Google round trip, if anywhere.
+      // Re-validated here rather than trusted: the cookie is attacker-writable
+      // in the same way the query parameter is.
+      const raw = request.cookies.get(NEXT_COOKIE)?.value
+      const next = safeNextPath(raw ? decodeURIComponent(raw) : null)
+
+      const response = NextResponse.redirect(`${origin}${next ?? landingPathForRole(profile?.role)}`)
+      response.cookies.delete(NEXT_COOKIE)
+      return response
     }
   }
 

@@ -65,7 +65,7 @@ export default async function PricingPage() {
           </CardHeader>
           <CardContent className="flex-1">
             <Button variant="outline" className="w-full mb-6" asChild>
-              <Link href="/signup">Create Free Account</Link>
+              <Link href="/signup?next=%2Fpricing">Create Free Account</Link>
             </Button>
             <ul className="space-y-3">
               {[
@@ -109,7 +109,7 @@ export default async function PricingPage() {
           </CardHeader>
           <CardContent className="flex-1">
             <Button className="w-full mb-6" asChild>
-              <Link href="/signup">Get Annual Membership</Link>
+              <Link href="/signup?next=%2Fpricing">Get Annual Membership</Link>
             </Button>
             <ul className="space-y-3">
               {[
@@ -383,7 +383,7 @@ export default async function PricingPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button variant="secondary" size="lg" className="font-semibold" asChild>
-              <Link href="/signup">Create Free Account</Link>
+              <Link href="/signup?next=%2Fpricing">Create Free Account</Link>
             </Button>
             <Button variant="outline" size="lg" className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground font-semibold" asChild>
               <Link href="/contact">Talk to Our Team</Link>

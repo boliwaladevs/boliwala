@@ -20,7 +20,7 @@ export default async function ProfilePage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect("/login")
+    redirect("/login?next=%2Fprofile")
   }
 
   const [{ data: profile }, shortlisted, alerts] = await Promise.all([

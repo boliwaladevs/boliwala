@@ -7,6 +7,7 @@ import { Building2, Share2, Download, ChevronLeft, ChevronRight, Check, Search, 
 import { toggleShortlist } from "@/app/actions/shortlist"
 import { unlockFieldGroup } from "@/app/actions/unlock"
 import { useToast } from "@/hooks/use-toast"
+import { currentPath, withNext } from "@/lib/auth/next-param"
 import { formatDateLong, formatDateShort, formatINR } from "@/lib/format"
 import type { SafeListing } from "@/lib/access/redact"
 import type { AccessState, FieldGroup, GateDecision } from "@/lib/access/types"
@@ -63,7 +64,7 @@ function UnlockCta({
             router.refresh()
           } else if (result.error === "not_authenticated") {
             toast({ variant: "destructive", title: "Sign in required" })
-            router.push("/login")
+            router.push(withNext("/login", currentPath()))
           } else if (result.error === "insufficient_credits") {
             toast({ variant: "destructive", title: "Not enough credits", description: "Upgrade to Annual for unlimited access." })
           } else {
@@ -107,7 +108,7 @@ export function ListingView({
   const handleSave = () => {
     if (!isSignedIn) {
       toast({ title: "Sign in to save properties" })
-      router.push("/login")
+      router.push(withNext("/login", currentPath()))
       return
     }
     const wasSaved = saved

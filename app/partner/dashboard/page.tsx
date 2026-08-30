@@ -35,7 +35,7 @@ export default async function PartnerDashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect("/login")
+  if (!user) redirect("/login?next=%2Fpartner%2Fdashboard")
 
   const { data: profile } = await supabase
     .from("profiles")

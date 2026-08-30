@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { displayCount, type SiteStats } from "@/lib/stats"
 import { landingPathForRole } from "@/lib/auth/landing"
+import { NEXT_COOKIE, nextFromLocation, withNext } from "@/lib/auth/next-param"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -32,6 +33,12 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
   const { toast } = useToast()
   const supabase = createClient()
 
+  // Read after mount rather than with useSearchParams(): these pages are
+  // statically prerendered with a 1h revalidate, and useSearchParams() would
+  // force a Suspense boundary around the whole form to keep that.
+  const [nextPath, setNextPath] = useState<string | null>(null)
+  useEffect(() => setNextPath(nextFromLocation()), [])
+
   const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
@@ -48,7 +55,7 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
         return
       }
       toast({ title: "Welcome to Boliwala!", description: "5 free credits added to your account." })
-      router.push("/profile")
+      router.push(nextPath ?? "/profile")
       router.refresh()
       return
     }
@@ -57,6 +64,14 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
     setSubmitting(false)
     if (error) {
       toast({ variant: "destructive", title: "Couldn't log in", description: error.message })
+      return
+    }
+
+    // A ?next= the user actually came from wins over both defaults below —
+    // that is the whole point of the parameter.
+    if (nextPath) {
+      router.push(nextPath)
+      router.refresh()
       return
     }
 
@@ -82,6 +97,12 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
   }
 
   const handleGoogleLogin = async () => {
+    // Carried in a cookie rather than on redirectTo, so the callback URL stays
+    // byte-identical to the one already in Supabase's redirect allowlist —
+    // see lib/auth/next-param.ts. Short-lived; the callback clears it.
+    if (nextPath) {
+      document.cookie = `${NEXT_COOKIE}=${encodeURIComponent(nextPath)}; Path=/; Max-Age=600; SameSite=Lax`
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -288,7 +309,7 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
 
             {!isPartner && (
               <Link
-                href="/partner/login"
+                href={withNext("/partner/login", nextPath)}
                 className="mt-3 w-full flex items-center justify-center gap-3 bg-background border border-border hover:bg-secondary/50 text-foreground font-semibold h-12 rounded-xl transition-colors text-sm"
               >
                 Login as Channel Partner
