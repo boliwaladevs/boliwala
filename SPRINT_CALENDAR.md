@@ -6,10 +6,29 @@
 > Mark completed items, update dates, and move status indicators. This rule is canonical
 > and repeated in `CLAUDE.md`, `MEMORY.md`, and `project_calendar.html`.
 
+> [!CAUTION]
+> **⛔ THE SCHEDULE IN THIS FILE IS HISTORICAL. `ROADMAP.md` IS THE AUTHORITY ON WHAT TO DO NEXT.**
+>
+> A brainstorm on **30 August 2026** reset the infrastructure plan and the launch
+> sequencing (`MEMORY.md` §25). Three things in this file are now **false**:
+>
+> 1. **The 15 September launch date is dead** (`ROADMAP.md` **D0**). A new date has
+>    not yet been agreed with the client.
+> 2. **The "all credentials by 17 August" prerequisite is retired.** Razorpay is
+>    deferred indefinitely — month-one monetisation is a manual "Contact Sales"
+>    flow (`ROADMAP.md` Item 4). Sprints 7–11 are no longer gated on payments.
+> 3. **The Week 1–6 schedule in Part 2 is superseded** by the dependency-ordered
+>    items in `ROADMAP.md`. The stack is also moving to Cloudflare Workers + R2
+>    (`ROADMAP.md` Item 1, in progress — `MEMORY.md` §27).
+>
+> **What is still valid here:** the per-sprint *task detail* (what each sprint
+> contains). `ROADMAP.md` links back to it for exactly that. Read the task lists,
+> ignore the weeks and dates.
+
 **Created:** 9 August 2026  
-**Last Updated:** 22 August 2026  
-**Launch date:** 🚀 **15 September 2026** — non-negotiable  
-**Source of truth:** `boliwala_features.txt` (URD v2.0) + `SCOPE_AUDIT.md` + `MEMORY.md`
+**Last Updated:** 30 August 2026 — superseded-schedule notice added; task detail unchanged  
+**Launch date:** ⛔ **15 September 2026 is dead** — a new date is owed (`ROADMAP.md` **D0**)  
+**Source of truth:** `ROADMAP.md` for sequencing; `boliwala_features.txt` (URD v2.0) + `SCOPE_AUDIT.md` + `MEMORY.md` for scope
 
 ---
 
@@ -87,11 +106,25 @@ meeting; exercise the three new flows before relying on them.
 
 ---
 
-## Part 2 — Sprint Plan: 10 Aug → 15 Sep Launch
+## Part 2 — Sprint Plan: 10 Aug → 15 Sep Launch  ⛔ **SCHEDULE SUPERSEDED — see the notice at the top of this file**
 
-### 🔴 NON-NEGOTIABLE PREREQUISITE
+> **The week-by-week plan below is historical.** Use `ROADMAP.md` for ordering.
+> The task lists inside each sprint remain accurate and are still referenced.
 
-**All blocked credentials MUST arrive by 17 August.** Without them, the 15 Sep date is impossible.
+### ~~🔴 NON-NEGOTIABLE PREREQUISITE~~ — RETIRED 30 Aug 2026
+
+~~**All blocked credentials MUST arrive by 17 August.** Without them, the 15 Sep date is impossible.~~
+
+**This prerequisite no longer applies.** Razorpay is deferred indefinitely
+(`ROADMAP.md` Item 12) and the 15 Sep date is dead, so the 17 Aug / 24 Aug
+deadlines below are moot. The table is kept because the *items* are still
+wanted — only the dates and the launch-gating framing are wrong:
+
+- **Razorpay keys** — no longer blocking anything. Item 12, unscheduled.
+- **Resend** — still wanted, now for the "Contact Sales" flow (`ROADMAP.md`
+  Item 4, **D7**); a stopgap email path is acceptable for month one.
+- **Privacy/Terms, contact number, brand assets** — still genuinely blocking
+  launch (`ROADMAP.md` Item 6, **D9**), just not on 24 Aug.
 
 | Credential | Source | Action |
 |---|---|---|
@@ -305,7 +338,11 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 
 ---
 
-## Part 3 — Timeline at a Glance
+## Part 3 — Timeline at a Glance  ⛔ **HISTORICAL**
+
+> This grid describes a 15 Sep launch that no longer exists. Kept as a record of
+> what was planned on 9 Aug. `ROADMAP.md` orders the work by dependency instead
+> of by week, deliberately, because no new date has been agreed (**D0**).
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐
@@ -321,14 +358,24 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 └─────────┴─────────┴─────────┴─────────┴───────────┴────────┴────────────────┘
 ```
 
-## Part 4 — Client Deadlines (Hard)
+## Part 4 — Client Deadlines (Hard)  ⛔ **ALL DATES VOID — 30 Aug 2026**
 
-| Date | What | Consequence if missed |
+> Every date below was pegged to the dead 15 Sep launch, and the 17 Aug / 24 Aug
+> ones were already missed before the plan was reset. **What is still owed from
+> the client is tracked live in the `ROADMAP.md` decision register (D0–D12)** —
+> use that, not this table.
+
+| ~~Date~~ | What | Status as of 30 Aug 2026 |
 |---|---|---|
-| **10 Aug** | Start Sprint 6 | Every day lost = day off QA |
-| **17 Aug** | Razorpay test keys + Resend API key | **Launch slips day-for-day** |
-| **24 Aug** | Privacy/Terms copy, contact number, WhatsApp, headline stats | Content pages won't exist at launch |
-| **31 Aug** | Brand assets (logo, favicon, OG image) | Launches with placeholder branding |
-| **7 Sep** | Production domain + Razorpay live KYC complete | Cannot do production cutover |
-| **11 Sep** | All code complete — QA freeze | No new features after this date |
-| **15 Sep** | 🚀 **LAUNCH** | — |
+| ~~10 Aug~~ | Start Sprint 6 | ✅ Done — Sprint 6 shipped 9 Aug (`MEMORY.md` §19) |
+| ~~17 Aug~~ | Razorpay test keys + Resend API key | **Razorpay retired** (Item 12, unscheduled). Resend still wanted — **D7**, Item 4, stopgap acceptable |
+| ~~24 Aug~~ | Privacy/Terms copy, contact number, WhatsApp, headline stats | ❌ Still outstanding — **D9**, Item 6, genuinely launch-blocking |
+| ~~31 Aug~~ | Brand assets (logo, favicon, OG image) | ❌ Still outstanding — **D9**, Item 6 |
+| ~~7 Sep~~ | Production domain + Razorpay live KYC | Domain still owed — **D2**, blocks Item 1b. Razorpay KYC no longer relevant |
+| ~~11 Sep~~ | All code complete — QA freeze | Void — no agreed date to freeze against |
+| ~~15 Sep~~ | ~~🚀 LAUNCH~~ | **Dead. A new date must be agreed — D0.** |
+
+**Newly outstanding since this table was written:** **D3b** (inventory data
+source) is the longest-lead commercial item and blocks Items 2·S4–S8 — the
+~50,000 listings that `coparison.md` §1 calls our single biggest competitive
+gap. It should be escalated ahead of everything else in this table.

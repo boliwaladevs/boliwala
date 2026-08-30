@@ -19,7 +19,27 @@ context window fills up, open a new session and point it at this file first.
 > 4. `plans/boliwala-phase1-sprint-plan.md` (master plan — **includes Sprint
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
-**Last updated:** 2026-08-22 (Sprints 15 + 16 delivered, see §22/§23).
+**Last updated:** 2026-08-30 (infra direction change + roadmap reset, see §25;
+Cloudflare agent tooling installed + Item 1a execution plan, see §26; **Item 1a
+spike executed — steps 1-4 pass, step 5 blocked on a Windows-only adapter bug,
+see §27**).
+
+> **▶ STARTING A CLOUDFLARE SESSION? READ §27 FIRST (live spike state),
+> THEN §26, THEN §25.** §26 is the live handoff: what tooling is already
+> installed, what still needs authenticating, the exact Item 1a step order,
+> and the one failure mode most likely to produce a false "pass".
+
+> **🟢 30 AUG — READ `ROADMAP.md` FIRST FOR SEQUENCING.**
+> A brainstorm on 2026-08-30 changed the infra direction and the launch
+> plan. `ROADMAP.md` is now **the single ordered "what to do next" doc** and
+> supersedes the week-by-week dependency map in `SPRINT_CALENDAR.md` Part 2
+> (task detail there is still valid). Decisions and full technical rationale
+> in **§25 below** and **`INFRA_R2_SCALING_ANALYSIS.md`**. Headlines:
+> stack moves to **Cloudflare (Workers + R2 + DNS) + Supabase**; scale target
+> **50,000+ live listings** with images/PDFs/vectors; **property only (no
+> vehicles)**; **payments/Razorpay deferred indefinitely** (manual "Contact
+> Sales" for now); **15 Sep launch date is dead**, needs re-baselining.
+> Competitive context: `coparison.md` (FindAuction teardown) + `upper.md`.
 
 > **🔴 22 AUG — PRODUCTION HAD BEEN STUCK ON `0e6cfd5` SINCE 9 AUG.**
 > Every build from `e7cac13` onward failed at prerender, so all of Sprint 6
@@ -263,7 +283,27 @@ earlier session:
    sync a stale branch, rebase to land a PR), and the recurring `gh`
    account-drift gotcha (same underlying issue as #1 above, generalized).
    Read that file directly rather than duplicating its commands here.
-
+9. **Windows blocks the Next `standalone` build unless Developer Mode is on.**
+   OpenNext forces `output: "standalone"`, whose tracer symlinks
+   `node_modules/next` into `.next/standalone`. Without
+   `AllowDevelopmentWithoutDevLicense=1` (Settings > System > For
+   developers > Developer Mode) or an elevated shell, the build dies with
+   `EPERM: operation not permitted, symlink` **after** a fully
+   successful compile - so it reads like a build failure when it is only a
+   permission bit. Enabled on this machine 2026-08-30. Check it with
+   `(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock').AllowDevelopmentWithoutDevLicense`.
+10. **`@opennextjs/cloudflare` 1.20.4 produces a broken bundle when
+   built on Windows - every route 500s.** The adapter patches Next's manifest
+   loader with `if (path.endsWith("/server/middleware-manifest.json"))`,
+   but a Windows build hands it `.next\server\middleware-manifest.json`
+   (backslashes). The check never matches, execution falls through to a
+   dynamic `require()`, and the Worker throws
+   `Dynamic require of "/.next/server/middleware-manifest.json" is not supported`
+   on **every** request. The manifest file itself is present in the bundle -
+   only the path separator is wrong. **Consequence: never `wrangler deploy`
+   a Windows-built bundle. It will 500 in production exactly as it does
+   locally.** Builds must run on Linux (CI / Workers Builds / WSL). WSL is
+   **not** installed on this machine (`wsl --status` > not installed).
 ---
 
 ## 6. Sprint 2.1 — execution-ready plan for the next session
@@ -2136,3 +2176,413 @@ Three things in it are worth keeping for whoever demos next:
 It tells the demoer to **run on localhost unless the Vercel deploy is confirmed
 green**, since production had been stale for two weeks and today's fix had not
 been observed deploying at the time of writing.
+
+
+---
+
+## 25. Infra direction change + roadmap reset (2026-08-30)
+
+A brainstorming session on 2026-08-30 reset both the infrastructure plan and
+the launch sequencing. Two new documents were written; this section records
+the decisions so a fresh session has the *why*.
+
+### 25.1 New documents (read order)
+
+| File | Role |
+|---|---|
+| `ROADMAP.md` | **The ordered "what to do next" doc.** Supersedes the week-by-week map in `SPRINT_CALENDAR.md` Part 2. Numbered items 1–16, a decisions register (D0–D12), the standing verification bar. **Item 1** = Cloudflare migration (handed to a dedicated agent). **Item 2** = the competitive-gap sprint plan (S1–S10) built from `coparison.md`. |
+| `INFRA_R2_SCALING_ANALYSIS.md` | Full technical rationale for the Cloudflare + R2 + pgvector architecture, plus appendices on Razorpay deferral, the navbar/partner-auth changes, and the `.apk` question. Big-font `<style>` block for reading. |
+| `coparison.md` | Competitive teardown of **FindAuction.in** (the incumbent — ~96k indexed properties, founded 2018). §6 is the prioritised build-gap list that `ROADMAP.md` Item 2 turns into sprints. |
+| `upper.md` | Companion to `coparison.md` — where Boliwala already leads (free full address, ₹999 vs ₹7,000, credit economy, server-side gating, real-time alerts, partner programme). `[LIVE]` / `[SPEC]` / `[STRUCTURAL]` tagged. |
+
+`SPRINT_CALENDAR.md` and `project_calendar.html` still carry the old 15 Sep
+plan and were **not** rewritten in this session — flagged for a follow-up
+pass. `ROADMAP.md` is the authority on ordering until then.
+
+### 25.2 Decisions made
+
+- **Scale target: 50,000+ live listings** (competitor FindAuction indexes
+  ~96k; ~17.8k live), each with photos, PDF documents, and vector data.
+  Current live count is 12. This is what forces the infra change — Supabase
+  Storage egress ($0.09/GB) + serverless image optimisation costs do not
+  survive that volume. `coparison.md` §1: *"our single biggest competitive
+  gap is not a feature — it is ~50,000 missing listings."*
+- **Property only.** Vehicles / plant & machinery are **explicitly
+  descoped** (`coparison.md` P2.1 dropped) even though FindAuction earns real
+  traffic from `/cars/{city}` — user decision 2026-08-30.
+- **`ROADMAP.md` Item 2 is the competitive-gap sprint plan**, S1–S10, built
+  from `coparison.md` §6 minus payments and minus vehicles. S1–S5
+  (R2 storage, PDF docs, Lender model, ingest + daily refresh/expiry, SEO
+  landing-page matrix) are launch-blocking; S6–S9 (auction history + drop
+  badges, search field expansion, vector search, PWA/push/redirect auth) are
+  parity polish; S10 is post-launch out-build (compare, map, calculator,
+  .ics, mega-auction pages, Hindi).
+- **Move the whole stack to Cloudflare + Supabase:**
+  - App: **Cloudflare Workers via `@opennextjs/cloudflare`** (not classic
+    Pages). Replaces Vercel. **Vercel Pro was never purchased** — no sunk
+    cost, so migrating now (while the codebase is small) was chosen over
+    doing it later.
+  - Blobs: **Cloudflare R2** (`boliwala-images`, `boliwala-docs`), public
+    buckets, `cdn.boliwala.com`, $0 egress. **Supabase Storage is retired**
+    (migration `0008`'s bucket).
+  - DNS: Cloudflare. Jobs: Workers Cron + Queues.
+  - Supabase keeps Postgres, RLS, Auth, and gains **`pgvector`** for
+    semantic search. Vectors stay in Postgres (co-located with listings for
+    filtered similarity) — **no Pinecone/Qdrant**.
+  - **Gate:** a 1-day go/no-go spike must confirm `@opennextjs/cloudflare`
+    builds on **Next 16.0.10** and passes leak-test / access-matrix / route
+    sweep / real Supabase login on a Workers preview. If it fails → buy
+    Vercel Pro, ship there, keep R2 and everything else. `ROADMAP.md` Item 1.
+- **`sharp` does not run on Workers.** Image renditions move to the Node
+  bulk-ingest job; admin one-off uploads use Cloudflare Images
+  transformations on the R2 original. No runtime image optimisation anywhere.
+- **PDFs are freely public** (client answer) — public R2 bucket, no signed
+  URLs. New `listing_documents` table with a `visibility` column defaulting
+  to `'public'` so a future gated doc type has room.
+- **Embedding source undecided** (D5) — plan covers both "we generate"
+  (OpenAI `text-embedding-3-small`, <$1 for 70k) and "client provides"
+  (must confirm model + dimension).
+- **Payments / Razorpay are deferred indefinitely — "we do not need payments
+  yet" (user, 2026-08-30).** Month-one monetisation is a manual flow:
+  Pricing page CTA → **"Contact Sales"** form → email to team → manual
+  UPI/WhatsApp billing + manual credit/subscription grant in admin. Razorpay
+  sits at `ROADMAP.md` Item 12, unscheduled, unblocked only when the client
+  says payments are wanted. **This retires the entire Razorpay critical
+  path** that §7, §9.3, §11.4, `blockers.md` B1/B2, and `post_audit_plan.md`
+  §1 all treat as the launch-gating dependency. The repeated "15 Sep only
+  works if test keys land by 17 Aug" caveat no longer applies. `coparison.md`
+  P0.4 (payments) is **excluded** from Item 2.
+- **Navbar + partner auth changes** (see `INFRA_R2_SCALING_ANALYSIS.md`
+  Appendix B): Log In button → orange bg/white text; Sign Up → white
+  bg/black text; targets unchanged. Add "Login as Channel Partner" below the
+  Google button on `/login`, linking to a new `/partner/login` (same
+  `auth-view.tsx` via a `variant` prop — email/pass + Google, identical
+  look, different post-login routing). Hard-gate `/partner/dashboard`
+  regardless of the partner-scope decision (still `post_audit_plan.md`
+  17.A.1).
+- **`.apk` (Capacitor, in the URD scope):** the hosting choice is neutral to
+  it. Feasibility depends on the frontend — a thin WebView/PWA wrapper works
+  on any host now; a real Capacitor app needs API route handlers alongside
+  the server actions. Decide *which* before building more frontend (D11).
+
+### 25.3 What changed vs. the old plan
+
+- **Old Sprint 15.5 Vercel-env items** (`SUPABASE_SERVICE_ROLE_KEY`,
+  `NEXT_PUBLIC_SITE_URL`, Google redirect URI) are **absorbed into the
+  Cloudflare migration** (`ROADMAP.md` Item 1) — they become Workers env
+  config done during cutover.
+- **DB password rotation + blanket-grant revoke** (old 15.5.4 / 15.5.5,
+  Sprint 6.7, §19.7) survive as `ROADMAP.md` Item 3 — still Supabase-side,
+  still needs dashboard access.
+- **15 Sep launch date is dead** (`ROADMAP.md` D0). It predates the
+  Cloudflare move, the 70k scale, and the already-missed 17 Aug / 24 Aug
+  credential deadlines. A new date must be agreed with the client.
+
+### 25.4 State at time of writing
+
+HEAD = `093b7ff` (Sprint 16). No code written this session — planning only.
+New untracked files: `ROADMAP.md`, `INFRA_R2_SCALING_ANALYSIS.md`,
+`coparison.md`, `upper.md`. `SPRINT_CALENDAR.md` and `project_calendar.html`
+still carry the old 15 Sep plan — a rewrite pass is owed but not done.
+
+**Immediate next step:** the user clears context and hands the Cloudflare
+migration (`ROADMAP.md` Item 1) to a **dedicated fresh agent** with a
+purpose-written setup prompt. That agent does Item 1a (the OpenNext/Next 16
+go/no-go spike) first. Item 2 (competitive-gap sprints) begins after the
+migration lands.
+
+> **Superseded by §26 (same day).** No separate setup prompt was ever
+> written and none is needed — §25 + §26 + `ROADMAP.md` Item 1 are the
+> handoff. Cloudflare skills/MCP tooling is now installed. Go to §26.
+
+---
+
+## 26. Cloudflare agent handoff — tooling installed, Item 1a ready (2026-08-30)
+
+**Read this before touching `ROADMAP.md` Item 1.** No code was written in
+the session that produced this section — tooling install and planning only.
+HEAD is still `093b7ff`.
+
+### 26.1 Cloudflare tooling is installed (user ran it, verified on disk)
+
+Per the official Cloudflare setup instructions at
+`https://developers.cloudflare.com/agent-setup/prompt.md` (fetched and read
+in full, HTTP 200, contents benign — five MCP servers + a skills pack, no
+credential handling), the user ran:
+
+```
+claude plugin marketplace add cloudflare/skills
+claude plugin install cloudflare@cloudflare
+```
+
+Both succeeded, scope `user`. Verified present on disk:
+
+- **13 skills** at `~/.claude/plugins/marketplaces/cloudflare/skills/` —
+  `wrangler`, `workers-best-practices`, `durable-objects`, `agents-sdk`,
+  `web-perf`, `turnstile-spin`, `cloudflare-email-service`, `cloudflare-one`
+  (+ migrations), `sandbox-{next,stable,migrate-to-next}`, `cloudflare`.
+  **No authentication required** — plain markdown.
+- **5 MCP servers** declared in
+  `~/.claude/plugins/marketplaces/cloudflare/.mcp.json`, all `type: http`,
+  no tokens in the file: `cloudflare-api` (`mcp.cloudflare.com`),
+  `cloudflare-docs`, `cloudflare-bindings`, `cloudflare-builds`,
+  `cloudflare-observability`.
+
+**Prefer `cloudflare-docs` (public, no auth) over training-data recall for
+anything about OpenNext on Next 16** — the adapter is new enough that live
+docs beat memory.
+
+### 26.2 Three separate auth layers — do not conflate them
+
+This is the single most confusable thing in this handoff:
+
+| Layer | Auth | When |
+|---|---|---|
+| Skills | none | already usable |
+| `cloudflare-docs` MCP | none (public) | already usable |
+| `cloudflare-api` / `-bindings` / `-builds` / `-observability` MCP | **OAuth** | lazily, on **first Cloudflare tool call** — opens a browser |
+| **`wrangler` CLI** | **separate `wrangler login`** | **not covered by MCP OAuth** |
+
+**`wrangler` is not authenticated by the MCP OAuth flow.** A successful MCP
+OAuth does *not* mean deploys work. `wrangler login` (or
+`CLOUDFLARE_API_TOKEN`) is its own step, run by the user in their own
+terminal.
+
+**MCP servers connect at session start** — the session that installed them
+never sees them. Same trap as §5 gotcha #6 (Supabase MCP). If the Cloudflare
+tools aren't in your tool list, you're in a stale session; restart.
+
+### 26.3 D1 status
+
+**The user has a Cloudflare account** (confirmed 2026-08-30). Item 1a is
+unblocked. Two sub-questions left open, neither blocking 1a:
+
+- Is that account the intended **production owner** for `boliwala.com`?
+  Items 1b–1d put the real DNS zone and production Workers on it.
+- **Billing:** 1a is free-tier (`*.workers.dev` previews). **R2 in Item 2 ·
+  S1 needs a card on file** even though egress is $0.
+
+### 26.4 Item 1a — exact step order (steps 1–5 need no Cloudflare auth)
+
+```
+1. pnpm add -D @opennextjs/cloudflare wrangler  → verify: installs clean on Next 16.0.10
+2. open-next.config.ts + wrangler.toml          → verify: wrangler validates config
+3. opennextjs-cloudflare build                  → verify: builds, no adapter errors
+4. inspect .open-next/ bundle size              → verify: < 10 MB compressed (THE GATE)
+5. wrangler dev (local Workers runtime)         → verify: route sweep passes locally
+--- user runs `wrangler login` here ---
+6. deploy to *.workers.dev preview              → then the real gate:
+   scripts/leak-test.mjs · scripts/access-matrix-test.mjs (49 assertions) ·
+   route sweep · real Supabase email login · real Google login
+```
+
+**Starting state verified 2026-08-30:** `next` is `16.0.10`;
+`@opennextjs/cloudflare`, `wrangler`, `wrangler.toml` and
+`open-next.config.ts` are **all absent** — a clean 1a start, nothing to
+undo.
+
+**If the spike fails:** buy Vercel Pro, ship there, keep R2 and every other
+roadmap item unchanged, revisit the host post-launch. Skip 1b–1d.
+`ROADMAP.md` Item 1.
+
+### 26.5 The failure mode most likely to produce a false "pass"
+
+**Google OAuth will probably fail on the preview, and that is not
+necessarily a no-go.** Supabase URL Configuration and the Google authorized
+redirect URI both point at the current origin; a `*.workers.dev` preview is
+a **new origin**. Decide *before* running the gate which of these you're
+accepting, and record it:
+
+- (a) temporarily add the preview origin to Supabase URL Configuration +
+  the Google client's authorized redirect URIs, and test Google properly; or
+- (b) accept **"email login verified, Google deferred to Item 1d"** as an
+  explicit partial pass.
+
+**Do not discover this mid-spike and rationalise a fail into a pass.** The
+whole point of 1a is an honest go/no-go. Note the choice in the completion
+record. (Related long-standing risk: §4 flags that the Google redirect URI
+and Supabase URL Configuration have **never been independently verified** —
+this is the first time that will actually be exercised against a new
+origin.)
+
+### 26.6 Docs owed (not done)
+
+`SPRINT_CALENDAR.md` and `project_calendar.html` still carry the dead 15 Sep
+plan (§25.4). The `CLAUDE.md` three-file update rule applies at the **first
+Item 1 commit** — bring both in line then, along with `ROADMAP.md` Item 1
+ticks and this section's completion record.
+
+
+---
+
+## 27. Item 1a — OpenNext go/no-go spike, execution record (2026-08-30)
+
+**Status: steps 1–4 PASS, step 5 BLOCKED on the host, step 6 not reached.
+The go/no-go question is still open — nothing found so far argues against
+OpenNext on Next 16.** Read gotchas #9 and #10 in §5 before rerunning.
+
+### 27.1 Results against the §26.4 step order
+
+| Step | Verify | Result |
+|---|---|---|
+| 1. `pnpm add -D @opennextjs/cloudflare wrangler` | installs on Next 16.0.10 | PASS — `@opennextjs/cloudflare 1.20.4`, `wrangler 4.127.1` |
+| 2. `open-next.config.ts` + `wrangler.toml` | wrangler validates | PASS |
+| 3. `opennextjs-cloudflare build` | builds, no adapter errors | PASS — compile, typecheck, 24 static pages, worker emitted |
+| 4. bundle size | **< 10 MB compressed (THE GATE)** | **PASS — 2.74 MiB gzip** (12.06 MB raw) |
+| 5. `wrangler dev` route sweep | routes pass locally | **FAIL — 20/20 routes 500. Windows-only adapter bug, gotcha #10.** |
+| 6. preview deploy + real gate | leak test, access matrix, logins | not reached |
+
+Bundle measured with `wrangler deploy --dry-run --outdir=<dir>` — output
+`Total Upload: 12063.84 KiB / gzip: 2809.30 KiB`.
+
+### 27.2 Neither failure implicates Next 16 or the app
+
+This is the §26.5 warning working in reverse — the risk here was recording a
+**false fail**. Both failures were host artifacts:
+
+- **Step 3, first attempt:** `EPERM ... symlink` during the standalone copy.
+  Windows Developer Mode was off. The user enabled it 2026-08-30 and the
+  rebuild passed. Gotcha #9.
+- **Step 5:** every route 500s because the adapter's manifest patch tests for
+  a forward-slash path against a backslash path. Gotcha #10.
+
+In between, `next build` itself succeeded on the first try —
+`Compiled successfully in 19.7s`, all 24 static pages generated. The app
+needed **no** code changes to build for Workers. No `middleware.ts` exists
+anywhere in the repo, which sidesteps the one documented OpenNext gap
+(Node.js middleware is unsupported).
+
+### 27.3 Worker size limits — free tier is not viable past the short term
+
+Cloudflare's published Worker size limits (verified against live docs, not
+recall):
+
+| | Workers Free | Workers Paid |
+|---|---|---|
+| After gzip | **3 MB** | **10 MB** |
+| Before compression | 64 MB | 64 MB |
+
+We are at **2.74 MiB gzip — about 92% of the free limit** with 12 listings,
+and before `ROADMAP.md` Item 2 adds the R2 client, PDF handling, pgvector
+search and the SEO route matrix. The roadmap's "< 10 MB" gate implicitly
+assumed Workers Paid. **A preview deploy fits on free today**; the user has
+said the account gets upgraded the week of 2026-09-07 and is content to run
+free until then. Revisit if a deploy is ever rejected for size.
+
+### 27.4 Cloudflare now recommends vinext over OpenNext
+
+Their Next.js framework guide (last updated 2026-08-25) makes **vinext** — a
+Vite plugin reimplementing the Next.js API surface — the default path, and
+frames the OpenNext page as *"use this guide to maintain an existing OpenNext
+application. Migrate to vinext when compatibility allows."*
+
+This does **not** change Item 1a: OpenNext is still supported and documented,
+and vinext is explicitly **beta**. But it adds a third branch to the "if the
+spike fails" plan, which currently reads "buy Vercel Pro". Before spending
+money, run `npx vinext check` — a non-destructive compatibility report that
+leaves `next dev` working. Order of preference on a no-go: vinext check,
+then Vercel Pro.
+
+### 27.5 Google OAuth — §26.5 asks for the wrong change
+
+§26.5 says to add the preview origin to "the Google client's authorized
+redirect URIs". **That is a no-op for this app.** Verified:
+
+- `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` sit in `.env.local` but are referenced
+  **nowhere** in the code — this is Supabase-managed Google OAuth, so the
+  credentials live in the Supabase dashboard.
+- `components/auth-view.tsx` line 71 sends
+  `redirectTo: ${window.location.origin}/auth/callback`.
+
+The hop is browser → Google → **Supabase**
+`https://rimyttphaidvlytefvil.supabase.co/auth/v1/callback` → back to our
+origin. The Google client's authorized redirect URI is that fixed Supabase
+URL and never contains our app origin.
+
+**The single thing that gates a preview-origin login is Supabase →
+Authentication → URL Configuration → Redirect URLs.** `redirectTo` is
+validated against that allow-list and an unlisted URL is *silently* bounced
+to Site URL — which is exactly the false pass §26.5 was worried about, just
+in a different place. Add `https://<preview>.workers.dev/**` there before
+running the step 6 gate, remove it after, and **do not touch Site URL** (that
+would change default redirects for the live app).
+
+No code change and no `NEXT_PUBLIC_SITE_URL` change is needed for login
+itself — `window.location.origin` adapts on its own.
+
+### 27.6 The blocker, and why it forces the CI decision early
+
+`wrangler deploy` from this machine would upload the same broken Windows
+bundle, so it would 500 in production too. **The build has to happen on
+Linux.** WSL is not installed here (`wsl --status` → not installed). That
+makes the git-connected Cloudflare build — which builds on Linux — the
+fastest honest route to a go/no-go, and it is also `ROADMAP.md` Item 1c
+brought forward.
+
+Two paths, and Item 1c's wording ("GitHub → `wrangler deploy` action")
+presumes the second:
+
+- **A — Cloudflare Workers Builds.** The Vercel analogue: connect the repo in
+  the Cloudflare dashboard, build and deploy on every push, per-PR previews,
+  no long-lived API token stored in GitHub. **Recommended, and chosen.**
+- **B — GitHub Actions running `wrangler deploy`.** Needs
+  `CLOUDFLARE_API_TOKEN` as a GitHub secret; more control.
+
+Since A was chosen, Item 1c's wording in `ROADMAP.md` was updated to match
+rather than left stale.
+
+**Build-environment trap for either path:** `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are inlined at **build** time.
+`next.config.mjs` reads
+
+```js
+hostname: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://localhost").hostname
+```
+
+If that variable is missing in CI the build still **succeeds**, silently
+falling back to `localhost`, and every listing image 400s at runtime — a
+green pipeline shipping a broken site. Set both as build variables.
+Runtime-only secrets (`SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`) go in
+Workers secrets via `wrangler secret put`, never the repo.
+
+### 27.7 Decisions resolved this session
+
+- **D1 — Cloudflare account owner: RESOLVED.** The user confirmed the
+  existing account is the production owner for boliwala.com.
+  `wrangler login` succeeded as **boliwaladevs@gmail.com**, account ID
+  `dd735b278158c0a26949c1d5d6b6ebc3` — same handle as the `boliwaladevs`
+  GitHub org. Token scopes include `workers (write)` and `d1 (write)`;
+  nothing is missing for a preview deploy.
+- **Billing:** upgrade to Workers Paid deferred to the week of 2026-09-07 by
+  the user. Not blocking today.
+- **Demo listings:** the user noted the 12 live listings are demo data and
+  "we can keep 4 only". **No rows were deleted** — that read as permission
+  rather than an instruction, listing count has no effect on bundle size, and
+  §8.4 records "12/12" as the leak-test baseline. If they are trimmed, that
+  baseline must be restated in the same commit.
+
+### 27.8 Files added or changed
+
+| File | Change |
+|---|---|
+| `open-next.config.ts` | **new** — `defineCloudflareConfig()` defaults only; no cache/tag store yet (Item 1c decision) |
+| `wrangler.toml` | **new** — name `boliwala`, `nodejs_compat`, compat date 2026-08-30, ASSETS binding, observability on |
+| `package.json` | `@opennextjs/cloudflare` + `wrangler` as devDependencies |
+| `pnpm-workspace.yaml` | `allowBuilds`: `esbuild: true`, `workerd: true` — pnpm 11 wrote unresolved placeholders that made OpenNext's internal `pnpm install` fail hard. `sharp: true` was pre-existing and untouched. |
+| `.gitignore` | `.open-next/`, `.wrangler/`, `cloudflare-env.d.ts`, `.dev.vars` |
+| `.dev.vars` | **new, gitignored** — 14 populated vars copied from `.env.local` so the local Workers runtime can see them |
+| `MEMORY.md` | this section, gotchas #9/#10, header + banner |
+
+### 27.9 Next action
+
+1. User authorises the Cloudflare GitHub App on `boliwaladevs` (in progress).
+2. Commit the §25 planning docs (still untracked) plus the config above, and
+   push to `main` — the user authorised pushing as `boliwaladevs`.
+3. Linux build → preview URL → add it to Supabase Redirect URLs (§27.5) →
+   run the step 6 gate: `scripts/leak-test.mjs`,
+   `scripts/access-matrix-test.mjs` (49 assertions), route sweep, real
+   Supabase email login, real Google login.
+4. Only then record a go or no-go.
+
+**Do not record a no-go on the basis of anything in §27.2.** Those are
+Windows problems and they disappear on Linux.

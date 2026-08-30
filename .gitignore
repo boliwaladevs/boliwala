@@ -26,3 +26,8 @@ boliwala_google_oauth_json_file_path.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Cloudflare / OpenNext build output
+.open-next/
+.wrangler/
+cloudflare-env.d.ts
+.dev.vars
