@@ -3042,13 +3042,32 @@ The user was asked directly and chose **"Merge to main now"**. The merge then
 failed for a mechanical reason, not a project one: `git rebase` was **denied by
 the auto-mode permission classifier**. Nothing is wrong with the branch.
 
-**The approval stands. To land it:**
+**The approval stands. To land it — rebase the *feature branch* onto `main`,
+then fast-forward `main`:**
 
 ```
+git checkout item5-navbar-partner-auth
+git rebase main
 git checkout main
-git rebase item5-navbar-partner-auth
+git merge --ff-only item5-navbar-partner-auth
 git push origin main            # as boliwaladevs — authorised, §28.6
 ```
+
+**Do NOT run `git checkout main && git rebase item5-...`** — an earlier draft
+of this section said exactly that, and it is wrong. It replays `main`'s own
+commits on top of the branch, giving them new SHAs; since those commits are
+already on `origin/main`, landing them would then demand a force-push to a
+protected branch. The five commands above rewrite only the unpushed feature
+branch, which is what "rebase merge" is supposed to mean.
+
+Verified before writing this: `item5` carries **one** commit (`a9c12af`,
+`app/` and `components/` only), `main` carries three docs-only commits it
+lacks, and `git merge-tree` reports **zero conflicts**. The rebase is
+mechanical.
+
+Afterwards the pushed branch has diverged from its rewritten local self, so
+either `git push --force-with-lease origin item5-navbar-partner-auth` to
+realign it, or just delete it — it is merged at that point.
 
 Push to `main` as `boliwaladevs` is authorised (§28.6), and `--rebase` is the
 house default (`plans/version_control.md`). **That push auto-triggers a second
