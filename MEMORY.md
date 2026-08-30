@@ -21,12 +21,13 @@ context window fills up, open a new session and point it at this file first.
 
 **Last updated:** 2026-08-30 (infra direction change + roadmap reset, see §25;
 Cloudflare agent tooling installed + Item 1a execution plan, see §26; Item 1a
-spike executed, see §27; **Workers Builds connected, plus a Next 16.0.10
-packaging bug that blocks every cold build — see §28**).
+spike executed, see §27; Workers Builds connected, see §28; **build unblocked
+and verified — §29 corrects §28.4 and is the live handoff**).
 
-> **▶ NEW SESSION? READ §28 FIRST — it is the live handoff (what is committed,
-> what is on a branch, and the one bug blocking every build). Then §27 (the
-> Item 1a spike record), then §26, then §25.**
+> **▶ NEW SESSION? READ §29 FIRST — it is the live handoff and it CORRECTS
+> §28.4, which reached a wrong conclusion. Nothing is blocking the build; the
+> production build, leak test and access matrix all pass on `main`. Then §28
+> (session state, Item 5 branch), §27 (Item 1a spike), §26, §25.**
 
 > **🟢 30 AUG — READ `ROADMAP.md` FIRST FOR SEQUENCING.**
 > A brainstorm on 2026-08-30 changed the infra direction and the launch
@@ -2591,6 +2592,10 @@ Windows problems and they disappear on Linux.
 
 ## 28. Session handoff — Workers Builds connected, one hard blocker (2026-08-30, later same day)
 
+> **⚠️ §28.4 IS WRONG AND IS CORRECTED BY §29.** The build is not blocked. The
+> rest of this section (commits, Cloudflare settings, the Item 5 branch) is
+> still accurate.
+
 **▶ START HERE. This supersedes §27.9 as the live next action.** §27 is still
 the correct record of the Item 1a spike; this section is what happened after it.
 
@@ -2784,3 +2789,112 @@ against a production server (§22.3 has the exact incantations), then merge with
 because of §28.4.** Neither implicates OpenNext or Next 16 as a hosting choice.
 The size gate — the one thing Item 1a was really built to test — already
 passed at 2.74 MiB.
+
+
+---
+
+## 29. ⚠️ CORRECTION to §28.4 — the build is NOT blocked (2026-08-30, end of session)
+
+**Read this before acting on anything in §28.4. That section reaches the wrong
+conclusion and would send you to do work that does not need doing.**
+
+### 29.1 What §28.4 got wrong
+
+§28.4 claims Next 16.0.10 ships a broken `@vercel/og`, that the failure is
+platform-independent, and that Cloudflare's Linux builders will hit it too. It
+offers four fixes including a `pnpm patch` and replacing the brand images.
+
+**All of that is wrong.** The reasoning inferred the *published package's*
+contents from what was sitting in local `node_modules`. Checked against the
+registry CDN instead:
+
+| | `noto-sans-v27-latin-regular.ttf` | `...ttf.bin` |
+|---|---|---|
+| **Published `next@16.0.10`** | **HTTP 200 — ships** | HTTP 404 — does not exist |
+| **This machine, before 2026-08-30** | missing | present, dated 4 Aug |
+
+Both files are 27,748 bytes. The package ships `.ttf`; **something on this
+machine renamed it to `.ttf.bin` during the 4 August install.** Cause not
+established — a Windows security tool quarantine-renaming a font file is the
+usual suspect, but that was not proven and should not be repeated as fact.
+
+**Consequence: this was local install corruption, not a Next bug.** A clean
+Linux install on Cloudflare extracts the correct `.ttf`, so the Workers build
+very likely never hits this at all. Do **not** commit a `pnpm patch`, and do
+**not** replace `app/icon.tsx`, `app/apple-icon.tsx` or `app/opengraph-image.tsx`
+on account of it — that would bake a permanent workaround into the repo for a
+problem that existed on one laptop.
+
+### 29.2 Verified after restoring the file
+
+Restoring the correctly-named file locally (copied from the `.bin`, byte
+-identical to the published `.ttf`) clears it completely. On `main` at
+`460e4e8`, cold build with `.next` deleted:
+
+- **`pnpm build` with `SUPABASE_SERVICE_ROLE_KEY` blanked — PASS**, exit 0, all
+  25 routes including `/icon`, `/apple-icon`, `/opengraph-image`.
+- **Leak test against the production server — PASS.** 12/12 live listings,
+  96 column-key checks and 96 non-empty-value checks, no gated data in guest
+  HTML.
+- **Access matrix — PASS**, 49 assertions across 7 viewer states.
+- **`tsc --noEmit` — clean.**
+
+That is four of the standing verification bar's legs green on `main`, and the
+first time the leak test has run this session.
+
+**If a fresh clone or a `pnpm install --force` reproduces the `.ttf.bin`
+rename on this machine, the fix is local:** restore the file name in
+`node_modules`, or find and stop whatever is renaming it. It is not a code
+change and nothing about it belongs in the repo.
+
+### 29.3 What this changes about the plan
+
+- **§28.4 is void.** §28.7 step 1 ("resolve §28.4") is done — there was
+  nothing to resolve.
+- **The Cloudflare build settings are now correct in the dashboard** (verified
+  by the user): build `pnpm exec opennextjs-cloudflare build`, deploy
+  `pnpm exec opennextjs-cloudflare deploy`, version
+  `pnpm exec opennextjs-cloudflare upload`, root `/`, and both
+  `NEXT_PUBLIC_SUPABASE_*` build variables present.
+- **So the next Workers build is the real Item 1a step 6 attempt.** If it goes
+  green it produces a `*.workers.dev` preview, and the actual gate can finally
+  run against it.
+
+### 29.4 Next action, replacing §28.7
+
+1. **Trigger a Cloudflare build** (Retry build, or any push to `main`). This is
+   the first run with correct settings *and* the pnpm pin.
+2. If it fails, read the log before theorising — and note that the two failures
+   this session were both environmental, so check the environment first.
+3. On success, take the preview URL and add
+   `https://<preview>.workers.dev/**` to **Supabase → Authentication → URL
+   Configuration → Redirect URLs**. **Do not touch Site URL.** §27.5 explains
+   why, and corrects §26.5.
+4. **Run the Item 1a gate against the preview:** `scripts/leak-test.mjs <url>`,
+   `scripts/access-matrix-test.mjs`, route sweep, real Supabase email login,
+   real Google login. §22.3 has the exact invocations.
+5. **Only then record a go or no-go on Item 1a.**
+6. **Verify and land `item5-navbar-partner-auth`** (§28.5). It has not been
+   built or leak-tested — that was blocked when the branch was cut, and is not
+   blocked any more:
+   ```
+   git checkout item5-navbar-partner-auth
+   rm -rf .next && pnpm build          # blank SUPABASE_SERVICE_ROLE_KEY
+   # start server on 3100 per §22.3, then:
+   node scripts/leak-test.mjs http://127.0.0.1:3100
+   ```
+   If both pass, merge to `main` with `--rebase` per
+   `plans/version_control.md`. Two judgement calls inside it are flagged in
+   §28.5 and are worth a second opinion.
+7. Remove the preview URL from Supabase Redirect URLs when done.
+
+### 29.5 The habit worth keeping
+
+Three failures this session looked like they condemned the migration, and all
+three were environmental: Windows Developer Mode, a Windows path-separator bug
+in the adapter, and a locally renamed font. **The bundle-size gate — the one
+thing Item 1a was built to test — passed at 2.74 MiB and has never been in
+doubt.** Check the environment before concluding anything about OpenNext,
+Next 16, or Cloudflare, and verify a claim about a package against the registry
+rather than against `node_modules`. §28.4 exists as a worked example of getting
+that exactly backwards.
