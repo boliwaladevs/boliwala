@@ -17,10 +17,17 @@ export const metadata = pageMetadata({
  * disallow keep it out of search results, which is not the same as keeping
  * people out.
  *
- * The guard is deliberately only "is signed in", matching /profile. There is
- * no partner role in the schema yet, and inventing one here would fork the
- * access model ahead of the client's decision on whether the partner portal
- * ships at all.
+ * The guard used to be only "is signed in", matching /profile, on the
+ * reasoning that no partner role was wired up yet. That left every ordinary
+ * customer one URL away from invented commission figures, so it is now gated
+ * on the role itself (ROADMAP.md Item 5c).
+ *
+ * `channel_partner` exists in the profiles.role enum but no account holds it
+ * today, so in practice this closes the page until an admin grants the role.
+ * That is the intended outcome while the portal is still a mockup — show.md
+ * already lists /partner/dashboard as "do not open" during a client demo.
+ * The real partner role, approval flow and commission logic remain Item 10,
+ * gated on D8.
  */
 export default async function PartnerDashboardPage() {
   const supabase = await createClient()
@@ -29,6 +36,14 @@ export default async function PartnerDashboardPage() {
   } = await supabase.auth.getUser()
 
   if (!user) redirect("/login")
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+
+  if (profile?.role !== "channel_partner") redirect("/profile")
 
   return <PartnerDashboardView />
 }

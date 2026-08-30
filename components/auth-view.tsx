@@ -12,9 +12,16 @@ import { useToast } from "@/hooks/use-toast"
 interface AuthViewProps {
   defaultTab?: "login" | "signup"
   stats: SiteStats
+  /**
+   * "partner" renders the same page for /partner/login. The layout is
+   * deliberately identical — the only differences are where an email/password
+   * login lands and the absence of the self-referential partner link.
+   */
+  variant?: "customer" | "partner"
 }
 
-export function AuthView({ defaultTab = "login", stats }: AuthViewProps) {
+export function AuthView({ defaultTab = "login", stats, variant = "customer" }: AuthViewProps) {
+  const isPartner = variant === "partner"
   const [activeTab, setActiveTab] = useState<"login" | "signup">(defaultTab)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
@@ -50,6 +57,15 @@ export function AuthView({ defaultTab = "login", stats }: AuthViewProps) {
     setSubmitting(false)
     if (error) {
       toast({ variant: "destructive", title: "Couldn't log in", description: error.message })
+      return
+    }
+
+    // Someone who came in through /partner/login is asking for the partner
+    // area, so send them there. The page itself enforces the role — a customer
+    // who signs in here just bounces back to /profile.
+    if (isPartner) {
+      router.push("/partner/dashboard")
+      router.refresh()
       return
     }
 
@@ -269,7 +285,16 @@ export function AuthView({ defaultTab = "login", stats }: AuthViewProps) {
               </svg>
               Google
             </button>
-            
+
+            {!isPartner && (
+              <Link
+                href="/partner/login"
+                className="mt-3 w-full flex items-center justify-center gap-3 bg-background border border-border hover:bg-secondary/50 text-foreground font-semibold h-12 rounded-xl transition-colors text-sm"
+              >
+                Login as Channel Partner
+              </Link>
+            )}
+
           </form>
 
         </div>
