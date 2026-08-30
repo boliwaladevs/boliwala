@@ -391,3 +391,7 @@ gap. It should be escalated ahead of everything else in this table.
 - [x] **S9 · redirect-preserving auth** — `/login?next=` honoured with a tested
       open-redirect guard; gated CTAs, pricing CTAs and the server-side gates all
       pass it. Header login link is a known remaining gap. `MEMORY.md` §34.4–34.5.
+- [x] **S7 (part) · popularity sort + reserve price per sq ft** — "Most Popular"
+      sort on the already-tracked `viewCount`; ₹/sq ft on cards and listing pages,
+      hidden when area is unknown. Rest of S7 still blocked on missing columns.
+      `MEMORY.md` §34.6–34.7.

@@ -3697,3 +3697,53 @@ Someone reading a listing who clicks the header login still gets dropped on
 (`withNext("/login", currentPath())`, the component is already a client
 component and already imports `usePathname`) and is **the obvious next thing to
 do here**, but it was not in the agreed scope so it was not bundled in.
+
+### 34.6 Queue item 3 — S7 popularity sort + reserve price per sq ft ✅ LANDED
+
+**Scope note:** only the two self-contained pieces of S7, exactly as §33.2
+required. The rest of S7 (borrower name, auction date range, building/society
+name, bid increment, EMD deadline as a filter, Constructive Possession) needs
+columns that do not exist and was **not touched**.
+
+**Popularity sort.** `viewCount` was already tracked server-side and already in
+`SEARCH_CARD_COLUMNS`, so this needed no new data and no schema change — a
+`"popular"` case in `searchListings`' switch, ordering by `viewCount` desc with
+`auctionDate` asc as the tie-break. Sort set is now the five §33.2 asked for:
+**Default · Popular · Newest · Price ↑ · Price ↓** (existing labels kept —
+renaming working copy is not this item's job).
+
+Verified against the real 12 rows: `/search?sort=popular` returns **exactly**
+the DB's `viewCount desc` order, all 12, top to bottom —
+`industrial-warehouse-chakan` (3320) · `commercial-shop-fc-road` (2150) ·
+`1bhk-gomti-nagar` (1884) · `residential-plot-gachibowli` (1551) ·
+`textile-unit-pandesara` (1297) · `2bhk-kharghar` (1293) · `2bhk-saibaba` (1109)
+· `office-anna-salai` (1005) · `3bhk-whitefield` (883) · `mixed-use-nagpur`
+(740) · `villa-bopal` (666) · `agricultural-ajmer` (428). An unknown `?sort=`
+value still falls back to the default ordering.
+
+**Reserve price per sq ft.** `reservePricePerSqft()` in `lib/format.ts`, shown
+under the reserve price on search cards and on the listing page's action card.
+**Returns `null` when the area is unknown and the caller renders nothing** —
+deliberately not "—" or "₹0/sq.ft", either of which reads as a real figure.
+
+**A gap in the verification worth naming:** all 12 demo listings have an
+`areaSqft`, so **the live data cannot exercise the hidden branch at all.** It
+was tested directly against the helper instead — `null`, `0` and `undefined`
+areas, and a zero reserve price, all return `null`. Values were cross-checked
+against Postgres computing the same division: ₹2,875 · ₹19,375 · ₹170/sq.ft all
+match to the rupee.
+
+### 34.7 Verification — item 3
+
+- `tsc --noEmit` clean · cold build clean, 25 routes.
+- **Popular sort order matches the DB exactly** (12/12, above).
+- **Per-sq-ft helper** — 7 cases PASS including every hidden branch; rendered
+  values match a Postgres-side computation.
+- Rendered HTML confirms per-sq-ft on both search cards and the listing page,
+  and all five sort options present with `auction_asc` selected by default.
+- **Leak test PASS** 12/12 · **Access matrix PASS 49/49** · 22-route sweep
+  (baseline + `?sort=popular`) as expected.
+- **Both earlier items re-run and still green** — `next-param-test` 26/26,
+  `bulk-sample-selfcheck` PASS.
+- **Not verified in a browser.** The per-sq-ft line's appearance under the price
+  on a real card, at each breakpoint, has not been looked at.

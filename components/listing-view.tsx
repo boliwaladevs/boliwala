@@ -8,7 +8,7 @@ import { toggleShortlist } from "@/app/actions/shortlist"
 import { unlockFieldGroup } from "@/app/actions/unlock"
 import { useToast } from "@/hooks/use-toast"
 import { currentPath, withNext } from "@/lib/auth/next-param"
-import { formatDateLong, formatDateShort, formatINR } from "@/lib/format"
+import { formatDateLong, formatDateShort, formatINR, reservePricePerSqft } from "@/lib/format"
 import type { SafeListing } from "@/lib/access/redact"
 import type { AccessState, FieldGroup, GateDecision } from "@/lib/access/types"
 import type { PricingSettings } from "@/lib/access/types"
@@ -391,7 +391,12 @@ export function ListingView({
         <div>
           <div className="bg-background border border-border rounded-xl shadow-md p-6 lg:sticky lg:top-24">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1 block">Reserve Price</span>
-            <div className="text-3xl font-extrabold tracking-tight text-foreground mb-3">{formatINR(listing.reservePrice)}</div>
+            <div className={`text-3xl font-extrabold tracking-tight text-foreground ${reservePricePerSqft(listing.reservePrice, listing.areaSqft) ? "" : "mb-3"}`}>
+              {formatINR(listing.reservePrice)}
+            </div>
+            {reservePricePerSqft(listing.reservePrice, listing.areaSqft) && (
+              <div className="text-sm font-medium text-muted-foreground mb-3">{reservePricePerSqft(listing.reservePrice, listing.areaSqft)}</div>
+            )}
             <div className="text-sm text-muted-foreground pt-3 border-t border-border mb-2">
               EMD Required: <strong className="text-red-500 font-semibold">{formatINR(listing.emdAmount)}</strong>
             </div>

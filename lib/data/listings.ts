@@ -18,7 +18,7 @@ export interface SearchFilters {
   minPrice?: number
   maxPrice?: number
   auctionWindow?: "week" | "month"
-  sort: "auction_asc" | "price_asc" | "price_desc" | "recent"
+  sort: "auction_asc" | "popular" | "price_asc" | "price_desc" | "recent"
   page: number
 }
 
@@ -54,7 +54,8 @@ export function parseSearchFilters(searchParams: SearchParamsInput): SearchFilte
     minPrice: Number.isFinite(minPrice) && minPrice > 0 ? minPrice : undefined,
     maxPrice: Number.isFinite(maxPrice) && maxPrice > 0 ? maxPrice : undefined,
     auctionWindow: auctionWindow === "week" || auctionWindow === "month" ? auctionWindow : undefined,
-    sort: sort === "price_asc" || sort === "price_desc" || sort === "recent" ? sort : "auction_asc",
+    sort:
+      sort === "popular" || sort === "price_asc" || sort === "price_desc" || sort === "recent" ? sort : "auction_asc",
     page: Number.isInteger(page) && page > 0 ? page : 1,
   }
 }
@@ -130,6 +131,11 @@ export async function searchListings(
   if (filters.bankIds.length > 0) query = query.in("bankId", filters.bankIds)
 
   switch (filters.sort) {
+    // viewCount is already tracked server-side on every listing view, so
+    // "Popular" needs no new data. Ties fall back to the default ordering.
+    case "popular":
+      query = query.order("viewCount", { ascending: false }).order("auctionDate", { ascending: true })
+      break
     case "price_asc":
       query = query.order("reservePrice", { ascending: true })
       break

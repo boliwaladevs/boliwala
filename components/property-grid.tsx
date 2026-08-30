@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { toggleShortlist } from "@/app/actions/shortlist"
 import { useToast } from "@/hooks/use-toast"
 import { currentPath, withNext } from "@/lib/auth/next-param"
-import { formatDateShort, formatINR } from "@/lib/format"
+import { formatDateShort, formatINR, reservePricePerSqft } from "@/lib/format"
 import type { SearchListing } from "@/lib/data/listings"
 
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
@@ -109,7 +109,12 @@ export function PropertyGrid({
 
             <div className="p-4 flex-1 flex flex-col">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Reserve Price</div>
-              <div className="text-xl font-bold text-foreground tracking-tight mb-2">{formatINR(p.reservePrice)}</div>
+              <div className={`text-xl font-bold text-foreground tracking-tight ${reservePricePerSqft(p.reservePrice, p.areaSqft) ? "" : "mb-2"}`}>
+                {formatINR(p.reservePrice)}
+              </div>
+              {reservePricePerSqft(p.reservePrice, p.areaSqft) && (
+                <div className="text-[11px] font-medium text-muted-foreground mb-2">{reservePricePerSqft(p.reservePrice, p.areaSqft)}</div>
+              )}
               <div className="text-sm font-semibold text-foreground leading-snug mb-1">{p.title}</div>
               <div className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
                 <MapPin className="w-3 h-3" /> {p.locality}, {p.city}

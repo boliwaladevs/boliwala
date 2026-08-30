@@ -4,9 +4,10 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation"
 
 const SORT_OPTIONS = [
   { value: "auction_asc", label: "Auction Date (Soonest)" },
+  { value: "popular", label: "Most Popular" },
+  { value: "recent", label: "Recently Added" },
   { value: "price_asc", label: "Price: Low → High" },
   { value: "price_desc", label: "Price: High → Low" },
-  { value: "recent", label: "Recently Added" },
 ]
 
 export function SearchSortSelect({ currentSort }: { currentSort: string }) {
