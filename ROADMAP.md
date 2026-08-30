@@ -31,7 +31,7 @@
 
 # THE ORDERED ROADMAP
 
-## 1. Cloudflare migration  ⬅ **IN PROGRESS — 1a partially executed 2026-08-30, see `MEMORY.md` §27**
+## 1. Cloudflare migration  ⬅ **IN PROGRESS — deployed and serving as of 2026-08-30 night; one open defect. See `MEMORY.md` §30.**
 
 **Goal:** the app runs on Cloudflare Workers, DNS on Cloudflare, deploy via `wrangler`, all existing verification passes.
 
@@ -39,7 +39,7 @@
 
 **Done when:**
 
-- **1a — Go/no-go spike (time-box: 1 day). ⏳ Steps 1–4 pass, step 5 blocked, verdict still open.** `@opennextjs/cloudflare` builds on Next 16.0.10; deploys to a `*.workers.dev` preview; `scripts/leak-test.mjs` + `scripts/access-matrix-test.mjs` + the route sweep pass against the preview; real Supabase email login + Google login work against the preview; Worker bundle < 10 MB compressed.
+- **1a — Go/no-go spike (time-box: 1 day). ⏳ Builds, deploys and serves. Verdict still open on one defect — `MEMORY.md` §30.** First green Workers build 2026-08-30 night; live at `https://boliwala.boliwaladevs.workers.dev`; `/`, `/search`, `/login` all 200. **Blocking the verdict:** every `/listing/[slug]` 500s on the Worker (§30.4), so the leak test cannot pass against it. Google login against the Worker also needs its origin added to the Google Cloud console — expected, and not a no-go. `@opennextjs/cloudflare` builds on Next 16.0.10; deploys to a `*.workers.dev` preview; `scripts/leak-test.mjs` + `scripts/access-matrix-test.mjs` + the route sweep pass against the preview; real Supabase email login + Google login work against the preview; Worker bundle < 10 MB compressed.
   - **Result so far (`MEMORY.md` §27):** adapter installs and builds clean on Next 16.0.10; **bundle 2.74 MiB gzip — the size gate passes**; the app needed no code changes. Local `wrangler dev` 500s on every route because of a **Windows-only** path-separator bug in the adapter (`MEMORY.md` §5 gotcha #10), so the build must run on Linux. **Nothing found so far argues against OpenNext — do not read the Windows failures as a no-go.**
   - **If the spike fails:** first run `npx vinext check` — Cloudflare now recommends **vinext** over OpenNext for Next.js (their docs, 25 Aug), and it is a non-destructive compatibility report. Only if that is also a dead end, buy Vercel Pro, ship there, keep every other item unchanged, revisit the host post-launch. R2 is host-agnostic. Skip 1b–1d.
 - **1b —** Move `boliwala.com` DNS to the account above (**D2** — domain must exist first).

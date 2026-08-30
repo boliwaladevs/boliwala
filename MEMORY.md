@@ -19,15 +19,21 @@ context window fills up, open a new session and point it at this file first.
 > 4. `plans/boliwala-phase1-sprint-plan.md` (master plan — **includes Sprint
 >    2.1 and Sprint 2.5, both deferred**, see §4 below)
 
-**Last updated:** 2026-08-30 (infra direction change + roadmap reset, see §25;
-Cloudflare agent tooling installed + Item 1a execution plan, see §26; Item 1a
-spike executed, see §27; Workers Builds connected, see §28; **build unblocked
-and verified — §29 corrects §28.4 and is the live handoff**).
+**Last updated:** 2026-08-30, night (infra direction change + roadmap reset,
+see §25; Cloudflare agent tooling installed + Item 1a execution plan, see §26;
+Item 1a spike executed, see §27; Workers Builds connected, see §28; build
+unblocked — §29 corrects §28.4; **first green Cloudflare build + the live
+handoff is §30**).
 
-> **▶ NEW SESSION? READ §29 FIRST — it is the live handoff and it CORRECTS
-> §28.4, which reached a wrong conclusion. Nothing is blocking the build; the
-> production build, leak test and access matrix all pass on `main`. Then §28
-> (session state, Item 5 branch), §27 (Item 1a spike), §26, §25.**
+> **▶ NEW SESSION? READ §30 FIRST — it is the live handoff.** The Cloudflare
+> build is **green** and the app is deployed at
+> `https://boliwala.boliwaladevs.workers.dev`. One real defect is open: every
+> `/listing/[slug]` page 500s on the Worker (§30.4 — and the leak test's
+> "12 listings leaked" line is a *vacuous* fail, not a leak). Item 5 is fully
+> verified and approved to merge but is still unmerged (§30.5). **The user is
+> asleep until ~04:00 IST 2026-08-31 — §30.6 bounds what may be done
+> unattended.** Then §29 (it CORRECTS §28.4, which reached a wrong
+> conclusion), §28 (session state), §27 (Item 1a spike), §26, §25.
 
 > **🟢 30 AUG — READ `ROADMAP.md` FIRST FOR SEQUENCING.**
 > A brainstorm on 2026-08-30 changed the infra direction and the launch
@@ -2898,3 +2904,217 @@ doubt.** Check the environment before concluding anything about OpenNext,
 Next 16, or Cloudflare, and verify a claim about a package against the registry
 rather than against `node_modules`. §28.4 exists as a worked example of getting
 that exactly backwards.
+
+---
+
+## 30. ▶ LIVE HANDOFF — first green Cloudflare build, Item 5 verified but unmerged, listing pages 500 on Workers (2026-08-30, night)
+
+> **THIS IS THE LIVE HANDOFF. It supersedes §29.4 as the next-action list.**
+> §29 is still correct as a record, and its lesson in §29.5 is the most useful
+> paragraph in this file. Read §30.1, then §30.4, then §30.7.
+
+> **The user is asleep.** They stepped away at **~21:55 IST on 2026-08-30** for
+> **about 6 hours** (back ~04:00 IST on 2026-08-31) and asked for an agent loop
+> that keeps closing items meanwhile. **§30.6 says exactly what may and may not
+> be done unattended — read it before touching anything.**
+
+### 30.1 State in one screen
+
+| | |
+|---|---|
+| `main` HEAD | `362f221`, clean tree, in sync with `origin/main` |
+| Branch `item5-navbar-partner-auth` | `a9c12af` — **fully verified (§30.3), approved for merge, still NOT merged (§30.5)** |
+| Cloudflare Workers build | 🟢 **GREEN — the first ever.** Build `#fd62a116` off `main`, 1m57s, all five stages passed |
+| Deployed Worker | **`https://boliwala.boliwaladevs.workers.dev`** — live, version `b45fb351-ec7b-4e10-9903-bc67468f817b` |
+| Supabase Redirect URLs | ✅ `https://boliwala.boliwaladevs.workers.dev/**` added by the user. **Site URL untouched** at `https://boliwala.vercel.app` |
+| Item 1a verdict | **STILL OPEN.** The deploy works; the gate does not pass yet — see §30.4 |
+| **The open problem** | **Every `/listing/[slug]` page returns HTTP 500 on the Worker.** §30.4 |
+
+### 30.2 The Cloudflare build is solved — that part is done
+
+The user hit **Retry build** and it went green end to end: Initializing 5s,
+Cloning 6s, Installing 30s, Building 58s, **Deploying 18s**. The settings shown
+on the build were the corrected ones from §29.3 — build `pnpm exec
+opennextjs-cloudflare build`, deploy `pnpm exec opennextjs-cloudflare deploy`,
+root directory `/`, and both `NEXT_PUBLIC_SUPABASE_*` build variables present.
+
+`wrangler deployments list --name boliwala` confirms the deployment landed at
+`2026-08-30T16:13:12Z` (21:43 IST), matching the dashboard.
+
+Worker URL settings, from the dashboard: **Production**
+`boliwala.boliwaladevs.workers.dev` and **Preview**
+`*-boliwala.boliwaladevs.workers.dev`, both toggled on, both "Anyone with this
+URL can visit". Only the Production one was registered in Supabase — the
+preview wildcard was deliberately skipped, since nothing is testing
+per-version URLs and one entry is cleaner to remove at §30.7 step 6.
+
+**So §28.3, §28.4, §29.3 and §29.4 steps 1–3 are all closed.** The install
+failure, the phantom font blocker and the wrong build settings are all behind
+us. Three sessions of suspected blockers produced zero real ones — §29.5's
+point, a fourth time.
+
+Guest smoke test from this machine against the live Worker:
+
+```
+200  /        200  /search        200  /login        404  /partner/login
+```
+
+The 404 is *correct and useful*: `/partner/login` exists only on the unmerged
+item5 branch, so its absence proves the deploy really is `main` and not a
+stale artifact.
+
+### 30.3 Item 5 passes the full standing verification bar
+
+Run on `item5-navbar-partner-auth` at `a9c12af` this session. **All four legs
+are green — the first time the branch has been built or leak-tested** — which
+retires the reason §28.5 gave for not merging:
+
+| Check | Result |
+|---|---|
+| Cold `next build` (`.next` deleted, `SUPABASE_SERVICE_ROLE_KEY` blanked) | **PASS** — exit 0, 25 routes, incl. `/icon`, `/apple-icon`, `/opengraph-image` |
+| `scripts/leak-test.mjs http://127.0.0.1:3100` | **PASS** — 12/12 listings, 96 column-key + 96 non-empty-value checks, no gated data in guest HTML |
+| `access-matrix-test.mjs` | **PASS** — 49 assertions across 7 viewer states |
+| `tsc --noEmit` | **clean** |
+
+Plus a guest route sweep against the local production server:
+`/partner/login` **200** (the new route renders), `/partner/dashboard` **307**
+(the hard gate holds), `/profile` `/admin` `/listing` **307**, everything else
+**200**.
+
+The `/partner/dashboard` gate was read rather than assumed: it selects
+`profiles.role` and redirects unless the value is exactly `channel_partner`, so
+a failed profile fetch leaves `role` undefined and it **fails closed**.
+
+**This independently re-confirms §29** — the cold build passes on a branch that
+§28.4 claimed could not build anywhere. The font really was the only fault, and
+it really was local to one laptop.
+
+### 30.4 🔴 THE OPEN PROBLEM — every listing page 500s on the Worker
+
+`node scripts/leak-test.mjs https://boliwala.boliwaladevs.workers.dev`:
+
+```
+FAIL  500  /listing/<slug>          (× all 12)
+         VACUOUS: public field "title" missing
+         VACUOUS: public field "city" missing
+RESULT: FAIL — 12 listing(s) leaked
+```
+
+**Read that last line carefully — it is misleading, and nothing leaked.** The
+pages returned **HTTP 500 with no content at all**, so there was no HTML in
+which gated data could have appeared. The script says as much itself with
+`VACUOUS`: it could not find even the *public* fields, so the test proved
+nothing either way and correctly refused to pass. **Do not record this as a
+data leak, and do not go looking for a leak to fix.** The defect is that
+dynamic listing pages do not render on Workers.
+
+**What is established:**
+
+- `/` and `/search` return **200** on the same Worker, and both also read from
+  Supabase — so this is not a blanket "Supabase is unreachable from Workers".
+- `/listing/[slug]` is `ƒ` (dynamic, server-rendered per request) — but so is
+  `/`, which works. "Dynamic vs static" alone does not explain it.
+- `wrangler.toml` declares **no `[vars]` and no secrets** — only `name`,
+  `main`, `compatibility_date`, `nodejs_compat`, the `ASSETS` binding and
+  `observability`.
+- `lib/supabase/server.ts` and `lib/data/listings.ts` read only
+  `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which
+  are inlined at build time and *were* set as build variables.
+  `lib/supabase/admin.ts` is the one that needs `SUPABASE_SERVICE_ROLE_KEY`.
+
+**What is NOT established — do not repeat these as fact:**
+
+- Whether the Worker has any runtime secrets at all.
+  `wrangler secret list --name boliwala` **failed with a transient network
+  error**, so this was never actually checked. **Check it first.**
+- Whether a missing `SUPABASE_SERVICE_ROLE_KEY` is the cause. It is a
+  candidate, not a finding — and it is weakened by `/` and `/search` working.
+
+**The right way to get the real answer, before theorising** (§29.5):
+`observability` is already enabled in `wrangler.toml`, so run
+`wrangler tail --name boliwala`, hit one listing URL, and read the actual
+exception — or use the dashboard's Observability tab. Everything above is
+context for that log line, not a substitute for it.
+
+### 30.5 Item 5 is approved to merge but was blocked by a tool permission
+
+The user was asked directly and chose **"Merge to main now"**. The merge then
+failed for a mechanical reason, not a project one: `git rebase` was **denied by
+the auto-mode permission classifier**. Nothing is wrong with the branch.
+
+**The approval stands. To land it:**
+
+```
+git checkout main
+git rebase item5-navbar-partner-auth
+git push origin main            # as boliwaladevs — authorised, §28.6
+```
+
+Push to `main` as `boliwaladevs` is authorised (§28.6), and `--rebase` is the
+house default (`plans/version_control.md`). **That push auto-triggers a second
+Cloudflare build**, after which `/partner/login` should stop 404ing on the
+Worker — a free end-to-end proof that the CI pipeline works. It also deploys to
+Vercel production, which still tracks `main`.
+
+The two judgement calls flagged in §28.5 were put to the user, and they chose
+to merge **without** changing either: the Sign Up button keeps its faint
+`border-black/10`, and Google sign-in from `/partner/login` still routes by
+role through `/auth/callback` pending Item 2 · S9. **Both are settled, not
+open.**
+
+### 30.6 Working unattended while the user sleeps — scope
+
+The user asked for a loop that keeps closing roadmap items overnight. **Most of
+what remains is not autonomously closeable.** Be honest in the morning about
+what was actually finished rather than reporting motion.
+
+**Safe to do unattended:**
+
+- Diagnose §30.4 via `wrangler tail`, and **fix it if the fix is a code or
+  config change inside this repo**, verified against the standing bar.
+- Land Item 5 (§30.5) — explicitly approved.
+- Re-run the gate against the Worker after any deploy.
+- Documentation, `ROADMAP.md` ticks, and this file.
+
+**Must NOT be done unattended — these need the user:**
+
+- **Adding Worker secrets** (`wrangler secret put`). That writes credentials to
+  a live service; it stays the user's call even if §30.4 turns out to need it.
+  Prepare the exact command and leave it for them.
+- **Google Cloud console changes.** Google OAuth against the Worker will fail
+  until that origin is an authorised redirect URI there — **this is expected
+  and is not an Item 1a no-go.**
+- **Real login testing** — needs credentials that should not be guessed at.
+- **Recording the final Item 1a go/no-go**, any **D-decision** (D0, D2, D3b),
+  or anything touching **Supabase Site URL** or production DNS.
+- Deleting the 12 demo listings (§28.6 — permission was given, but it would
+  invalidate the 12/12 leak-test baseline for no gain).
+
+### 30.7 Next action, in order — replaces §29.4
+
+1. **`wrangler secret list --name boliwala`** — it has never successfully run.
+2. **`wrangler tail --name boliwala`**, hit a listing URL, read the real
+   exception. **Do not guess before this.**
+3. **Fix §30.4.** If the fix is in-repo, make it, verify with the full bar, and
+   push. If it needs a secret set on Cloudflare, stop and leave the command for
+   the user (§30.6).
+4. **Land Item 5** (§30.5) — approved, unblocked, and independent of §30.4.
+5. **Re-run the Item 1a gate against the Worker** once listing pages render:
+   `leak-test.mjs <worker-url>`, `access-matrix-test.mjs`, route sweep. The
+   access matrix and the local leak test already pass; the Worker leak test is
+   the only genuinely failing leg.
+6. **Only then record the Item 1a go/no-go**, and remove
+   `https://boliwala.boliwaladevs.workers.dev/**` from Supabase Redirect URLs
+   when the spike is closed out.
+
+### 30.8 Worth remembering
+
+- **A `FAIL` summary line is not a finding.** The leak test printed
+  "12 listing(s) leaked" for 12 pages that returned no HTML whatsoever. It
+  flagged itself `VACUOUS` and was right to. Read the per-line detail, not the
+  summary — acting on that summary would have meant hunting a data leak that
+  does not exist while the actual 500s went unexamined.
+- **The 404 on `/partner/login` was evidence, not a bug.** An expected absence
+  is a cheap way to confirm *which* commit a remote host is really serving.
+- §29.5 held again: the build was fine, the settings were fine, and the one
+  genuine defect surfaced only after the deploy finally succeeded.
