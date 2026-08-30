@@ -3260,7 +3260,11 @@ database, not the repo.
 
 ---
 
-## 32. ▶▶ OVERNIGHT LOOP BRIEF — zero-intervention work queue (2026-08-30, night)
+## 32. OVERNIGHT LOOP BRIEF — zero-intervention work queue (2026-08-30, night)
+
+> ⚠️ **§32.2's QUEUE IS SUPERSEDED BY §33.2** (reordered by the user on
+> 2026-08-31, plus one new item at the top). **§32.0, §32.1, §32.3 and §32.4
+> still stand unchanged and are required reading.**
 
 **This section replaces §31.4 as the loop's brief.** §31 is still the correct
 record of *why* "build the partner dashboard" was rejected; this is what to do
@@ -3381,3 +3385,162 @@ fixed and is Item 1a decided**; what landed on `main`; what is sitting on an
 unmerged branch and why; what was attempted and abandoned, with the reason; and
 what now needs a decision. **Anything left in a half-state must be named
 explicitly** — a fresh session should never have to discover it.
+
+---
+
+## 33. ▶▶ LIVE LOOP BRIEF — reordered queue, agreed with the user before handoff (2026-08-31)
+
+> **THIS SUPERSEDES §32.2 AS THE QUEUE.** §32.0 (DB facts), §32.1 (the rules),
+> §32.3 (what is excluded and why) and §32.4 (morning-summary format) all still
+> stand unchanged — read them. Only the **order** and the **contents** of the
+> queue changed, plus one new item the user added at the top.
+
+### 33.0 State verified at the start of this session — two corrections to §30
+
+- **`main` = `32acd34`, clean tree, in sync with `origin/main`.**
+- **Item 5 IS MERGED.** `e0b0f43` ("Item 5: navbar restyle, partner login
+  route, partner dashboard hard-gate") is on `main`. **§30.1's "still NOT
+  merged" and §30.7 step 4 are both closed** — do not redo them. The branches
+  `item5-navbar-partner-auth` (local + remote) are now redundant and can be
+  deleted whenever convenient.
+- **§30.4 is still live and reproducible.** Measured this session against the
+  deployed Worker: `/` → **200**,
+  `/listing/industrial-warehouse-chakan-pune-union` → **500**. Not stale, and
+  not fixed by the Item 5 deploy.
+- `wrangler` **4.127.1** is available locally via `npx`.
+
+### 33.1 Why the order changed
+
+The user reordered the queue deliberately: **§30.4 and the Item 1a verdict are
+the only items with a network / Cloudflare dependency**, so at the front of the
+queue a hanging `wrangler tail` or a slow rebuild could stall everything behind
+them. Items 1–3 below are pure local code and cannot be blocked that way.
+
+**The cost of this, stated to the user and accepted by them:** §30.4 and the
+Item 1a verdict are the critical path for the whole of `ROADMAP.md` Item 2, and
+at the end of the queue they are the two most likely to be cut short if the
+window runs out. That is a deliberate trade, not an oversight.
+
+### 33.2 THE QUEUE, in order
+
+#### 1 — Bulk-upload sample CSV, downloadable from the admin UI
+
+*(New — added by the user, 2026-08-31. Not in §32.2.)*
+
+**Why:** the user needs to prepare real inventory data and there is currently
+**no documentation anywhere of what the importer accepts** — the format lives
+only inside a `TARGET_FIELDS` array in a client component.
+
+**Where:** `components/admin/bulk-upload-panel.tsx`, rendered at
+`components/admin-view.tsx:332` on the **`bulk-upload` page ("Bulk Upload
+Excel", sidebar 📂)**. Note that in the current admin nav, `bulk-upload` is a
+**sibling of `add-listing`**, not nested inside it (`admin-view.tsx:184-185`).
+The button goes on the Bulk Upload page, directly above the file picker. The
+user was told this and agreed; it is **not** duplicated on Add Listing.
+
+**Design decision — do not substitute a static file:** generate the CSV in the
+browser **from the same `TARGET_FIELDS` array the parser uses**, as a Blob +
+`<a download>`. A sample file checked into `public/` is a second source of
+truth that drifts the moment a column changes — and **S3 (bank → lender) and
+S7 (new filter fields) are both queued to change exactly this list.**
+Generating it means the sample cannot disagree with what the importer accepts.
+No new route, no server action, no new dependency.
+
+**The importer's real contract**, read from the code
+(`bulk-upload-panel.tsx:9-24` and `lib/data/types.ts:1-10`) — re-verify before
+changing; do not trust this table blindly if the file has moved on:
+
+| Column (label) | Required | Accepted |
+|---|---|---|
+| Title, City, Address Line | yes | free text |
+| **Bank (name)** | yes | **must match an existing bank by name**, else the row errors |
+| Reserve Price, EMD Amount | yes | number > 0 |
+| Auction Date, EMD Deadline | yes | anything `Date.parse` accepts |
+| Locality, State, Pincode, Area (sq.ft) | no | free text / number |
+| Property Type | no | `residential` `commercial` `industrial` `agricultural` `mixed_use` |
+| Possession Type | no | `physical` `symbolic` |
+
+**Three traps the sample exists to close, all found by reading the parser:**
+
+1. **Bank must resolve.** The panel already receives `banks` as a prop, so fill
+   the sample's Bank column with a **real name from the live list** — otherwise
+   the user's first import fails on `Bank "..." not recognized`.
+2. **ISO dates only (`2026-09-15`).** The parser uses `Date.parse`, which reads
+   `15/09/2026` as **invalid** and `09/03/2026` as **March 9th**. A sample in
+   DD/MM/YYYY would actively teach a format that silently corrupts auction
+   dates.
+3. **Enum typos fail silently.** `propertyType` / `possessionType` are
+   lowercased and **fall back to `residential` / `physical` with no error
+   raised**. The sample and the on-screen note are the only place these get
+   documented.
+
+**Also surface in the UI, not the file:** `status` is hardcoded to `draft` on
+bulk commit (there is no status column — publishing happens in the listings
+panel), and images/PDFs are not part of this flow yet (S1/S2/S4).
+
+**Done when:** button renders on the Bulk Upload Excel page · CSV downloads
+with all 14 columns in importer order · **3 realistic rows** (so the format of
+blank optional cells is visible too) · Bank column pre-filled from the real
+`banks` prop · ISO dates · valid enum values · accepted-values and the
+`status=draft` note shown in the UI · **re-importing the downloaded sample
+through the panel parses with zero row errors** — the self-check that proves
+sample and parser agree.
+
+#### 2 — S9 · redirect-preserving auth (`/login?next=<url>`)
+
+Unchanged from §32.2 item 3, including the reasoning there: it closes a real
+conversion leak and unblocks the second judgement call in §28.5.
+
+**Done when:** `/login?next=` honoured **with an open-redirect guard
+(same-origin, path-only)** · gated CTAs and the pricing CTA pass `next` ·
+post-login returns to origin · access matrix still 49/49.
+
+#### 3 — S7 · popularity sort + reserve price per sq ft
+
+Unchanged from §32.2 item 4.
+
+**Done when:** "Popular" sort on `/search` using the already-tracked
+server-side `viewCount` · sort set = Default · Popular · Newest · Price ↑ ·
+Price ↓ · ₹/sq ft computed and shown on cards and the listing page, **hidden
+when `areaSqft` is absent**. No schema change. Leave the rest of S7 alone —
+those fields need columns that do not exist.
+
+#### 4 — §30.4 · listing pages 500 on the Worker
+
+Moved to the back (§33.1). `wrangler secret list --name boliwala` **(has still
+never successfully run)**, then `wrangler tail --name boliwala`, hit a listing
+URL, and **read the real exception before forming any theory** (§29.5). Fix
+only if the fix is in-repo and verifiable.
+
+**Done when:** the actual exception is recorded in this file — **that alone is
+a win even if the fix is not ours to make.** If it needs `wrangler secret put`,
+**stop, write the exact command out for the user, and move on** (rule 4).
+
+#### 5 — Item 1a go/no-go verdict
+
+Only if 4 resolves. Full gate against
+`https://boliwala.boliwaladevs.workers.dev`: `leak-test.mjs <url>`,
+`access-matrix-test.mjs`, route sweep. **Caveat to record explicitly rather
+than treat as a failure:** Google login against the Worker origin is untestable
+until that origin is added in the Google Cloud console — expected, and **NOT a
+no-go** (§32.2 item 2).
+
+#### Reserved — the morning handoff section
+
+Budgeted, not left to chance. Written in **§32.4's order**.
+
+### 33.3 Explicitly NOT attempted this run
+
+- **S5 (SEO route scaffolding)** and **S3 (lender model on a branch)** — §32.2
+  items 5 and 6. Each is larger than the remaining window can clear against the
+  standing bar. **Dropped deliberately: better untouched than half-built.**
+  They remain the natural next items for a session with a full window.
+- Everything in §32.3 stays blocked for the reasons given there.
+
+### 33.4 Tree state at handoff
+
+This section was committed **locally only, and not pushed** — a docs-only push
+would still owe the full standing bar under rule 32.1, which is not worth the
+budget immediately before the loop starts. **The next agent should push it
+alongside its first verified item.** If you are reading this and `main` is one
+docs commit ahead of `origin/main`, that is why, and it is expected.
