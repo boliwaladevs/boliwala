@@ -3544,3 +3544,87 @@ would still owe the full standing bar under rule 32.1, which is not worth the
 budget immediately before the loop starts. **The next agent should push it
 alongside its first verified item.** If you are reading this and `main` is one
 docs commit ahead of `origin/main`, that is why, and it is expected.
+
+---
+
+## 34. OVERNIGHT LOOP — running record (2026-08-31)
+
+Executing the §33.2 queue under the §32.1 rules. One entry per item, written as
+each item closes. **§32.4's morning summary is the last subsection.**
+
+### 34.1 Queue item 1 — bulk-upload sample CSV ✅ LANDED
+
+**What shipped** (`components/admin/bulk-upload-panel.tsx`, one commit):
+
+- A **"⬇ Download sample CSV"** button on the **Bulk Upload Excel** page, above
+  the file picker, with a short accepted-values note beside it.
+- The file is generated in the browser from the **same `TARGET_FIELDS` array the
+  parser reads** (§33.2's design decision — no static file in `public/`, so the
+  sample cannot disagree with the importer when S3/S7 change the column list).
+- 14 columns in importer order · 3 rows · row 2 leaves every optional cell blank
+  on purpose so the empty-cell format is visible · Bank column filled from the
+  live `banks` prop · ISO dates computed relative to today, so the sample never
+  goes stale · valid enum values.
+- **`scripts/bulk-sample-selfcheck.mjs`** — runs the round trip head­less:
+  generates the CSV using the component's own code (extracted from the file at
+  runtime, so it cannot drift), reads it back through the importer's path, and
+  asserts zero row errors **and** that the values survived. Run it whenever
+  `TARGET_FIELDS` changes: `node scripts/bulk-sample-selfcheck.mjs`.
+
+### 34.2 ⚠️ A REAL DATA-CORRUPTION BUG, found and fixed in the same commit
+
+**This is the important part of item 1, and it was not on anyone's list.**
+
+`XLSX.read(buf, { type: "array" })` was called **without `cellDates`**. SheetJS
+therefore turns a date cell into an **Excel serial number**, and the importer's
+validity check is `!isNaN(Date.parse(String(cell)))`:
+
+| what the admin types | what the parser saw | `Date.parse` | what got committed |
+|---|---|---|---|
+| `2026-09-15` | `46280` | **passes** | **year 46279** |
+
+So **every bulk-uploaded auction date and EMD deadline was silently written
+~44,000 years into the future** — no row error, no warning, the preview table
+showed a date, and the commit reported success. Measured, not theorised;
+reproduced against the real package before and after.
+
+**Fix:** pass `cellDates: true`. One option, same call, same function. Verified:
+`2026-09-15` now round-trips to 15 Sep 2026 00:00 IST.
+
+**Why this belongs to item 1 rather than a separate item:** §33.2's stated
+done-when was "re-importing the downloaded sample parses with zero row errors."
+The pre-fix code **passes that test** — the self-check output shows every row
+`OK` while every date reads year 46294. Shipping the sample alone would have
+handed the user a file that teaches the exact format that corrupts data. The
+acceptance criterion was strengthened to assert the parsed *values*, not just
+the absence of errors.
+
+**Two related traps, documented in the UI, not fixed** (no unambiguous fix, and
+out of scope):
+
+1. `15/09/2026` is **rejected** (row error — visible, so it is the safe failure).
+   `09/03/2026` is read by SheetJS as **3 September**, not 9 March — silently
+   wrong. Hence ISO-only in the sample and stated on screen.
+2. **`bulkCommitListings` swallows insert failures** —
+   `admin-listings.ts:211` is `if (!error) committed += 1`, so a row the DB
+   rejects (e.g. a mistyped `propertyType`, which the client passes through
+   unchanged rather than defaulting) is **dropped with no message**; the toast
+   just reports a smaller number. Left alone deliberately — it is a real
+   reporting weakness but fixing it is its own item. **Worth queueing.**
+   Note this corrects §33.2's trap 3: a *blank* enum falls back to
+   `residential`/`physical`; a *typo* does not fall back, it is passed through.
+
+### 34.3 Verification — full standing bar, all green
+
+- `tsc --noEmit` — clean.
+- Cold `pnpm build` (`.next` deleted, `SUPABASE_SERVICE_ROLE_KEY` blanked) —
+  clean, **25 routes** (was 24 in §22.2; `/partner/login` is the new one, from
+  Item 5).
+- **Leak test PASS** — 12/12 listings, 96 column-key + 96 value checks.
+- **Access matrix PASS** — 49 assertions, 7 viewer states.
+- **Route sweep, 21 routes** — identical to the §22.2 baseline: public 200,
+  `/listing` 307, `/profile` `/admin` `/partner/dashboard` 307 for a guest, bad
+  slug 404, plus `/partner/login` 200.
+- `node scripts/bulk-sample-selfcheck.mjs` — PASS.
+- **Not verified in a browser.** The button, its layout and the download gesture
+  are confirmed at the code/round-trip level only. Worth one eyeball pass.

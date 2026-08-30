@@ -23,6 +23,30 @@ const TARGET_FIELDS: { key: keyof ListingInput; label: string; required: boolean
   { key: "areaSqft", label: "Area (sq.ft)", required: false },
 ]
 
+// Sample-file values, keyed by field so the CSV is always emitted in TARGET_FIELDS order
+// and cannot drift from what the parser reads. Row 2 leaves every optional blank on purpose,
+// so the format of an empty cell is visible too.
+const SAMPLE_VALUES: Partial<Record<keyof ListingInput, [string, string, string]>> = {
+  title: ["2 BHK Flat in Kharadi", "Commercial Shop on MG Road", "Industrial Warehouse, Chakan MIDC"],
+  city: ["Pune", "Nashik", "Pune"],
+  addressLine: ["Flat 402, Sunrise Residency, Kharadi", "Shop 12, MG Road", "Plot 7, MIDC Phase II, Chakan"],
+  locality: ["Kharadi", "", "Chakan"],
+  state: ["Maharashtra", "", "Maharashtra"],
+  pincode: ["411014", "", "410501"],
+  reservePrice: ["5200000", "1850000", "24500000"],
+  emdAmount: ["520000", "185000", "2450000"],
+  propertyType: ["residential", "", "industrial"],
+  possessionType: ["physical", "", "symbolic"],
+  areaSqft: ["720", "", "12500"],
+}
+
+const csvEscape = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
+
+// ISO (yyyy-mm-dd) only. Date.parse reads 15/09/2026 as invalid, and the sheet reader
+// reads 09/03/2026 as 3 September, not 9 March — so a DD/MM sample would teach a format
+// that silently sets the wrong auction date.
+const isoInDays = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10)
+
 interface ParsedRow {
   rowNumber: number
   input: ListingInput
@@ -58,7 +82,9 @@ export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }
   const handleFile = async (file: File) => {
     setResult(null)
     const buf = await file.arrayBuffer()
-    const workbook = XLSX.read(buf, { type: "array" })
+    // cellDates: without it the reader turns an ISO date cell into an Excel serial number
+    // (2026-09-15 -> 46280), which Date.parse accepts and commits as the year 46279.
+    const workbook = XLSX.read(buf, { type: "array", cellDates: true })
     const sheet = workbook.Sheets[workbook.SheetNames[0]]
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" })
     if (rows.length === 0) {
@@ -73,6 +99,32 @@ export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }
     for (const field of TARGET_FIELDS) autoMapping[field.key] = guessColumn(detectedHeaders, field.key, field.label)
     setMapping(autoMapping)
     setParsed([])
+  }
+
+  const downloadSample = () => {
+    // Bank must resolve against the real list or every row errors, so the sample is filled
+    // from the banks actually in the database rather than an invented name.
+    const bankFor = (i: number) => (banks.length > 0 ? banks[i % banks.length].name : "")
+    const values: Partial<Record<keyof ListingInput, [string, string, string]>> = {
+      ...SAMPLE_VALUES,
+      bankId: [bankFor(0), bankFor(1), bankFor(2)],
+      auctionDate: [isoInDays(30), isoInDays(45), isoInDays(60)],
+      emdDeadline: [isoInDays(23), isoInDays(38), isoInDays(53)],
+    }
+
+    const lines = [TARGET_FIELDS.map((f) => csvEscape(f.label)).join(",")]
+    for (let i = 0; i < 3; i++) {
+      lines.push(TARGET_FIELDS.map((f) => csvEscape(values[f.key]?.[i] ?? "")).join(","))
+    }
+
+    // BOM so Excel opens it as UTF-8; CRLF because that is what Excel writes back out.
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "boliwala-bulk-upload-sample.csv"
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const findBank = (name: string): string | undefined => {
@@ -174,6 +226,25 @@ export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }
           title="How bulk upload works"
           subtitle="Upload any .xlsx/.csv file, map its columns to listing fields below, preview and fix errors, then commit — everything is created as a draft, never published directly."
         />
+        <div className="mt-4 p-3.5 border border-border rounded-lg bg-muted/30">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[13px] font-semibold text-foreground">Not sure what the file should look like?</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Download a sample with all 14 columns, filled in with three example rows.</div>
+            </div>
+            <button onClick={downloadSample} className="h-8.5 px-4 bg-secondary text-secondary-foreground border border-border font-semibold rounded-lg text-[13px] shrink-0">
+              ⬇ Download sample CSV
+            </button>
+          </div>
+          <ul className="mt-3 pt-3 border-t border-border space-y-1 text-xs text-muted-foreground">
+            <li><strong className="text-foreground">Required:</strong> Title, Bank (name), City, Address Line, Reserve Price, EMD Amount, Auction Date, EMD Deadline. Everything else may be left blank.</li>
+            <li><strong className="text-foreground">Bank (name)</strong> must match a bank already in the system, or the row is rejected.</li>
+            <li><strong className="text-foreground">Dates</strong> must be written as <code className="font-mono">YYYY-MM-DD</code> (e.g. 2026-09-15). <code className="font-mono">15/09/2026</code> is rejected, and <code className="font-mono">09/03/2026</code> is read as 3 September, not 9 March.</li>
+            <li><strong className="text-foreground">Property Type:</strong> residential · commercial · industrial · agricultural · mixed_use. <strong className="text-foreground">Possession Type:</strong> physical · symbolic. Left blank they default to residential / physical; a value that is not on these lists can cause the row to be dropped without an error.</li>
+            <li>Every imported row is created as a <strong className="text-foreground">draft</strong> — publish from the Listings page. Photos and documents are not part of this file.</li>
+          </ul>
+        </div>
+
         <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:bg-muted/50 hover:border-primary transition-colors mt-4">
           <div className="text-3xl mb-1.5">📊</div>
           <div className="text-sm font-semibold text-foreground mb-0.5">Click to choose your Excel/CSV file</div>
