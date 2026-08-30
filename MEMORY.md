@@ -3747,3 +3747,196 @@ match to the rupee.
   `bulk-sample-selfcheck` PASS.
 - **Not verified in a browser.** The per-sq-ft line's appearance under the price
   on a real card, at each breakpoint, has not been looked at.
+
+### 34.8 Queue item 4 — §30.4 listing pages 500 on the Worker: ROOT-CAUSED, NOT FIXED
+
+**§30.4 is no longer a mystery. The exception, read off `wrangler tail` exactly
+as §29.5 demanded, before forming any theory:**
+
+```
+Error: supabaseKey is required.
+    at new c3 (worker.js:63398:29)
+    at c4 (worker.js:63464:59)
+    at c2 (worker.js:107485:37)
+```
+
+**Cause, and why it hits only listing pages.** `wrangler secret list --name
+boliwala` — **which ran successfully for the first time, returning `[]`** — the
+Worker has **no secrets at all**. And `SUPABASE_SERVICE_ROLE_KEY` is the **only
+non-`NEXT_PUBLIC_` variable in the entire codebase** (checked by sweeping every
+`process.env.*` reference in `app/`, `lib/`, `components/`, `scripts/`; the
+other six are all `NEXT_PUBLIC_*`).
+
+So the split is exact:
+
+- `NEXT_PUBLIC_*` are **inlined at build time** and were set correctly as build
+  variables (§27.6's trap was avoided) — everything using the anon client works.
+- `SUPABASE_SERVICE_ROLE_KEY` is read **at runtime** by `createAdminClient()`
+  (`lib/supabase/admin.ts:15`). On Workers that value can only come from a
+  secret, and there is none — so `createSupabaseClient` throws.
+- `/listing/[slug]` is the only **guest-reachable** route that touches the
+  service-role client (`lib/data/listings.ts:218` for gated-column redaction,
+  `lib/data/views.ts:22` for view tracking). Hence: it alone 500s.
+
+**Confirmed against the deployed Worker** — every route correct except the
+listing family:
+
+| route | Worker |
+|---|---|
+| `/` `/search` `/login` `/signup` `/pricing` `/about` `/faq` `/contact` `/services` `/partner` `/partner/login` `/reset-password` `/robots.txt` `/sitemap.xml` | 200 |
+| `/listing` | 307 |
+| `/profile` `/admin` `/partner/dashboard` (guest) | 307 |
+| **`/listing/<any valid slug>`** | **500** |
+| **`/listing/no-such-slug-xyz`** | **500** (should be 404 — the service-role call throws before the not-found path is reached) |
+
+**NOT FIXED, and deliberately so.** There is no in-repo fix. The only fix is
+setting the secret, and `wrangler secret put` is forbidden by rule 4. Putting
+the key in `wrangler.toml` `[vars]` would commit a service-role key — which
+bypasses RLS and every column grant — into git, and was never an option.
+
+> **▶ THE COMMAND FOR THE USER. One command; syntax verified against
+> `wrangler secret put --help` on 4.127.1. The value is in
+> `project/.env.local` under the same name.**
+>
+> ```
+> npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name boliwala
+> ```
+>
+> (`--name` is optional — `wrangler.toml` already declares `name = "boliwala"`.)
+> It prompts for the value; paste it. Secrets persist across deployments, so
+> this is a one-time action. **Then re-run the Item 1a gate in §34.9.**
+
+**Gotcha for the next agent — §33.2's tail command is wrong for this wrangler.**
+In 4.127.1 `tail` takes the Worker as a **positional**, not `--name`:
+`npx wrangler tail --name boliwala` fails with `Unknown argument: name`. Use:
+
+```
+npx wrangler tail boliwala --format json
+```
+
+`secret list` and `secret put` **do** take `--name`. Only `tail` changed.
+
+### 34.9 Queue item 5 — Item 1a: CONDITIONAL GO, verdict not yet closeable
+
+§33.2 gated this on item 4 resolving. It did not resolve — the fix is the user's
+to apply — so **the full gate cannot be run and no unconditional verdict is
+recorded.** What can be said on evidence, though, is a good deal more than "open":
+
+**The blocker is a missing secret, not the adapter.** Everything that would
+actually indict OpenNext is working on the deployed Worker. Verified live
+against `https://boliwala.boliwaladevs.workers.dev` this session:
+
+- Server-rendered dynamic search with filters and DB reads — **200**, correct.
+- **Tonight's three items all work on the Worker**, which is a real end-to-end
+  test of the adapter: `?sort=popular` returns the exact `viewCount desc` order
+  from Postgres; ₹/sq ft renders on the cards (₹2,875 · ₹4,453 · ₹19,375 · ₹170);
+  all five sort options present; and a guest hitting `/profile` gets
+  `Location: /login?next=%2Fprofile` — so redirects, server components and
+  route handlers are all behaving.
+- Static, ISR and asset routes all 200. Redirect/404 semantics correct
+  everywhere the service-role client is not involved.
+
+**Workers Builds is healthy and auto-deploying.** Deployments at 21:14, 21:26
+and 21:34 UTC line up with tonight's three pushes, each landing ~2 minutes after
+its push. Live version `68eced58`. **Nothing about the build pipeline needs
+attention** — §28's connection is working as intended.
+
+**What remains before the verdict closes** — after the one command in §34.8:
+
+1. `node scripts/leak-test.mjs https://boliwala.boliwaladevs.workers.dev`
+   (cannot pass today: it reads all 12 listing pages, which currently 500).
+2. `node --experimental-strip-types --import ./scripts/ts-resolve-hook.mjs scripts/access-matrix-test.mjs`
+3. Re-sweep the routes; expect `/listing/<slug>` 200 and the bad slug 404.
+
+**The one caveat to record rather than treat as a failure (§32.2 item 2):**
+Google login against the Worker origin is untestable until that origin is added
+in the Google Cloud console. **A Google failure there is expected and is NOT a
+no-go.** Note this now also covers the `next` cookie added in §34.4, whose
+Google leg is likewise untested.
+
+**My reading, stated as a prediction and not as a result:** every piece of
+evidence points to a go, and the remaining risk is concentrated in one command
+whose failure mode is obvious and immediately visible. But it is a prediction —
+the gate has not been run, and nobody should record a go until it has.
+
+### 34.10 ☀️ MORNING SUMMARY — read this first
+
+Answering §32.4's questions in its order.
+
+**1. Did §30.4 get fixed, and is Item 1a decided?**
+
+**§30.4 is root-caused but NOT fixed. Item 1a is NOT decided — it is a
+conditional go.** The exception is `Error: supabaseKey is required.`; the Worker
+has no secrets (`wrangler secret list` returned `[]`, its first successful run);
+`SUPABASE_SERVICE_ROLE_KEY` is the only runtime variable the app has, and
+`/listing/[slug]` is the only guest-reachable route that needs it. The fix is
+one command, and rule 4 forbids me from running it:
+
+```
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name boliwala
+```
+
+**This is the single highest-value thing to do in the morning.** Value is in
+`project/.env.local`. Then run the three checks in §34.9 and the verdict closes.
+Full detail: §34.8, §34.9.
+
+**2. What landed on `main`?** Four commits, each with the full standing bar
+green before it went out, one item per commit:
+
+| commit | what | detail |
+|---|---|---|
+| `215458c` | Bulk-upload sample CSV **+ a silent date-corruption fix** | §34.1–34.3 |
+| `048193f` | S9 redirect-preserving auth with a tested open-redirect guard | §34.4–34.5 |
+| `9bb6443` | S7 popularity sort + reserve price per sq ft | §34.6–34.7 |
+| this one | §30.4 root cause, Item 1a conditional verdict, this summary | §34.8–34.10 |
+
+The §33.4 docs commit that was sitting unpushed went up with `215458c`, as
+planned. **All three feature commits are deployed and verified working on the
+Cloudflare Worker** (§34.9).
+
+**The one thing to read even if you read nothing else:** bulk upload was
+silently corrupting every date. `2026-09-15` became the Excel serial `46280`,
+`Date.parse` accepted it, and the row committed with an auction date in **year
+46279** — no error, preview showed a date, commit reported success. Fixed. This
+was found only because the sample CSV had to be round-tripped to prove it was
+right; the originally-agreed acceptance test ("re-imports with zero row errors")
+**passes on the broken code**, which is why the test was strengthened.
+
+**3. What is sitting on an unmerged branch, and why?** **Nothing.** Everything
+this session went straight to `main` behind the full bar. Two stale branches can
+be deleted whenever convenient: `item5-navbar-partner-auth` (local + remote —
+already merged as `e0b0f43`, confirmed in §33.0) and `feat_hriday`.
+
+**4. What was attempted and abandoned, and why?**
+
+- **S5 (SEO route scaffolding)** and **S3 (lender model on a branch)** — **not
+  attempted**, exactly as §33.3 pre-committed. Each is larger than the remaining
+  window could clear against the standing bar, and half-built is worse than
+  untouched.
+- **The §30.4 fix itself** — abandoned at rule 4, on purpose, with the command
+  written out instead (§34.8). Nothing was forced through.
+- Nothing was started and left half-done. No half-states to discover.
+
+**5. What now needs a decision or an action?**
+
+*Actions, no decision needed:*
+
+1. **Run the secret command** (§34.8), then the three checks in §34.9 to close
+   Item 1a. Highest value, ~5 minutes.
+2. **Header "Log In" link still drops context** — `components/header.tsx:119`
+   and `:203` go to a bare `/login`. Same conversion leak S9 just closed, one
+   link away; it was outside §33.2's agreed scope so it was not bundled in.
+   Two lines: `withNext("/login", currentPath())`. §34.4.
+3. **`bulkCommitListings` swallows insert failures** —
+   `app/actions/admin-listings.ts:211` is `if (!error) committed += 1`, so a row
+   the DB rejects vanishes with no message and the toast just reports a smaller
+   number. Its own item; worth queueing before real inventory arrives. §34.2.
+4. **An eyeball pass in a browser.** Nothing this session was seen rendered —
+   the sample-CSV button, the ₹/sq ft line under the price, and the login
+   redirect flow are all verified at code and HTTP level only.
+
+*Genuinely needs a decision (unchanged, all still blocking):* **D0** launch
+date · **D2** domain · **D3b** inventory data source — still the longest-lead
+commercial item and still blocking S4–S8, which is the ~50,000-listing gap
+`coparison.md` §1 calls our single biggest competitive weakness · **D7** · **D8**
+· **D9**. Nothing this session moved any of them, and nothing this session could.

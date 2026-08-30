@@ -395,3 +395,7 @@ gap. It should be escalated ahead of everything else in this table.
       sort on the already-tracked `viewCount`; ₹/sq ft on cards and listing pages,
       hidden when area is unknown. Rest of S7 still blocked on missing columns.
       `MEMORY.md` §34.6–34.7.
+- [x] **§30.4 root-caused** — Worker listing pages 500 with `supabaseKey is
+      required`; the Worker has no secrets and `SUPABASE_SERVICE_ROLE_KEY` is the
+      only runtime var. Fix is one `wrangler secret put`, blocked by loop rule 4
+      and written out for the user. Item 1a is a conditional go. `MEMORY.md` §34.8–34.10.
