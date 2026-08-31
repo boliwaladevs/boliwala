@@ -399,3 +399,6 @@ gap. It should be escalated ahead of everything else in this table.
       required`; the Worker has no secrets and `SUPABASE_SERVICE_ROLE_KEY` is the
       only runtime var. Fix is one `wrangler secret put`, blocked by loop rule 4
       and written out for the user. Item 1a is a conditional go. `MEMORY.md` §34.8–34.10.
+- [x] **Item 1a — Cloudflare go/no-go: GO (2026-08-31).** Secret set; leak test
+      12/12 against the deployed Worker, access matrix 49/49, 22-route sweep clean.
+      `MEMORY.md` §35.

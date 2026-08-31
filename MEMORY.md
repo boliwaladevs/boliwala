@@ -3940,3 +3940,61 @@ date · **D2** domain · **D3b** inventory data source — still the longest-lea
 commercial item and still blocking S4–S8, which is the ~50,000-listing gap
 `coparison.md` §1 calls our single biggest competitive weakness · **D7** · **D8**
 · **D9**. Nothing this session moved any of them, and nothing this session could.
+
+---
+
+## 35. ✅ §30.4 CLOSED and Item 1a decided — GO (2026-08-31)
+
+The user set the secret. §34.8's one command was the whole of it.
+
+### 35.1 §30.4 is fixed
+
+`wrangler secret list --name boliwala` now returns
+`[{ "name": "SUPABASE_SERVICE_ROLE_KEY", "type": "secret_text" }]`.
+
+| | before | after |
+|---|---|---|
+| `/listing/industrial-warehouse-chakan-pune-union` | 500 | **200** |
+| `/listing/2bhk-flat-kharghar-navi-mumbai-sbi` | 500 | **200** |
+| `/listing/no-such-slug-xyz` | 500 | **404** (correct) |
+
+The root cause in §34.8 was exactly right and the fix needed no code. **§30.4 is
+closed. Do not re-investigate it.**
+
+### 35.2 Item 1a — GO
+
+Full gate run against `https://boliwala.boliwaladevs.workers.dev`:
+
+- **Leak test PASS — 12/12 listings, 96 column-key + 96 value checks, against
+  the deployed Worker.** This is the gate that was blocking the verdict, and it
+  is the blocking security gate in the standing bar. It has now passed on
+  Cloudflare, not just locally.
+- **Access matrix PASS — 49 assertions, 7 viewer states.**
+- **Route sweep, 22 routes — identical to the §22.2 local baseline:** 16×200,
+  4×307 (`/listing`, and `/profile` `/admin` `/partner/dashboard` for a guest),
+  1×404 for a bad slug, plus `?sort=popular` 200.
+- Bundle size gate was already passed at **2.74 MiB gzip** against a 10 MB
+  ceiling (§27); tonight added ~200 lines and it was not re-measured.
+- Workers Builds auto-deploys each push in ~2 minutes (§34.9).
+
+**Verdict: GO. `@opennextjs/cloudflare` is fit for this app.** Every Windows
+failure in §27 was the local path-separator bug (§5 gotcha #10) and none of it
+argued against the adapter, as §27 predicted. `vinext` is not needed; Vercel Pro
+is not needed.
+
+### 35.3 The two things the gate does NOT cover — read before treating this as total
+
+1. **Google login against the Worker origin is still untestable** until that
+   origin is added in the Google Cloud console. Expected, and **explicitly NOT a
+   no-go** (§32.2 item 2). This also covers the `next` cookie added in §34.4,
+   whose Google leg remains untested.
+2. **Email/password login has not been exercised in a browser against the
+   Worker.** The mechanical gate proves the Worker serves every route, reads the
+   DB, redacts gated columns correctly and redirects guests correctly — but
+   nobody has signed in on the deployed origin and watched the session survive.
+   The auth call itself goes to Supabase directly from the browser, so what is
+   actually unproven is **the Worker reading the session cookie server-side and
+   rendering `/profile` as a signed-in user**. It is the one manual check worth
+   doing before Item 1b.
+
+**Item 1a is done. Item 1b (DNS) is next, and is blocked on D2 — the domain.**
