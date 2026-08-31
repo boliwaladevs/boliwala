@@ -1,7 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { ChevronDown } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ListingsPanel } from "./admin/listings-panel"
 import { ListingFormPanel } from "./admin/listing-form-panel"
 import { BulkUploadPanel } from "./admin/bulk-upload-panel"
@@ -33,6 +35,28 @@ const pageMap: Record<string, { title: string; crumb: string }> = {
   'settings': { title: 'Settings', crumb: 'Boliwala Admin › Settings' },
 }
 
+interface NavGroupItem {
+  id: string
+  icon: string
+  label: string
+  badge?: string
+  badgeColor?: string
+}
+
+interface NavGroupDef {
+  label: string
+  items: NavGroupItem[]
+}
+
+/**
+ * Which sidebar groups the user has collapsed.
+ *
+ * Stored as the collapsed labels rather than the open ones, so the default is
+ * "everything open" and a group added later shows up instead of silently
+ * hiding behind a stale preference.
+ */
+const NAV_COLLAPSED_KEY = "bw_admin_nav_collapsed"
+
 export function AdminView({
   adminName,
   kpis,
@@ -51,6 +75,7 @@ export function AdminView({
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [editingListingId, setEditingListingId] = useState<string | null>(null)
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([])
 
   const currentPage = pageMap[activePage] || pageMap['dashboard']
 
@@ -74,9 +99,109 @@ export function AdminView({
     )
   }
 
-  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-    <div className="text-[10px] font-bold uppercase tracking-[1.2px] text-white/30 px-5 pt-3.5 pb-1.5">{children}</div>
-  )
+  // The sidebar as data rather than markup, so each group can carry its own
+  // disclosure state and roll its children's badges up onto a collapsed header.
+  const navGroups: NavGroupDef[] = [
+    {
+      label: "Listings",
+      items: [
+        { id: "dashboard", icon: "📊", label: "Dashboard" },
+        { id: "listings", icon: "🏠", label: "All Listings", badge: String(kpis.activeListings), badgeColor: "bg-amber-500" },
+        { id: "add-listing", icon: "➕", label: "Add Listing" },
+        { id: "bulk-upload", icon: "📂", label: "Bulk Upload Excel" },
+      ],
+    },
+    {
+      label: "Leads & Sales",
+      items: [
+        { id: "callbacks", icon: "📞", label: "Callback Requests", badge: String(kpis.callbackRequestsUnread) },
+        { id: "packages", icon: "💼", label: "Package Purchases", badge: "9", badgeColor: "bg-amber-500" },
+        { id: "requests", icon: "📋", label: "Service Pipeline" },
+      ],
+    },
+    {
+      label: "Finance",
+      items: [
+        { id: "payments", icon: "💰", label: "Payments" },
+        { id: "success-fees", icon: "🏆", label: "Success Fees", badge: "4" },
+      ],
+    },
+    {
+      label: "Users & Partners",
+      items: [
+        { id: "users", icon: "👥", label: "All Users" },
+        { id: "partners", icon: "🤝", label: "Channel Partners", badge: "6", badgeColor: "bg-amber-500" },
+      ],
+    },
+    {
+      label: "Engagement",
+      items: [
+        { id: "alerts", icon: "🔔", label: "Alert Subscribers" },
+        { id: "alert-engine", icon: "⚡", label: "Alert Engine & Log" },
+        { id: "email-campaigns", icon: "📧", label: "Email Campaigns" },
+        { id: "whatsapp", icon: "💬", label: "WhatsApp Tools" },
+        { id: "segments", icon: "🎯", label: "Segments & Export" },
+        { id: "engagement", icon: "📊", label: "Engagement Analytics" },
+      ],
+    },
+    {
+      label: "Tools",
+      items: [
+        { id: "analytics", icon: "📈", label: "Site Analytics" },
+        { id: "settings", icon: "⚙️", label: "Settings" },
+      ],
+    },
+  ]
+
+  // Read after mount, not during render: this component is server-rendered and
+  // localStorage does not exist there. Everything open is the honest fallback.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(NAV_COLLAPSED_KEY)
+      if (raw) setCollapsedGroups(JSON.parse(raw))
+    } catch {
+      // Private windows and cleared site data both land here. Not worth a UI.
+    }
+  }, [])
+
+  // Never leave the group holding the active item collapsed — a refresh always
+  // starts on the Dashboard, and panels navigate here programmatically, so the
+  // sidebar would otherwise hide where you are. Deliberately not persisted:
+  // "I collapsed Engagement" should still hold once you leave Engagement.
+  // The functional update matters — on mount this runs in the same batch as the
+  // restore above and must see the restored list, not the initial one.
+  useEffect(() => {
+    const active = navGroups.find((g) => g.items.some((i) => i.id === activePage))?.label
+    if (!active) return
+    setCollapsedGroups((prev) => (prev.includes(active) ? prev.filter((l) => l !== active) : prev))
+    // navGroups is rebuilt every render; activePage is what actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePage])
+
+  const toggleGroup = (label: string) => {
+    const next = collapsedGroups.includes(label)
+      ? collapsedGroups.filter((l) => l !== label)
+      : [...collapsedGroups, label]
+    setCollapsedGroups(next)
+    try {
+      window.localStorage.setItem(NAV_COLLAPSED_KEY, JSON.stringify(next))
+    } catch {
+      // Same as above: the sidebar works, the preference just will not survive.
+    }
+  }
+
+  // A collapsed group must still show what it is hiding. A folded-away
+  // "Leads & Sales" that swallows an unread callback count is a regression, not
+  // a feature, so the children's badges roll up into one on the header. Red
+  // wins over amber: it is the colour the unread counts use.
+  const groupBadge = (group: NavGroupDef) => {
+    const badged = group.items.filter((i) => i.badge && i.badge !== "0")
+    if (badged.length === 0) return null
+    return {
+      total: String(badged.reduce((sum, i) => sum + (Number(i.badge) || 0), 0)),
+      color: badged.some((i) => (i.badgeColor ?? "bg-red-500") === "bg-red-500") ? "bg-red-500" : "bg-amber-500",
+    }
+  }
 
   const StatCard = ({ icon, trend, trendUp = true, trendFlat = false, value, label, iconBg }: any) => (
     <div className="bg-card border border-border rounded-xl p-4.5 shadow-sm">
@@ -178,31 +303,26 @@ export function AdminView({
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-white/50 hover:text-white">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto py-2 scrollbar-hide">
-          <SectionLabel>Listings</SectionLabel>
-          <NavItem id="dashboard" icon="📊" label="Dashboard" />
-          <NavItem id="listings" icon="🏠" label="All Listings" badge={String(kpis.activeListings)} badgeColor="bg-amber-500" />
-          <NavItem id="add-listing" icon="➕" label="Add Listing" />
-          <NavItem id="bulk-upload" icon="📂" label="Bulk Upload Excel" />
-          <SectionLabel>Leads & Sales</SectionLabel>
-          <NavItem id="callbacks" icon="📞" label="Callback Requests" badge={String(kpis.callbackRequestsUnread)} />
-          <NavItem id="packages" icon="💼" label="Package Purchases" badge="9" badgeColor="bg-amber-500" />
-          <NavItem id="requests" icon="📋" label="Service Pipeline" />
-          <SectionLabel>Finance</SectionLabel>
-          <NavItem id="payments" icon="💰" label="Payments" />
-          <NavItem id="success-fees" icon="🏆" label="Success Fees" badge="4" />
-          <SectionLabel>Users & Partners</SectionLabel>
-          <NavItem id="users" icon="👥" label="All Users" />
-          <NavItem id="partners" icon="🤝" label="Channel Partners" badge="6" badgeColor="bg-amber-500" />
-          <SectionLabel>Engagement</SectionLabel>
-          <NavItem id="alerts" icon="🔔" label="Alert Subscribers" />
-          <NavItem id="alert-engine" icon="⚡" label="Alert Engine & Log" />
-          <NavItem id="email-campaigns" icon="📧" label="Email Campaigns" />
-          <NavItem id="whatsapp" icon="💬" label="WhatsApp Tools" />
-          <NavItem id="segments" icon="🎯" label="Segments & Export" />
-          <NavItem id="engagement" icon="📊" label="Engagement Analytics" />
-          <SectionLabel>Tools</SectionLabel>
-          <NavItem id="analytics" icon="📈" label="Site Analytics" />
-          <NavItem id="settings" icon="⚙️" label="Settings" />
+          {navGroups.map((group) => {
+            const isOpen = !collapsedGroups.includes(group.label)
+            const rollup = groupBadge(group)
+            return (
+              <Collapsible key={group.label} open={isOpen} onOpenChange={() => toggleGroup(group.label)}>
+                <CollapsibleTrigger className="w-full flex items-center gap-1.5 px-5 pt-3.5 pb-1.5 text-[10px] font-bold uppercase tracking-[1.2px] text-white/30 hover:text-white/60 transition-colors">
+                  <ChevronDown className={`w-3 h-3 shrink-0 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`} />
+                  <span className="flex-1 text-left">{group.label}</span>
+                  {!isOpen && rollup && (
+                    <span className={`text-[10px] font-bold text-white px-2 py-0.5 rounded-full min-w-[20px] text-center ${rollup.color}`}>{rollup.total}</span>
+                  )}
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  {group.items.map((item) => (
+                    <NavItem key={item.id} id={item.id} icon={item.icon} label={item.label} badge={item.badge} badgeColor={item.badgeColor} />
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )
+          })}
         </div>
         <div className="p-3.5 border-t border-white/10 flex items-center gap-2.5 mt-auto shrink-0 bg-[#0A0F1C]">
           <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[13px] font-bold text-white shrink-0">{adminName.charAt(0).toUpperCase()}</div>

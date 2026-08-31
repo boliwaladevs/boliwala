@@ -4641,3 +4641,103 @@ dependency was left alone as out-of-scope and not mine to decide unattended.
 2. There is still **no CHECK constraint on `profiles.role`**, so the four-role
    vocabulary is enforced only in application code. That is what the migration
    above is for.
+
+### 37.9 ITEM B — collapsible admin sidebar sections ✅ LANDED (visual check still owed)
+
+**Commit:** `ITEM_B_HASH`
+
+**What changed in `components/admin-view.tsx`:** the sidebar was a flat run of
+`SectionLabel` + `NavItem` markup — six labels and 19 items, all siblings, with
+no structure tying a label to the items beneath it. It is now **data**: a
+`navGroups: NavGroupDef[]` array built inside the component (so it still closes
+over `kpis`), rendered through Radix `Collapsible`.
+
+`SectionLabel` is **deleted** — my change orphaned it, so it went with the
+change. Nothing else in the file used it.
+
+**Decisions worth knowing:**
+
+- **Radix `Collapsible`, not `Accordion`.** Both were already vendored, but
+  `Accordion` is used in this codebase as `type="single"` (`services-view.tsx`),
+  which closes every other group when you open one. A sidebar wants several
+  groups open at once, so one controlled `Collapsible` per group is the right
+  primitive. It was vendored and previously unused.
+- **The stored preference is the *collapsed* list, not the open list**
+  (`bw_admin_nav_collapsed` in `localStorage`). Storing "what is open" means a
+  group added later is absent from the stored set and defaults to hidden. This
+  way the default is open and a new group appears.
+- **The active group is forced open, and that override is deliberately not
+  persisted.** `activePage` starts at `dashboard` on every load and other
+  panels navigate programmatically (`goToAddListing`, `goToEditListing`,
+  `goToBulkUpload`), so a collapsed group would otherwise hide where you are.
+  Not persisting means "I collapsed Engagement" still holds once you leave
+  Engagement — and, importantly, you can still collapse the group you are
+  currently in, because the re-open effect only fires when `activePage`
+  changes, not on every toggle.
+- **The re-open effect uses a functional `setState` on purpose.** On mount it
+  runs in the same batch as the `localStorage` restore, so it has to read the
+  restored list rather than the initial `[]`. A plain value update there would
+  silently lose the restore and the active group would stay hidden on load —
+  exactly the regression §37.2 warned about.
+- **`localStorage` is read in a post-mount `useEffect`, never during render.**
+  `/admin` is a server-rendered route (`ƒ` in the build output), so a render-
+  time read would break SSR. Both the read and the write are wrapped in
+  `try/catch` — private windows and cleared site data both throw.
+- **Collapsed groups keep their badges.** A folded-away "Leads & Sales" that
+  swallows an unread-callback count is a regression, so `groupBadge()` rolls
+  the children's badges into one count on the header, shown only while
+  collapsed. Red wins over amber when a group mixes them, because red is the
+  colour the unread counts use. Zero-valued badges are excluded rather than
+  rendered as a "0" chip.
+
+#### Verification
+
+`npx tsc --noEmit` — **clean, exit 0.**
+
+`pnpm run build` — **succeeded**, route table unchanged.
+
+The compiled client bundle actually carries the new sidebar (not just a
+type-level pass):
+
+```
+Leads & Sales              in 1 chunk(s)
+Users & Partners           in 1 chunk(s)
+bw_admin_nav_collapsed     in 1 chunk(s)
+collapsible-trigger        in 1 chunk(s)
+collapsible-content        in 4 chunk(s)
+```
+
+No regression in either standing test, re-run against a local `next start`
+production server built from this commit:
+
+```
+Column-key checks: 96
+Non-empty value checks: 96
+RESULT: PASS — no gated data in guest HTML
+
+49 assertions across 7 viewer states
+RESULT: PASS — gating matrix correct
+23 assertions across 8 role/door pairs
+RESULT: PASS — login doors correct
+```
+
+#### ⚠️ The visual check is NOT done — it is yours
+
+§37.2 asked for screenshots of the sidebar collapsed and expanded and a
+refresh-on-a-non-default-tab check. **That needs a signed-in browser session as
+the superadmin, which is not available unattended** — `/admin` correctly 307s
+without one, and creating a session would have meant writing to auth. You said
+before stepping away that you would verify B on return, so this is the agreed
+split, not a skipped step.
+
+**What to click when you check it:**
+
+1. Collapse `Engagement` → its six items hide, the chevron rotates.
+2. Refresh → `Engagement` is still collapsed, `Listings` is open because
+   Dashboard is active.
+3. Collapse `Leads & Sales` while a callback count is non-zero → the count
+   appears as a single red chip on the collapsed header.
+4. From the Dashboard, use a button that jumps to a panel in a collapsed group
+   (e.g. Add Listing) → that group opens by itself.
+5. Collapse the group you are *currently* in → it should stay collapsed and
+   not fight you.
