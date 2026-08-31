@@ -43,9 +43,9 @@ export function PartnerDashboardView() {
       {/* SIDEBAR */}
       <aside className="hidden md:flex flex-col w-[250px] bg-white border-r border-slate-200 sticky top-0 h-screen p-5 gap-1.5 shrink-0 z-30">
         <div className="flex items-center gap-2.5 pb-5">
-          <div className="w-[34px] h-[34px] rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg font-['Plus_Jakarta_Sans']">B</div>
+          <div className="w-[34px] h-[34px] rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg">B</div>
           <div>
-            <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[18px] leading-tight">Boliwala</div>
+            <div className="font-extrabold text-[18px] leading-tight">Boliwala</div>
             <div className="text-[11px] text-slate-500 font-medium">Partner Portal</div>
           </div>
         </div>
@@ -85,7 +85,7 @@ export function PartnerDashboardView() {
 
         <div className="mt-auto border-t border-slate-200 pt-3.5">
           <div className="flex items-center gap-2.5 p-2 rounded-[10px]">
-            <div className="w-9 h-9 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-sm font-['Plus_Jakarta_Sans'] shrink-0">RM</div>
+            <div className="w-9 h-9 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-sm shrink-0">RM</div>
             <div>
               <div className="font-semibold text-[13.5px] text-slate-900 leading-tight">Rahul Mehta</div>
               <div className="text-[11.5px] text-amber-600 font-semibold">● Gold Partner</div>
@@ -124,7 +124,7 @@ export function PartnerDashboardView() {
         {/* TOPBAR */}
         <header className="bg-white border-b border-slate-200 px-5 md:px-8 py-4 flex items-center justify-between sticky top-0 z-20">
           <div>
-            <h1 className="text-[21px] font-extrabold font-['Plus_Jakarta_Sans']">{pageTitles[activeView].title}</h1>
+            <h1 className="text-[21px] font-extrabold">{pageTitles[activeView].title}</h1>
             <div className="text-[13px] text-slate-500 mt-0.5">{pageTitles[activeView].sub}</div>
           </div>
           <div className="hidden md:flex items-center gap-2.5">
@@ -147,42 +147,42 @@ export function PartnerDashboardView() {
                   <div className="w-[34px] h-[34px] rounded-lg bg-blue-50 flex items-center justify-center mb-3 text-blue-600">
                     <Users className="w-[18px] h-[18px]" />
                   </div>
-                  <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[25px] leading-none">45</div>
+                  <div className="font-extrabold text-[25px] leading-none">45</div>
                   <div className="text-[12.5px] text-slate-500 font-medium mt-1.5">Total Referrals</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm relative overflow-hidden">
                   <div className="w-[34px] h-[34px] rounded-lg bg-emerald-50 flex items-center justify-center mb-3 text-emerald-600">
                     <CheckCircle2 className="w-[18px] h-[18px]" />
                   </div>
-                  <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[25px] leading-none">32</div>
+                  <div className="font-extrabold text-[25px] leading-none">32</div>
                   <div className="text-[12.5px] text-slate-500 font-medium mt-1.5">Active Users</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm relative overflow-hidden">
                   <div className="w-[34px] h-[34px] rounded-lg bg-amber-50 flex items-center justify-center mb-3 text-amber-600">
                     <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"/></svg>
                   </div>
-                  <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[25px] leading-none">8</div>
+                  <div className="font-extrabold text-[25px] leading-none">8</div>
                   <div className="text-[12.5px] text-slate-500 font-medium mt-1.5">₹999 Subscribers</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm relative overflow-hidden">
                   <div className="w-[34px] h-[34px] rounded-lg bg-blue-50 flex items-center justify-center mb-3 text-blue-600">
                     <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg>
                   </div>
-                  <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[25px] leading-none">12</div>
+                  <div className="font-extrabold text-[25px] leading-none">12</div>
                   <div className="text-[12.5px] text-slate-500 font-medium mt-1.5">₹9,999 Packages</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm relative overflow-hidden">
                   <div className="w-[34px] h-[34px] rounded-lg bg-amber-50 flex items-center justify-center mb-3 text-amber-600">
                     <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"/></svg>
                   </div>
-                  <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[25px] leading-none">5</div>
+                  <div className="font-extrabold text-[25px] leading-none">5</div>
                   <div className="text-[12.5px] text-slate-500 font-medium mt-1.5">Auction Wins</div>
                 </div>
               </div>
 
               <div className="flex items-center justify-between mb-4 mt-2">
                 <div>
-                  <h2 className="text-[16px] font-bold font-['Plus_Jakarta_Sans']">Your referral link</h2>
+                  <h2 className="text-[16px] font-bold">Your referral link</h2>
                   <div className="text-[12.5px] text-slate-500">Share anywhere — every signup tracks back to you</div>
                 </div>
               </div>
@@ -203,7 +203,7 @@ export function PartnerDashboardView() {
 
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-[16px] font-bold font-['Plus_Jakarta_Sans']">Earnings breakdown</h2>
+                  <h2 className="text-[16px] font-bold">Earnings breakdown</h2>
                   <div className="text-[12.5px] text-slate-500">This month · updates as referrals convert</div>
                 </div>
               </div>
@@ -218,7 +218,7 @@ export function PartnerDashboardView() {
                           <div className="text-[12px] text-slate-500">8 subscribers × ₹999 × 10%</div>
                         </div>
                       </div>
-                      <div className="font-['Plus_Jakarta_Sans'] font-bold text-[16px]">₹799</div>
+                      <div className="font-bold text-[16px]">₹799</div>
                     </div>
                     <div className="flex items-center justify-between p-[14px_4px] border-b border-dashed border-slate-200">
                       <div className="flex items-center gap-3">
@@ -228,7 +228,7 @@ export function PartnerDashboardView() {
                           <div className="text-[12px] text-slate-500">12 packages × ₹9,999 × 15%</div>
                         </div>
                       </div>
-                      <div className="font-['Plus_Jakarta_Sans'] font-bold text-[16px]">₹17,998</div>
+                      <div className="font-bold text-[16px]">₹17,998</div>
                     </div>
                     <div className="flex items-center justify-between p-[14px_4px]">
                       <div className="flex items-center gap-3">
@@ -238,14 +238,14 @@ export function PartnerDashboardView() {
                           <div className="text-[12px] text-slate-500">5 wins × ₹50L avg × 1% × 5%</div>
                         </div>
                       </div>
-                      <div className="font-['Plus_Jakarta_Sans'] font-bold text-[16px]">₹12,500</div>
+                      <div className="font-bold text-[16px]">₹12,500</div>
                     </div>
                   </div>
                 </div>
                 <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl p-6 flex flex-col justify-between shadow-sm">
                   <div>
                     <div className="text-[13px] text-white/85 font-medium">Total earnings this month</div>
-                    <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[38px] tracking-[-0.02em] mt-1.5 mb-1">₹31,297</div>
+                    <div className="font-extrabold text-[38px] tracking-[-0.02em] mt-1.5 mb-1">₹31,297</div>
                     <div className="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full text-[12px] font-semibold mt-3">
                       <Wallet className="w-3.5 h-3.5" /> Next payout: 1 Aug 2026
                     </div>
@@ -326,7 +326,7 @@ export function PartnerDashboardView() {
                             {row.pkgId === '999' && <span className="inline-block px-2.5 py-1 rounded-md text-[12px] font-semibold bg-amber-50 text-amber-600">{row.pkg}</span>}
                             {row.pkgId === 'none' && <span className="text-[13px] text-slate-500">{row.pkg}</span>}
                           </td>
-                          <td className="p-3 px-4 font-['Plus_Jakarta_Sans'] font-bold text-slate-900">{row.earn}</td>
+                          <td className="p-3 px-4 font-bold text-slate-900">{row.earn}</td>
                           <td className="p-3 px-4 text-slate-600">{row.date}</td>
                         </tr>
                       )
@@ -343,7 +343,7 @@ export function PartnerDashboardView() {
               <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-[16px] font-bold font-['Plus_Jakarta_Sans']">Your referral link</h2>
+                    <h2 className="text-[16px] font-bold">Your referral link</h2>
                     <div className="text-[12.5px] text-slate-500">No limit — invite as many people as you like</div>
                   </div>
                 </div>
@@ -360,7 +360,7 @@ export function PartnerDashboardView() {
 
               <div className="grid md:grid-cols-2 gap-4.5">
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                  <h2 className="text-[16px] font-bold font-['Plus_Jakarta_Sans'] mb-4">Invite by email or phone</h2>
+                  <h2 className="text-[16px] font-bold mb-4">Invite by email or phone</h2>
                   
                   <label className="block text-[13px] font-semibold mb-2 text-slate-700">Email addresses</label>
                   <textarea rows={3} placeholder="priya@email.com, rajesh@email.com, ..." className="w-full border border-slate-200 rounded-xl p-3.5 text-[14px] resize-y focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all"></textarea>
@@ -377,15 +377,15 @@ export function PartnerDashboardView() {
 
                 <div className="flex flex-col gap-4.5">
                   <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                    <h2 className="text-[16px] font-bold font-['Plus_Jakarta_Sans'] mb-4">How you earn</h2>
+                    <h2 className="text-[16px] font-bold mb-4">How you earn</h2>
                     <div className="flex flex-col gap-3">
                       <div className="border border-slate-200 rounded-xl p-4">
-                        <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[24px] text-blue-600">10%</div>
+                        <div className="font-extrabold text-[24px] text-blue-600">10%</div>
                         <div className="text-[13px] font-semibold mt-1">On ₹999 subscriptions</div>
                         <div className="text-[12px] text-slate-500 mt-1">Each annual subscriber you refer</div>
                       </div>
                       <div className="border border-slate-200 rounded-xl p-4">
-                        <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[24px] text-blue-600">15%</div>
+                        <div className="font-extrabold text-[24px] text-blue-600">15%</div>
                         <div className="text-[13px] font-semibold mt-1">On ₹9,999 packages</div>
                         <div className="text-[12px] text-slate-500 mt-1">Each BidReady package purchased</div>
                       </div>
@@ -433,14 +433,14 @@ export function PartnerDashboardView() {
                     <div className="relative aspect-square bg-gradient-to-br from-blue-600 to-blue-900 p-5 flex flex-col justify-between text-white">
                       <span className="absolute top-3 right-3 bg-slate-900/50 backdrop-blur-sm text-white text-[10px] font-semibold px-2.5 py-1 rounded-full">1080 × 1080</span>
                       <div className="flex justify-between items-start">
-                        <span className="font-['Plus_Jakarta_Sans'] font-extrabold text-[15px]">Boliwala</span>
+                        <span className="font-extrabold text-[15px]">Boliwala</span>
                         <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-semibold">WhatsApp</span>
                       </div>
                       <div>
-                        <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[19px] leading-[1.15] tracking-tight">Bank Auction Flats up to 40% below market</div>
+                        <div className="font-extrabold text-[19px] leading-[1.15] tracking-tight">Bank Auction Flats up to 40% below market</div>
                         <div className="text-[11.5px] text-white/90 mt-1.5">Verified SARFAESI listings across India</div>
                         <div className="border-t border-white/25 pt-3 mt-3">
-                          <div className="font-bold text-[13px] font-['Plus_Jakarta_Sans']">Rahul Mehta</div>
+                          <div className="font-bold text-[13px]">Rahul Mehta</div>
                           <div className="text-[11.5px] text-white/90 mt-0.5">📞 +91 98200 11223</div>
                           <div className="text-[10.5px] text-white/90 mt-1.5 bg-white/20 px-2 py-1 rounded-md inline-block">boliwala.com/join?ref=CP_rahul_m8x3</div>
                         </div>
@@ -465,14 +465,14 @@ export function PartnerDashboardView() {
                     <div className="relative aspect-square bg-gradient-to-br from-amber-600 to-amber-900 p-5 flex flex-col justify-between text-white">
                       <span className="absolute top-3 right-3 bg-slate-900/50 backdrop-blur-sm text-white text-[10px] font-semibold px-2.5 py-1 rounded-full">1080 × 1080</span>
                       <div className="flex justify-between items-start">
-                        <span className="font-['Plus_Jakarta_Sans'] font-extrabold text-[15px]">Boliwala</span>
+                        <span className="font-extrabold text-[15px]">Boliwala</span>
                         <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-semibold">Instagram</span>
                       </div>
                       <div>
-                        <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[19px] leading-[1.15] tracking-tight">Your dream home at a bank auction price</div>
+                        <div className="font-extrabold text-[19px] leading-[1.15] tracking-tight">Your dream home at a bank auction price</div>
                         <div className="text-[11.5px] text-white/90 mt-1.5">Free listings · Expert bid support</div>
                         <div className="border-t border-white/25 pt-3 mt-3">
-                          <div className="font-bold text-[13px] font-['Plus_Jakarta_Sans']">Rahul Mehta</div>
+                          <div className="font-bold text-[13px]">Rahul Mehta</div>
                           <div className="text-[11.5px] text-white/90 mt-0.5">📞 +91 98200 11223</div>
                           <div className="text-[10.5px] text-white/90 mt-1.5 bg-white/20 px-2 py-1 rounded-md inline-block">boliwala.com/join?ref=CP_rahul_m8x3</div>
                         </div>
@@ -499,20 +499,20 @@ export function PartnerDashboardView() {
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid md:grid-cols-[1.5fr_1fr] gap-4.5 mb-8">
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                  <h2 className="text-[16px] font-bold font-['Plus_Jakarta_Sans'] mb-4">Commission structure</h2>
+                  <h2 className="text-[16px] font-bold mb-4">Commission structure</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                     <div className="border border-slate-200 rounded-xl p-4">
-                      <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[24px] text-blue-600">10%</div>
+                      <div className="font-extrabold text-[24px] text-blue-600">10%</div>
                       <div className="text-[13px] font-semibold mt-1 text-slate-900">₹999 Subscription</div>
                       <div className="text-[12px] text-slate-500 mt-1">Per annual subscriber</div>
                     </div>
                     <div className="border border-slate-200 rounded-xl p-4">
-                      <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[24px] text-blue-600">15%</div>
+                      <div className="font-extrabold text-[24px] text-blue-600">15%</div>
                       <div className="text-[13px] font-semibold mt-1 text-slate-900">₹9,999 Package</div>
                       <div className="text-[12px] text-slate-500 mt-1">Per BidReady package</div>
                     </div>
                     <div className="border border-slate-200 rounded-xl p-4">
-                      <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[24px] text-blue-600">5%</div>
+                      <div className="font-extrabold text-[24px] text-blue-600">5%</div>
                       <div className="text-[13px] font-semibold mt-1 text-slate-900">Success Fee</div>
                       <div className="text-[12px] text-slate-500 mt-1">Of our 1% winning-bid fee</div>
                     </div>
@@ -521,7 +521,7 @@ export function PartnerDashboardView() {
                 <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl p-6 flex flex-col justify-between shadow-sm">
                   <div>
                     <div className="text-[13px] text-white/85 font-medium">Lifetime earnings</div>
-                    <div className="font-['Plus_Jakarta_Sans'] font-extrabold text-[38px] tracking-[-0.02em] mt-1.5 mb-1">₹1,84,620</div>
+                    <div className="font-extrabold text-[38px] tracking-[-0.02em] mt-1.5 mb-1">₹1,84,620</div>
                     <div className="inline-flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full text-[12px] font-semibold mt-3">
                       <Wallet className="w-3.5 h-3.5" /> Monthly payout cycle
                     </div>
@@ -532,7 +532,7 @@ export function PartnerDashboardView() {
                 </div>
               </div>
 
-              <h2 className="text-[16px] font-bold font-['Plus_Jakarta_Sans'] mb-1">Payout history</h2>
+              <h2 className="text-[16px] font-bold mb-1">Payout history</h2>
               <div className="text-[12.5px] text-slate-500 mb-4">Monthly settlements to your account</div>
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-x-auto">
                 <table className="w-full text-left text-[14px]">
@@ -552,7 +552,7 @@ export function PartnerDashboardView() {
                       <td className="p-3 px-4">₹799</td>
                       <td className="p-3 px-4">₹17,998</td>
                       <td className="p-3 px-4">₹12,500</td>
-                      <td className="p-3 px-4 font-['Plus_Jakarta_Sans'] font-bold">₹31,297</td>
+                      <td className="p-3 px-4 font-bold">₹31,297</td>
                       <td className="p-3 px-4"><span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-semibold bg-amber-50 text-amber-600">● Pending</span></td>
                     </tr>
                     <tr className="border-b border-slate-100">
@@ -560,7 +560,7 @@ export function PartnerDashboardView() {
                       <td className="p-3 px-4">₹1,299</td>
                       <td className="p-3 px-4">₹22,497</td>
                       <td className="p-3 px-4">₹15,000</td>
-                      <td className="p-3 px-4 font-['Plus_Jakarta_Sans'] font-bold">₹38,796</td>
+                      <td className="p-3 px-4 font-bold">₹38,796</td>
                       <td className="p-3 px-4"><span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-semibold bg-emerald-50 text-emerald-600">✓ Paid</span></td>
                     </tr>
                   </tbody>

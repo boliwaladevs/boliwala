@@ -1,6 +1,9 @@
 # BOLIWALA.COM — PROJECT MEMORY & HANDOFF
 
-> **▶▶ START HERE (2026-08-31, evening): read §38 — THE LIVE EXECUTION BRIEF.**
+> **▶▶ START HERE: read §39 — THE EXECUTION LOG (live, updated per workstream).**
+> §38 is the brief it works from; read it second.
+>
+> **▶▶ (2026-08-31, evening): §38 — THE LIVE EXECUTION BRIEF.**
 > Then open **`immediate_plan.md`** and execute it top to bottom. It is a nine-
 > workstream queue (W0–W8), everything in it is unblocked today, and it ends at a
 > hard **`=== STOP: CSV REQUIRED ===`** marker. **Halt there.** Do not start
@@ -5214,3 +5217,77 @@ pnpm run lint               CANNOT RUN — eslint not installed (W8 fixes this)
 
 Keep the 49 and the 23 as separate tallies. W6.7 adds a **third** tally for
 partner-data isolation — do not fold new cases into the existing counts.
+
+---
+
+## 39. ▶▶ EXECUTION LOG — the `immediate_plan.md` queue (2026-09-01, running)
+
+> **This is the live section.** The queue is `immediate_plan.md`, W0→W8, halting at
+> `=== STOP: CSV REQUIRED ===`. One entry per workstream as it lands, newest at the
+> bottom. §38 is the brief; this is what actually happened.
+
+**User is away and has taken three items:** their half of W2 (the notification
+decision), their half of W3 (the Supabase password rotation), and Item B's visual
+check. Instruction was explicit — **do not stop execution waiting for any of them.**
+
+### 39.0 Queue status
+
+| | Workstream | Status | Commit |
+|---|---|---|---|
+| W0 | Plus Jakarta Sans | ✅ **LANDED** | see below |
+| W1 | Purge the six admin tables | ⬜ | |
+| W2 | Contact Sales flow | ⬜ | |
+| W3 | Security housekeeping | ⬜ | |
+| W4 | Lender model | ⬜ | |
+| W5 | R2 + PDF documents | ⬜ | |
+| W6 | Channel Partner portal | ⬜ | |
+| W7 | Legal routes + contact wiring | ⬜ | |
+| W8 | eslint + the three §36.5 defects | ⬜ | |
+
+### 39.1 W0 — Plus Jakarta Sans ✅ LANDED
+
+**What was wrong.** The three files in `app/fonts/` were not fonts. Each was a
+597-byte ASCII CSS file from Fontshare containing an `@font-face` rule pointing at
+a `cdn.fontshare.com` URL — and **nothing in the codebase ever imported them.**
+`app/globals.css:79` asked for `"Satoshi", "Satoshi Fallback", system-ui` and got
+system-ui on every page. The site has never rendered in its intended typeface.
+
+**What changed.**
+- `app/layout.tsx` — `Plus_Jakarta_Sans` from `next/font/google`, `display: "swap"`,
+  exposed as the CSS variable `--font-plus-jakarta-sans`, with
+  `className={plusJakartaSans.variable}` on `<html>`.
+- `app/globals.css:79` — `--font-sans: var(--font-plus-jakarta-sans), system-ui, sans-serif`
+  inside the Tailwind v4 `@theme inline` block.
+- The three fake `.woff2` files deleted (`git rm`).
+- `components/partner-dashboard-view.tsx` — all **35** inline
+  `font-['Plus_Jakarta_Sans']` classes removed.
+
+**Two notes on how it was done, both deliberate:**
+
+1. **There were no `@font-face` blocks to remove.** The plan's W0 checklist expected
+   some in `globals.css`; there were none. The fake fonts were never wired up at
+   all, which is *why* the fallback was silent.
+2. **The 35 inline classes were removed, not rewritten to `font-sans`.** The plan
+   said replace; deletion is equivalent here and leaves less noise. Checked before
+   doing it: the file contains **no** competing font class (`font-mono`, `font-serif`
+   or any other `font-[...]` arbitrary value — zero hits), so every one of those
+   elements inherits `font-sans` from `<body className="font-sans">`. Verified by
+   `tsc` and a green build.
+
+**Found and NOT touched — pre-existing, out of W0's scope:**
+`app/layout.tsx:10` is `const _geistMono = Geist_Mono({ subsets: ["latin"] })` —
+assigned, never used, and no `variable` option. `--font-mono` in `globals.css` then
+asks for the literal family `"Geist Mono"`, but `next/font` emits a hashed family
+name (`__Geist_Mono_<hash>`). **So `font-mono` is falling back the same way Satoshi
+was.** It is the identical bug, one line away, and fixing it is not W0. Recorded
+here so it is not lost.
+
+**Gate:** `grep -ri satoshi app lib components public styles` → **0 hits.** ✅
+
+**Standing bar:**
+```
+npx tsc --noEmit            clean, exit 0            ✅
+pnpm run build              green, 25/25 static      ✅
+leak-test.mjs               12/12 PASS               ✅
+access-matrix-test.mjs      49/49 + 23/23 PASS       ✅
+```

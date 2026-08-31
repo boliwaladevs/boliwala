@@ -464,3 +464,27 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
       Not a hole, but confusing. `MEMORY.md` §37.8.
 - [ ] `pnpm run lint` cannot run — **eslint is not a dependency of this project**
       and was not before this window. `MEMORY.md` §37.8.
+
+### The pre-launch queue, `immediate_plan.md` W0–W8 (running, `MEMORY.md` §39)
+
+- [x] **W0 — Plus Jakarta Sans.** The three `app/fonts/Satoshi-*.woff2` files were
+      597-byte Fontshare CSS text, never imported by anything, so the site had always
+      fallen back to system-ui. Replaced with `Plus_Jakarta_Sans` from
+      `next/font/google` wired through a CSS variable, the fake files deleted, and the
+      35 inline `font-['Plus_Jakarta_Sans']` classes in
+      `components/partner-dashboard-view.tsx` removed. `grep -ri satoshi` is clean.
+      Standing bar green: tsc 0, build 25/25, leak 12/12, matrix 49/49 + 23/23.
+- [ ] W1 — purge the six fabricated admin tables (top demo risk)
+- [ ] W2 — Contact Sales enquiry flow *(the notification decision is with the user)*
+- [ ] W3 — security housekeeping *(the password rotation is with the user)*
+- [ ] W4 — lender model, `banks` → `lenders`
+- [ ] W5 — R2 storage and PDF documents
+- [ ] W6 — Channel Partner portal (must follow W2)
+- [ ] W7 — legal routes and real contact wiring
+- [ ] W8 — eslint plus the three §36.5 defects
+- [ ] **Then STOP** — the inventory CSV gates everything after W8.
+
+- [ ] **`font-mono` is broken the same way Satoshi was** — `--font-mono` asks for the
+      literal `"Geist Mono"` but `next/font` emits a hashed family name, and
+      `_geistMono` in `app/layout.tsx:10` is assigned and never used. Found during W0,
+      deliberately not fixed there. `MEMORY.md` §39.1.

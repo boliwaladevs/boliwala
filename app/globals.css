@@ -76,7 +76,7 @@
 }
 
 @theme inline {
-  --font-sans: "Satoshi", "Satoshi Fallback", system-ui, sans-serif;
+  --font-sans: var(--font-plus-jakarta-sans), system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback";
   --color-background: var(--background);
   --color-foreground: var(--foreground);

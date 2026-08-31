@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist_Mono } from "next/font/google"
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { SmoothScrolling } from "@/components/smooth-scrolling"
@@ -8,6 +8,12 @@ import { Toaster } from "@/components/ui/toaster"
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, absoluteUrl } from "@/lib/seo"
 
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-plus-jakarta-sans",
+})
 
 const DEFAULT_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`
 const DEFAULT_DESCRIPTION =
@@ -50,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en-IN" suppressHydrationWarning>
+    <html lang="en-IN" className={plusJakartaSans.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
         <SmoothScrolling>
           {children}
