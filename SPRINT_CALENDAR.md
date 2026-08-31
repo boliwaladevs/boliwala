@@ -490,7 +490,19 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
       audit entry. Packages, Payments and Service Pipeline read those rows.
       Notification is **admin-panel-only** — no email exists to send.
       `MEMORY.md` §39.3.
-- [ ] W3 — security housekeeping *(the password rotation is with the user)*
+- [x] **W3 — grants now match the RLS policies** (`0016_grants_match_policies.sql`).
+      Fifteen tables carried Postgres's blanket grant for anon *and* authenticated —
+      RLS was the only thing stopping the anon key writing to the audit log. Every
+      grant is now the narrowest its policies allow, TRUNCATE/REFERENCES/TRIGGER are
+      revoked schema-wide and by default for future tables, and three load-bearing
+      **column-level** grants were found and preserved: listings' 27-column SELECT (the
+      credit gate at the database), profiles' 6-column UPDATE (not role, not credits)
+      and alert_subscriptions' isActive. New permanent check:
+      `node scripts/grants-test.mjs`, 27/27 — keep it as its own tally.
+      `MEMORY.md` §39.4.
+- [ ] **W3, still owed by the user: rotate the Supabase DB password** (it was pasted
+      into a chat transcript), then update `DATABASE_URL`/`DIRECT_URL` in `.env.local`,
+      `.dev.vars` and the Worker secrets.
 - [ ] W4 — lender model, `banks` → `lenders`
 - [ ] W5 — R2 storage and PDF documents
 - [ ] W6 — Channel Partner portal (must follow W2)

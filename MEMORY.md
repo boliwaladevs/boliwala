@@ -5237,7 +5237,7 @@ check. Instruction was explicit — **do not stop execution waiting for any of t
 | W0 | Plus Jakarta Sans | ✅ **LANDED** | see below |
 | W1 | Purge the six admin tables | ✅ **LANDED** | see §39.2 |
 | W2 | Contact Sales flow | ✅ **LANDED** | see §39.3 |
-| W3 | Security housekeeping | ⬜ | |
+| W3 | Security housekeeping | ✅ **LANDED** (rotation still yours) | see §39.4 |
 | W4 | Lender model | ⬜ | |
 | W5 | R2 + PDF documents | ⬜ | |
 | W6 | Channel Partner portal | ⬜ | |
@@ -5473,3 +5473,88 @@ survives and the balance is back at 4.
 > **Grant…** on it.
 
 **Standing bar:** tsc 0 · build green 25/25 · leak 12/12 · matrix 49/49 + 23/23. ✅
+
+### 39.4 W3 — security housekeeping ✅ LANDED (the password rotation is still yours)
+
+**`supabase/migrations/0016_grants_match_policies.sql`**, applied. Note the number:
+W2's manual-payments migration took 0015, so **W4's lender migration is `0017`**.
+
+**The before-state, recorded as the plan asked.** Fifteen of eighteen tables carried
+Postgres's default blanket grant for **both** `anon` and `authenticated`:
+
+```
+DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
+```
+
+on `admin_audit_log`, `payments`, `subscriptions`, `credit_transactions`,
+`service_packages`, `callback_requests`, `channel_partner_applications`, `settings`,
+`banks`, `shortlists`, `unlocks`, `listing_views`, `listing_images`,
+`bulk_upload_batches` — and `profiles` and `alert_subscriptions` with everything except
+table-level UPDATE. **RLS was the only thing standing in the way of the anon key
+writing to the audit log.**
+
+**⚠️ The single most important finding of this workstream — and the plan did not know
+about it.** Three tables already carry hand-made **column-level** grants, and they are
+load-bearing:
+
+| Table | Column grant | What it is actually doing |
+|---|---|---|
+| `listings` | anon/authenticated SELECT on **27 named columns** | `flatNumber`, `floor`, `inspectionDatetime`, `inspectionNotes`, `authorisedOfficer{Name,Phone,Email}`, `bankContact`, `createdBy` are **not selectable**. The credit gate is enforced at the database, underneath the app's redaction. |
+| `profiles` | authenticated UPDATE on **6 columns** | fullName, phone, city, panNumber, aadhaarNumber, preferences. **Not `role`. Not `creditsBalance`.** |
+| `alert_subscriptions` | authenticated UPDATE on **`isActive`** | pause/resume only — a user cannot rewrite where an alert is delivered. |
+
+**A table-level `REVOKE UPDATE ... FROM authenticated` destroys the whole column list,
+and a table-level `GRANT UPDATE` lets any signed-in user set their own role to
+superadmin.** The plan's per-table instruction, followed literally, would have done
+exactly that. The migration therefore issues **no table-level UPDATE statement at all**
+on those three, and says so at the top in case someone later "tidies" it.
+
+**After: every grant now matches its table's policies.**
+
+```
+anon           listings(27 cols), banks, settings, listing_images ....... SELECT
+               callback_requests, channel_partner_applications,
+               contact_sales_enquiries, alert_subscriptions ............ INSERT
+               everything else ......................................... nothing
+authenticated  + profiles, subscriptions, payments, service_packages,
+                 credit_transactions, unlocks, alert_subscriptions ...... SELECT
+               + shortlists ............................................ SELECT, INSERT, DELETE
+               + profiles(6 cols), alert_subscriptions(isActive) ........ UPDATE
+```
+
+`TRUNCATE`, `REFERENCES` and `TRIGGER` are revoked schema-wide from both roles, and
+`ALTER DEFAULT PRIVILEGES` now revokes them from every table created from here on — so
+W5's and W6's new tables do not land back at the permissive default.
+`_prisma_migrations` **is already gone** from this database (`to_regclass` → null);
+nothing to drop.
+
+**`scripts/grants-test.mjs` — a new, permanent third matrix.** The gating matrix and the
+leak test prove the *application* redacts; this proves the *database* would refuse even
+if the application did not. It connects on `DIRECT_URL`, then for each case does
+`set local role anon|authenticated` with the JWT claims PostgREST would set, runs the
+statement, and rolls back — nothing is written.
+
+```
+node scripts/grants-test.mjs      27/27 PASS
+```
+
+Both directions are asserted, which is the point:
+
+- a guest reads live listings but **cannot** read `flatNumber` or the officer's phone;
+- a guest submits a callback, an enquiry and an alert, and **cannot** read any of them back;
+- a signed-in user edits their own name, and **cannot** set `role = 'superadmin'`,
+  **cannot** set `creditsBalance = 9999`, **cannot** grant themselves a subscription,
+  **cannot** forge an audit row, **cannot** shortlist as another user, and **cannot**
+  rewrite an alert's delivery address.
+
+Kept as its own tally — **do not fold these 27 into the 49 or the 23.**
+
+> ### ⏳ Still yours, and W3 is not closed until it is done
+> **Rotate the Supabase database password.** The current one was pasted into a chat
+> transcript. Do it in the Supabase dashboard, then update `DATABASE_URL` and
+> `DIRECT_URL` in `.env.local`, `.dev.vars` and the Cloudflare Worker secrets, and
+> re-run `node scripts/grants-test.mjs` (it connects on `DIRECT_URL`, so it doubles as
+> the "did the rotation break anything" check).
+
+**Standing bar:** tsc 0 · build green 25/25 · leak 12/12 · matrix 49/49 + 23/23 ·
+grants 27/27. ✅

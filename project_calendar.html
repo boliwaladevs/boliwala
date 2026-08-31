@@ -545,7 +545,16 @@
       That grant is also the revenue event the channel-partner commissions (W6) will
       attach to. <i>No email is sent — there is no email system; the panel and its badge
       are the notification.</i>
-      W3–W8 to follow.
+      <b>W3 ✅</b> The database now enforces its own rules. Fifteen tables were still
+      carrying Postgres's default blanket grant for both the anonymous and signed-in
+      keys, with row-level security as the only thing in the way; grants are now the
+      narrowest each table's policies allow. Three hand-made column-level grants were
+      found and deliberately preserved — the one that hides gated listing fields from the
+      anonymous key, and the one that stops a signed-in user editing their own role or
+      credit balance. A new check, <code>scripts/grants-test.mjs</code>, drives all of it
+      as the real database roles and passes 27/27.
+      <i>Still with the client: rotating the database password.</i>
+      W4–W8 to follow.
       <br><br><b>Vector search moved to post-launch</b> (<code>deferred_plan.md</code>
       D7) — it is a Tier 4 differentiator and did not belong in a pre-launch queue.
     </div>
