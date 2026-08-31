@@ -61,6 +61,21 @@ interface NavGroupDef {
  * "everything open" and a group added later shows up instead of silently
  * hiding behind a stale preference.
  */
+/**
+ * What a StatCard shows when **nothing in the schema records the figure** —
+ * emails sent, WhatsApp queue depth, open and click rates, PDF downloads,
+ * campaign templates. All of these were hardcoded to invented numbers.
+ *
+ * Deliberately not 0. A zero claims we measured and found none; the truth is
+ * that there is no table to measure. This way the panel neither lies nor
+ * quietly drops a metric someone planned for.
+ *
+ * Lives here rather than in lib/data/admin.ts because that module is
+ * server-only, and importing a value (as opposed to a type) from it into this
+ * client component pulls the server bundle across and fails the build.
+ */
+const NOT_TRACKED = "—"
+
 const NAV_COLLAPSED_KEY = "bw_admin_nav_collapsed"
 
 /** Icon and tint per activity kind. The text itself comes from the database. */
@@ -673,10 +688,10 @@ export function AdminView({
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <AlertStrip type="info" icon="⚡" title="Real-time matching is ON" subtitle="Every new or edited listing is instantly checked against all active alert rules. Matches fire email immediately." />
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon="⚡" iconBg="bg-blue-100" value="4,291" label="Active Alert Rules" />
-                <StatCard icon="📧" iconBg="bg-emerald-100" trend="↑ 142" value="1,284" label="Emails Sent Today" />
-                <StatCard icon="💬" iconBg="bg-amber-100" trend="↑ 38" value="96" label="WhatsApp Queued" />
-                <StatCard icon="👆" iconBg="bg-purple-100" value="28.4%" label="Alert → Click Rate" />
+                <StatCard icon="⚡" iconBg="bg-blue-100" value={sectionStats.alerts.total.toLocaleString('en-IN')} label="Active Alert Rules" />
+                <StatCard icon="📧" iconBg="bg-emerald-100" value={NOT_TRACKED} trend="No send log yet" trendFlat label="Emails Sent Today" />
+                <StatCard icon="💬" iconBg="bg-amber-100" value={NOT_TRACKED} trend="No queue yet" trendFlat label="WhatsApp Queued" />
+                <StatCard icon="👆" iconBg="bg-purple-100" value={NOT_TRACKED} trend="No click tracking yet" trendFlat label="Alert → Click Rate" />
               </div>
               <FormSection title="⚙️ Alert Engine Configuration">
                 <div className="flex flex-col gap-3.5">
@@ -705,10 +720,10 @@ export function AdminView({
           {activePage === 'email-campaigns' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon="📧" iconBg="bg-blue-100" value="12" label="Active Templates" />
-                <StatCard icon="📨" iconBg="bg-emerald-100" trend="↑ 18%" value="38,420" label="Sent This Month" />
-                <StatCard icon="👁️" iconBg="bg-amber-100" value="42.1%" label="Avg Open Rate" />
-                <StatCard icon="👆" iconBg="bg-purple-100" value="9.8%" label="Avg Click Rate" />
+                <StatCard icon="📧" iconBg="bg-blue-100" value={NOT_TRACKED} trend="No templates table yet" trendFlat label="Active Templates" />
+                <StatCard icon="📨" iconBg="bg-emerald-100" value={NOT_TRACKED} trend="No send log yet" trendFlat label="Sent This Month" />
+                <StatCard icon="👁️" iconBg="bg-amber-100" value={NOT_TRACKED} trend="No open tracking yet" trendFlat label="Avg Open Rate" />
+                <StatCard icon="👆" iconBg="bg-purple-100" value={NOT_TRACKED} trend="No click tracking yet" trendFlat label="Avg Click Rate" />
               </div>
               <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                 <TcHead title="📧 Lifecycle Email Templates" acts={<TcActionBtn primary>➕ New Template</TcActionBtn>} />
@@ -737,9 +752,9 @@ export function AdminView({
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <AlertStrip type="warning" icon="💬" title="Phase 1: Click-to-chat mode" subtitle="Automated WhatsApp push needs the official Business API. Until then, use click-to-chat links." />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard icon="💬" iconBg="bg-emerald-100" value="1,204" label="WhatsApp Subscribers" />
-                <StatCard icon="📋" iconBg="bg-amber-100" value="96" label="Queued Messages" />
-                <StatCard icon="🔗" iconBg="bg-blue-100" value="2,841" label="Click-to-Chat Opens" />
+                <StatCard icon="💬" iconBg="bg-emerald-100" value={sectionStats.alerts.whatsapp.toLocaleString('en-IN')} label="WhatsApp Subscribers" />
+                <StatCard icon="📋" iconBg="bg-amber-100" value={NOT_TRACKED} trend="No queue yet" trendFlat label="Queued Messages" />
+                <StatCard icon="🔗" iconBg="bg-blue-100" value={NOT_TRACKED} trend="No click tracking yet" trendFlat label="Click-to-Chat Opens" />
               </div>
               <FormSection title="🔗 Click-to-Chat Link Generator">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -797,10 +812,10 @@ export function AdminView({
           {(activePage === 'engagement' || activePage === 'analytics') && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon="👁️" iconBg="bg-blue-100" trend="↑ 22%" value="84,290" label="Page Views This Month" />
-                <StatCard icon="🔍" iconBg="bg-emerald-100" trend="↑ 18%" value="12,410" label="Listing Detail Views" />
-                <StatCard icon="📄" iconBg="bg-amber-100" trend="↑ 31%" value="2,840" label="PDF Downloads" />
-                <StatCard icon="📝" iconBg="bg-purple-100" trend="↑ 28%" value="5.8%" label="View → Signup Rate" />
+                <StatCard icon="👁️" iconBg="bg-blue-100" value={sectionStats.views.thisMonth.toLocaleString('en-IN')} label="Listing Views This Month" />
+                <StatCard icon="🔍" iconBg="bg-emerald-100" value={sectionStats.views.allTime.toLocaleString('en-IN')} label="Listing Views (All Time)" />
+                <StatCard icon="📄" iconBg="bg-amber-100" value={NOT_TRACKED} trend="No download log yet" trendFlat label="PDF Downloads" />
+                <StatCard icon="📝" iconBg="bg-purple-100" value={NOT_TRACKED} trend="Views and signups are not joined into a funnel" trendFlat label="View → Signup Rate" />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">

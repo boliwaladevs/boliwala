@@ -102,7 +102,12 @@ export interface AdminSectionStats {
     email: number
     whatsapp: number
   }
+  views: {
+    allTime: number
+    thisMonth: number
+  }
 }
+
 
 export async function getAdminSectionStats(): Promise<AdminSectionStats> {
   const admin = createAdminClient()
@@ -111,7 +116,17 @@ export async function getAdminSectionStats(): Promise<AdminSectionStats> {
   startOfMonth.setHours(0, 0, 0, 0)
   const monthStart = startOfMonth.getTime()
 
-  const [packageRows, paymentRows, totalUsers, callbackCount, alertsTotal, alertsEmail, alertsWhatsapp] =
+  const [
+    packageRows,
+    paymentRows,
+    totalUsers,
+    callbackCount,
+    alertsTotal,
+    alertsEmail,
+    alertsWhatsapp,
+    viewsAllTime,
+    viewsThisMonth,
+  ] =
     await Promise.all([
       admin.from("service_packages").select("userId, amountPaid, createdAt"),
       admin.from("payments").select("amount, createdAt").eq("status", "paid"),
@@ -120,6 +135,9 @@ export async function getAdminSectionStats(): Promise<AdminSectionStats> {
       admin.from("alert_subscriptions").select("id", { count: "exact", head: true }).eq("isActive", true),
       admin.from("alert_subscriptions").select("id", { count: "exact", head: true }).eq("isActive", true).not("email", "is", null),
       admin.from("alert_subscriptions").select("id", { count: "exact", head: true }).eq("isActive", true).not("whatsapp", "is", null),
+      admin.from("listing_views").select("id", { count: "exact", head: true }),
+      // listing_views timestamps its rows `viewedAt`, not `createdAt`.
+      admin.from("listing_views").select("id", { count: "exact", head: true }).gte("viewedAt", new Date(monthStart).toISOString()),
     ])
 
   const packages = (packageRows.data ?? []) as { userId: string; amountPaid: number | null; createdAt: string }[]
@@ -169,6 +187,10 @@ export async function getAdminSectionStats(): Promise<AdminSectionStats> {
       total: alertsTotal.count ?? 0,
       email: alertsEmail.count ?? 0,
       whatsapp: alertsWhatsapp.count ?? 0,
+    },
+    views: {
+      allTime: viewsAllTime.count ?? 0,
+      thisMonth: viewsThisMonth.count ?? 0,
     },
   }
 }
