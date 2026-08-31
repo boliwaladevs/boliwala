@@ -1,7 +1,14 @@
 import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
 
-import { landingPathForRole } from "@/lib/auth/landing"
+import {
+  DENIED_PARAM,
+  DOOR_COOKIE,
+  doorFromCookie,
+  landingPathForRole,
+  loginPathForDoor,
+  roleAllowedAtDoor,
+} from "@/lib/auth/landing"
 import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-param"
 
 export async function GET(request: NextRequest) {
@@ -23,6 +30,25 @@ export async function GET(request: NextRequest) {
         .eq("id", data.user.id)
         .single()
 
+      // One email, one role: the door the sign-in started at admits only its
+      // own roles, exactly as the password form enforces it. Same rule, same
+      // file — lib/auth/landing.ts — called from both sides.
+      const door = doorFromCookie(request.cookies.get(DOOR_COOKIE)?.value)
+
+      if (!roleAllowedAtDoor(door, profile?.role)) {
+        // Sign the session back out before bouncing. The code has already been
+        // exchanged at this point, so without this the visitor keeps a valid
+        // session while being shown a refusal.
+        await supabase.auth.signOut()
+
+        const denied = NextResponse.redirect(
+          `${origin}${loginPathForDoor(door)}?${DENIED_PARAM}=1`,
+        )
+        denied.cookies.delete(NEXT_COOKIE)
+        denied.cookies.delete(DOOR_COOKIE)
+        return denied
+      }
+
       // Where the user was headed before the Google round trip, if anywhere.
       // Re-validated here rather than trusted: the cookie is attacker-writable
       // in the same way the query parameter is.
@@ -31,6 +57,7 @@ export async function GET(request: NextRequest) {
 
       const response = NextResponse.redirect(`${origin}${next ?? landingPathForRole(profile?.role)}`)
       response.cookies.delete(NEXT_COOKIE)
+      response.cookies.delete(DOOR_COOKIE)
       return response
     }
   }

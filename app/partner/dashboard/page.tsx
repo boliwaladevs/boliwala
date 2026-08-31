@@ -22,12 +22,15 @@ export const metadata = pageMetadata({
  * customer one URL away from invented commission figures, so it is now gated
  * on the role itself (ROADMAP.md Item 5c).
  *
- * `channel_partner` exists in the profiles.role enum but no account holds it
- * today, so in practice this closes the page until an admin grants the role.
- * That is the intended outcome while the portal is still a mockup — show.md
- * already lists /partner/dashboard as "do not open" during a client demo.
- * The real partner role, approval flow and commission logic remain Item 10,
- * gated on D8.
+ * `channel_partner` is a live role: one account held it as of 2026-08-31, and
+ * that account now reaches this page by signing in at /partner/login, which
+ * admits no other role (lib/auth/landing.ts). It is not a Postgres enum —
+ * there is no CHECK constraint on profiles.role yet, see
+ * scripts/2026-08-31-profiles-role-check.sql.
+ *
+ * The portal itself is still a mockup — show.md lists /partner/dashboard as
+ * "do not open" during a client demo. The approval flow and commission logic
+ * remain Item 10, gated on D8.
  */
 export default async function PartnerDashboardPage() {
   const supabase = await createClient()

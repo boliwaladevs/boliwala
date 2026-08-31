@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { displayCount, type SiteStats } from "@/lib/stats"
-import { landingPathForRole } from "@/lib/auth/landing"
+import {
+  DENIED_PARAM,
+  DOOR_COOKIE,
+  landingPathForRole,
+  roleAllowedAtDoor,
+  wrongDoorMessage,
+  type LoginDoor,
+} from "@/lib/auth/landing"
 import { NEXT_COOKIE, nextFromLocation, withNext } from "@/lib/auth/next-param"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -23,6 +30,7 @@ interface AuthViewProps {
 
 export function AuthView({ defaultTab = "login", stats, variant = "customer" }: AuthViewProps) {
   const isPartner = variant === "partner"
+  const door: LoginDoor = isPartner ? "partner" : "customer"
   const [activeTab, setActiveTab] = useState<"login" | "signup">(defaultTab)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
@@ -38,6 +46,14 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
   // force a Suspense boundary around the whole form to keep that.
   const [nextPath, setNextPath] = useState<string | null>(null)
   useEffect(() => setNextPath(nextFromLocation()), [])
+
+  // The OAuth callback bounces a wrong-door sign-in back here with ?denied=1,
+  // having already signed the session out. Read the same way as `next` above,
+  // and for the same reason.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get(DENIED_PARAM) !== "1") return
+    toast({ variant: "destructive", title: "Wrong login page", description: wrongDoorMessage(door) })
+  }, [door, toast])
 
   const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,38 +77,38 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    setSubmitting(false)
     if (error) {
+      setSubmitting(false)
       toast({ variant: "destructive", title: "Couldn't log in", description: error.message })
       return
     }
 
-    // A ?next= the user actually came from wins over both defaults below —
-    // that is the whole point of the parameter.
-    if (nextPath) {
-      router.push(nextPath)
-      router.refresh()
-      return
-    }
-
-    // Someone who came in through /partner/login is asking for the partner
-    // area, so send them there. The page itself enforces the role — a customer
-    // who signs in here just bounces back to /profile.
-    if (isPartner) {
-      router.push("/partner/dashboard")
-      router.refresh()
-      return
-    }
-
-    // Staff skip the customer profile page. There is no separate admin login —
-    // the account's own role decides where it lands.
+    // One email, one role: each door admits only the roles that belong to it.
+    // Checked before ?next= is honoured — otherwise an account could walk
+    // straight past the gate just by arriving with a next= on the URL.
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", data.user.id)
       .single()
 
-    router.push(landingPathForRole(profile?.role))
+    if (!roleAllowedAtDoor(door, profile?.role)) {
+      // Sign the session back out. Leaving a valid session behind while showing
+      // an error is a half-open door — the visitor is still logged in, and any
+      // link they follow next lets them straight in.
+      await supabase.auth.signOut()
+      setSubmitting(false)
+      toast({ variant: "destructive", title: "Wrong login page", description: wrongDoorMessage(door) })
+      return
+    }
+
+    setSubmitting(false)
+
+    // A ?next= the user actually came from wins over the role's own landing
+    // page — that is the whole point of the parameter. Staff skip the customer
+    // profile page and partners go to their portal; there is no separate admin
+    // login, the account's own role decides where it lands.
+    router.push(nextPath ?? landingPathForRole(profile?.role))
     router.refresh()
   }
 
@@ -102,6 +118,12 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
     // see lib/auth/next-param.ts. Short-lived; the callback clears it.
     if (nextPath) {
       document.cookie = `${NEXT_COOKIE}=${encodeURIComponent(nextPath)}; Path=/; Max-Age=600; SameSite=Lax`
+    }
+    // Same trick for the door, so the callback can apply the one-email-one-role
+    // rule to Google sign-in too. Only set on the partner door; its absence
+    // means the customer one.
+    if (isPartner) {
+      document.cookie = `${DOOR_COOKIE}=partner; Path=/; Max-Age=600; SameSite=Lax`
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

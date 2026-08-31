@@ -1,4 +1,9 @@
-// Four-state gating matrix — the decision table the revenue model turns on.
+// Two matrices:
+//
+//   1. The four-state listing gating matrix — the decision table the revenue
+//      model turns on. Baseline: 49 assertions, all passing.
+//   2. The four-role x two-login-door matrix — "one email, one role", added
+//      2026-08-31 (MEMORY.md §37.2 Item A).
 //
 // Drives lib/access/resolve.ts directly with every viewer shape and asserts the
 // full expected matrix, including the cases that cost money if they regress:
@@ -15,6 +20,13 @@ import { readFileSync } from "node:fs"
 import { createClient } from "@supabase/supabase-js"
 import { resolveListingAccess } from "../lib/access/resolve.ts"
 import { FIELD_GROUPS } from "../lib/access/types.ts"
+import {
+  ROLES,
+  landingPathForRole,
+  loginPathForDoor,
+  roleAllowedAtDoor,
+  wrongDoorMessage,
+} from "../lib/auth/landing.ts"
 
 for (const line of readFileSync(".env.local", "utf8").split("\n")) {
   const match = line.match(/^([A-Z_]+)=(.*)$/)
@@ -160,4 +172,105 @@ console.log(
     ? "RESULT: PASS — gating matrix correct"
     : `RESULT: FAIL — ${failures} state(s) wrong`,
 )
-process.exit(failures === 0 ? 0 : 1)
+
+/* ------------------------------------------------------------------ *
+ * Login-door matrix: one email, one role
+ * ------------------------------------------------------------------ */
+
+console.log("\n--- LOGIN DOORS: four roles × two doors ---\n")
+
+// Every role, at every door, with the expected verdict spelled out rather than
+// derived — deriving it from the same function under test would assert nothing.
+const doorCases = [
+  { door: "customer", role: "user", allowed: true, lands: "/profile" },
+  { door: "customer", role: "admin", allowed: true, lands: "/admin" },
+  { door: "customer", role: "superadmin", allowed: true, lands: "/admin" },
+  { door: "customer", role: "channel_partner", allowed: false },
+  { door: "partner", role: "channel_partner", allowed: true, lands: "/partner/dashboard" },
+  { door: "partner", role: "user", allowed: false },
+  { door: "partner", role: "admin", allowed: false },
+  { door: "partner", role: "superadmin", allowed: false },
+]
+
+let doorFailures = 0
+let doorAssertions = 0
+
+for (const c of doorCases) {
+  const lines = []
+
+  const allowed = roleAllowedAtDoor(c.door, c.role)
+  doorAssertions++
+  if (allowed !== c.allowed) {
+    lines.push(`expected allowed=${c.allowed}, got ${allowed}`)
+  }
+
+  if (c.allowed) {
+    // An admitted role must land on its own surface, not a shared default.
+    const landing = landingPathForRole(c.role)
+    doorAssertions++
+    if (landing !== c.lands) {
+      lines.push(`landing: expected "${c.lands}", got "${landing}"`)
+    }
+  } else {
+    // A refused role must be told which door is actually theirs, and the
+    // message must not name the door it was just turned away from.
+    const message = wrongDoorMessage(c.door)
+    const otherDoor = loginPathForDoor(c.door === "partner" ? "customer" : "partner")
+    doorAssertions++
+    if (!message.includes(otherDoor)) {
+      lines.push(`message does not name ${otherDoor}: "${message}"`)
+    }
+    doorAssertions++
+    // Strip the other door out first: "/partner/login" contains "/login", so a
+    // naive substring test reports the customer message as naming its own door.
+    const beyondOtherDoor = message.split(otherDoor).join("")
+    if (beyondOtherDoor.includes(loginPathForDoor(c.door))) {
+      lines.push(`message names the door it refused: "${message}"`)
+    }
+  }
+
+  const ok = lines.length === 0
+  if (!ok) doorFailures++
+  console.log(
+    `${ok ? "PASS" : "FAIL"}  ${c.role.padEnd(15)} at ${loginPathForDoor(c.door).padEnd(15)} -> ${
+      c.allowed ? `admitted, lands ${c.lands}` : "refused"
+    }`,
+  )
+  for (const l of lines) console.log(`        ${l}`)
+}
+
+// The vocabulary itself: if a fifth role is added, this matrix stops being
+// exhaustive and the omission should fail loudly rather than pass quietly.
+doorAssertions++
+const untested = ROLES.filter((r) => !doorCases.some((c) => c.role === r))
+if (untested.length > 0) {
+  doorFailures++
+  console.log(`FAIL  roles in ROLES with no door case: ${untested.join(", ")}`)
+} else {
+  console.log(`PASS  all ${ROLES.length} roles in ROLES are covered at both doors`)
+}
+
+// "Every wrong-door case must end signed out" is a runtime behaviour of the two
+// call sites, not of the pure rule above. Assert it where it lives: both
+// refusal branches must sign the session back out. A valid session left behind
+// under an error message is a half-open door.
+const GUARD = "roleAllowedAtDoor(door, profile?.role)"
+for (const file of ["components/auth-view.tsx", "app/auth/callback/route.ts"]) {
+  doorAssertions++
+  const src = readFileSync(file, "utf8")
+  const at = src.indexOf("!" + GUARD)
+  // The refusal branch, taken as the block following the guard.
+  const branch = at === -1 ? "" : src.slice(at, at + 900)
+  const ok = at !== -1 && branch.includes("signOut()")
+  if (!ok) doorFailures++
+  console.log(`${ok ? "PASS" : "FAIL"}  ${file} signs the session out on a wrong-door login`)
+}
+
+console.log(`\n${doorAssertions} assertions across ${doorCases.length} role/door pairs`)
+console.log(
+  doorFailures === 0
+    ? "RESULT: PASS — login doors correct"
+    : `RESULT: FAIL — ${doorFailures} door case(s) wrong`,
+)
+
+process.exit(failures === 0 && doorFailures === 0 ? 0 : 1)

@@ -4466,3 +4466,178 @@ Append a `§37.7 ☀️ RETURN SUMMARY` with, in this order:
 
 Do not report an item as done unless its verification block in §37.5 actually
 ran and passed. If the window ends mid-item, say exactly where it stopped.
+
+### 37.8 ITEM A — one email, one role, enforced at both login doors ✅ LANDED
+
+**Commit:** `8b79172`
+
+**What was already true and was not re-solved:** the data model. `profiles.id`
+is a FK to `auth.users(id)`, Supabase keys `auth.users` on email, `profiles.role`
+is a single column — one email cannot hold two roles today. §37.2 said this and
+it held up on inspection.
+
+**What was actually broken:** both doors authenticated any role, and
+`landingPathForRole()` sent `channel_partner` to `/profile` along with ordinary
+customers.
+
+**The rule now lives in exactly one file** — `lib/auth/landing.ts` — and is
+called from both the password form and the OAuth callback, which was §37.2's
+instruction 3:
+
+| Added to `lib/auth/landing.ts` | Purpose |
+|---|---|
+| `ROLES` / `Role` | the four live values, exported so the test can prove the matrix is exhaustive |
+| `landingPathForRole()` | extended: `channel_partner` → `/partner/dashboard` (it went to `/profile` before) |
+| `LoginDoor`, `loginPathForDoor()` | `customer` = `/login`, `partner` = `/partner/login` |
+| `roleAllowedAtDoor()` | the gate |
+| `wrongDoorMessage()` | names the *other* door; depends on the door alone, so it stays correct after sign-out |
+| `DOOR_COOKIE` (`bw_door`) | carries the attempted door across the Google round trip |
+| `DENIED_PARAM` (`denied`) | how the callback tells a door to explain itself |
+
+**Call sites changed:**
+
+- `components/auth-view.tsx` — the profile role is now fetched **before**
+  `?next=` is honoured. That ordering is the security-relevant part: the old
+  code returned early on `nextPath`, so a wrong-door account arriving at
+  `/partner/login?next=/anything` would have walked straight past any gate
+  placed after it. On refusal it calls `supabase.auth.signOut()` and toasts.
+  The old `if (isPartner) → /partner/dashboard` branch is gone — the role's
+  landing path now does that job, and only `channel_partner` gets through that
+  door anyway.
+- `app/auth/callback/route.ts` — same rule, same function. Reads `bw_door`,
+  signs out on refusal, bounces to the attempted door with `?denied=1`, and
+  clears both cookies on every path out.
+- `app/partner/dashboard/page.tsx` — the stale comment §37.2 flagged is fixed.
+  It claimed `channel_partner` "exists in the profiles.role enum but no account
+  holds it today". Both halves were wrong: there is **no enum and no CHECK
+  constraint**, and one live account holds the role.
+
+**Asymmetric strictness, deliberate, documented in the source:** the partner
+door requires an explicit `channel_partner`, so a missing or unreadable profile
+row is a refusal. The customer door refuses only `channel_partner` and is
+otherwise permissive about unknown roles — it is the default door, a transient
+profile-read failure there would lock real customers out of the whole site, and
+`/admin` and `/partner/dashboard` carry their own server-side guards regardless.
+
+**Migration written, NOT applied** (§37.1 rule 3):
+`scripts/2026-08-31-profiles-role-check.sql` adds
+`profiles_role_check` constraining `role` to the four values, with the
+pre-flight query to run first and a rollback line. **Needs the user's hands.**
+
+#### Verification — the full standing bar
+
+`node --experimental-strip-types --import ./scripts/ts-resolve-hook.mjs scripts/access-matrix-test.mjs`
+
+```
+Live pricing from settings: {"flat_floor":1,"inspection":1,"officer_contact":1}
+Free signup credits: 10
+
+PASS  guest (signed out)  [state=guest]
+PASS  member, fresh signup (5 credits)  [state=member_with_credits]
+PASS  member, exactly 1 credit  [state=member_with_credits]
+PASS  member, 0 credits  [state=member_no_credits]
+PASS  member, 0 credits, one group already unlocked  [state=member_no_credits]
+PASS  subscriber (active annual)  [state=subscriber]
+PASS  subscriber who also has an unlock (must not double-charge)  [state=subscriber]
+
+49 assertions across 7 viewer states
+RESULT: PASS — gating matrix correct
+
+--- LOGIN DOORS: four roles × two doors ---
+
+PASS  user            at /login          -> admitted, lands /profile
+PASS  admin           at /login          -> admitted, lands /admin
+PASS  superadmin      at /login          -> admitted, lands /admin
+PASS  channel_partner at /login          -> refused
+PASS  channel_partner at /partner/login  -> admitted, lands /partner/dashboard
+PASS  user            at /partner/login  -> refused
+PASS  admin           at /partner/login  -> refused
+PASS  superadmin      at /partner/login  -> refused
+PASS  all 4 roles in ROLES are covered at both doors
+PASS  components/auth-view.tsx signs the session out on a wrong-door login
+PASS  app/auth/callback/route.ts signs the session out on a wrong-door login
+
+23 assertions across 8 role/door pairs
+RESULT: PASS — login doors correct
+```
+
+**Baseline preserved: the gating matrix is still 49/49.** The 8 door cases are
+a separate section with its own tally, so the 49 stays comparable across
+sessions.
+
+`node scripts/leak-test.mjs http://localhost:3000` (against a local
+`next start` production server) — **12/12, baseline held:**
+
+```
+Testing 12 live listings against http://localhost:3000
+
+PASS  200  /listing/office-space-anna-salai-chennai-sbi
+PASS  200  /listing/textile-unit-pandesara-surat-union
+PASS  200  /listing/residential-plot-gachibowli-hyderabad-pnb
+PASS  200  /listing/1bhk-flat-gomti-nagar-lucknow-pnb
+PASS  200  /listing/industrial-warehouse-chakan-pune-union
+PASS  200  /listing/2bhk-flat-kharghar-navi-mumbai-sbi
+PASS  200  /listing/2bhk-flat-saibaba-colony-coimbatore-sbi
+PASS  200  /listing/mixed-use-building-sitabuldi-nagpur-canara
+PASS  200  /listing/commercial-shop-fc-road-pune-bob
+PASS  200  /listing/villa-bopal-ahmedabad-idbi
+PASS  200  /listing/3bhk-apartment-whitefield-bengaluru-canara
+PASS  200  /listing/agricultural-land-ajmer-road-jaipur-bob
+
+Column-key checks: 96
+Non-empty value checks: 96
+
+RESULT: PASS — no gated data in guest HTML
+```
+
+`npx tsc --noEmit` — **clean, exit 0, no output.**
+
+`pnpm run build` — **succeeded.** Worth noting from the route table: `/login`
+and `/partner/login` are **still `○ (Static)` with a 1h revalidate.** The
+`?denied=1` reader was written as a post-mount `useEffect` on
+`window.location`, matching how `next` is already read there, precisely so
+neither page is forced out of static rendering by a `useSearchParams()`
+Suspense boundary.
+
+Route sweep against the local production server, all as expected:
+
+```
+/                      200      /services            200
+/login                 200      /listing             307
+/partner/login         200      /profile             307
+/signup                200      /admin               307
+/partner               200      /partner/dashboard   307
+/pricing               200      /auth/callback       307
+/search                200      /robots.txt          200
+/about                 200      /sitemap.xml         200
+/faq                   200
+/contact               200
+```
+
+#### ⚠️ `pnpm run lint` DOES NOT RUN — and this is pre-existing
+
+```
+$ eslint .
+'eslint' is not recognized as an internal or external command
+```
+
+**eslint is not a dependency of this project.** `package.json:9` defines
+`"lint": "eslint ."` but eslint appears in neither `dependencies` nor
+`devDependencies`, and `git show HEAD:package.json` confirms it was already
+missing before this commit. This is **not** a regression from Item A — the lint
+line in the §37.5 bar has never been runnable on this machine. Adding the
+dependency was left alone as out-of-scope and not mine to decide unattended.
+`tsc --noEmit` plus a full `next build` carried the static checking instead.
+
+#### Two things found and deliberately NOT changed
+
+1. **Signing *up* at `/partner/login` still creates an ordinary `user`.** The
+   partner door renders the same component, so its Sign Up tab makes a
+   customer account and lands it on `/profile`. Not a hole — the account gets
+   the role it deserves and the door refuses it on the next login — but it is
+   confusing, and closing it means either hiding the tab on that door or
+   building a partner-application flow. §37.2 explicitly forbade an invite
+   flow, so it is flagged, not built.
+2. There is still **no CHECK constraint on `profiles.role`**, so the four-role
+   vocabulary is enforced only in application code. That is what the migration
+   above is for.
