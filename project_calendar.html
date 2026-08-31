@@ -485,9 +485,28 @@
       <code>wrangler secret put</code>; see <code>MEMORY.md</code> §34.10 for the morning summary.
       <br><br><b>Item 1a is decided: GO</b> — the secret was set, the leak test now
       passes 12/12 against the deployed Worker, and the host decision (Workers + R2 +
-      Supabase) is reaffirmed. <b>One open defect:</b> <code>NEXT_PUBLIC_SITE_URL</code>
-      is not set on Cloudflare, so every canonical URL and sitemap entry on the live
-      site reads <code>localhost:3000</code>. See <code>MEMORY.md</code> §36 — the live handoff.
+      Supabase) is reaffirmed. <code>NEXT_PUBLIC_SITE_URL</code> <b>is now set and
+      verified</b> on the live Worker; canonicals, OG tags and the sitemap all read
+      the real origin. See <code>MEMORY.md</code> §37.0.
+      <br><br><b>31 Aug, afternoon — a second, attended loop</b> ran the three-item
+      queue in <code>MEMORY.md</code> §37 and landed all three.
+      <b>(A)</b> One email, one role: <code>/login</code> and
+      <code>/partner/login</code> each now admit only their own roles, on both the
+      password and Google paths, and a wrong-door sign-in is signed back out.
+      <b>(B)</b> The admin sidebar's six groups are collapsible, with the active
+      group held open and badge counts rolled up onto a collapsed header —
+      <i>the visual check is still owed.</i>
+      <b>(C)</b> The admin panel's demo data is gone: every StatCard on every panel
+      now reads from the database, the Recent Activity feed shows real events
+      instead of five invented people, and figures with no table behind them say
+      so rather than showing a fabricated number.
+      <b>Expect the admin panel to look very empty</b> — <code>payments</code>,
+      <code>service_packages</code>, <code>subscriptions</code>,
+      <code>alert_subscriptions</code> and <code>channel_partner_applications</code>
+      are all genuinely empty tables. That is the honest reading, not a broken
+      integration. <b>Still outstanding:</b> the demo <i>table rows</i> on the
+      Packages, Payments, Users, Partners, Success-Fee and Service-Pipeline panels
+      still name invented people. See <code>MEMORY.md</code> §37.7 — the return summary.
     </div>
   </div>
 </div>

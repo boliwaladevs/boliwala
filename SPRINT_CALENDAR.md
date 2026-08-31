@@ -405,10 +405,10 @@ gap. It should be escalated ahead of everything else in this table.
 
 ### Post-loop findings, 2026-08-31 — see `MEMORY.md` §36
 
-- [ ] **`NEXT_PUBLIC_SITE_URL` missing on Cloudflare** — every canonical URL, OG
-      tag and sitemap entry on the live Worker reads `http://localhost:3000`.
-      Set it as a Workers Builds **build variable** (not a secret). Highest-value
-      outstanding item. `MEMORY.md` §36.1.
+- [x] **`NEXT_PUBLIC_SITE_URL` set on Cloudflare (2026-08-31).** Added as a
+      Workers Builds build variable and verified on the live Worker: canonical,
+      `og:url`, `robots.txt` and all 20 sitemap entries read the real origin, and
+      `grep -c localhost` returns 0. `MEMORY.md` §37.0.
 - [ ] Sign in with email/password on the deployed origin and confirm `/profile`
       renders — the one Item 1a check never run. `MEMORY.md` §35.3.
 - [ ] `prompt: "select_account"` on the Google sign-in call, if the account
@@ -419,3 +419,38 @@ gap. It should be escalated ahead of everything else in this table.
 - [ ] Re-measure the Worker bundle: 2.74 MiB of a 3 MB free-tier cap, and that
       figure predates the overnight work. `MEMORY.md` §36.4.
 - Host decision reaffirmed: **stay on Workers + R2 + Supabase**. `MEMORY.md` §36.4.
+
+### Afternoon loop, 2026-08-31 — the §37 queue, all three items landed
+
+See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detail.
+
+- [x] **Item A — one email, one role** (`efb32d8`). `/login` and `/partner/login`
+      each admit only their own roles, on the password path and the Google
+      callback alike; a wrong-door sign-in is signed back out rather than left
+      with a live session. `channel_partner` now lands on `/partner/dashboard`.
+      Verified by 23 new assertions across 8 role/door pairs in
+      `scripts/access-matrix-test.mjs`; the existing 49 gating assertions are
+      untouched and still pass.
+- [x] **Item B — collapsible admin sidebar** (`8fc1963`). Six Radix `Collapsible`
+      groups, the active group forced open, badges rolled up onto a collapsed
+      header, preference stored in `localStorage`.
+      **⚠️ The visual check is still owed** — it needs a signed-in superadmin
+      browser session, which was not available unattended.
+- [x] **Item C — demo data purged from the admin panel** (`0ef6598`, `b3c02fd`,
+      `1389991`, `dfaae2a`, `2e991c0`). Every StatCard on every panel now reads
+      from the database; the Recent Activity feed shows real rows instead of five
+      invented people; metrics with no table behind them render "—" with a reason
+      rather than a fabricated figure; the success-fee banner no longer announces
+      a debt that does not exist.
+- [x] **Correction to `MEMORY.md` §37.3** (`1567903`). `profiles.role` **is**
+      constrained — it is of Postgres enum type `public."Role"`. The CHECK-
+      constraint migration written earlier in the window was unnecessary and has
+      been deleted; **nothing is waiting on you there.**
+
+- [ ] **Demo table ROWS still name invented people** — Packages, Payments, Users,
+      Partners, Success Fees and Service Pipeline. KPI figures are all real now;
+      these table bodies are not. **Top of the list next.** `MEMORY.md` §37.7.
+- [ ] Signing *up* at `/partner/login` still creates an ordinary `user` account.
+      Not a hole, but confusing. `MEMORY.md` §37.8.
+- [ ] `pnpm run lint` cannot run — **eslint is not a dependency of this project**
+      and was not before this window. `MEMORY.md` §37.8.

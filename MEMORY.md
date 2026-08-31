@@ -1,9 +1,17 @@
 # BOLIWALA.COM — PROJECT MEMORY & HANDOFF
 
-> **▶ START HERE (2026-08-31, afternoon): read §37 — the LIVE LOOP BRIEF.** It is
-> written for a fresh agent with no context and is self-contained: the rules
-> (§37.1), the three-item queue the user chose (§37.2), the grounding facts to
-> read before coding (§37.3), and the verification bar (§37.5).
+> **▶ START HERE (2026-08-31, evening): read §37.7 — the RETURN SUMMARY.**
+> The §37 loop queue is **complete**: Items A, B and C all landed and are
+> pushed. §37.7 says what is real on the admin panel, what is still fabricated,
+> and the one thing that needs your hands (Item B's visual check).
+> Per-item detail is §37.8 (A), §37.9 (B), §37.11 (C).
+>
+> **⚠️ §37.3 CONTAINS A KNOWN ERROR — read §37.10 before trusting it.**
+> `profiles.role` **is** constrained: it is a Postgres enum. The CHECK-constraint
+> migration §37.8 originally queued for you has been **withdrawn and deleted**;
+> nothing is waiting on you there.
+>
+> §37.1–§37.5 are the brief the loop worked from, kept for context.
 > **§36.1 is CLOSED** — `NEXT_PUBLIC_SITE_URL` is set and verified on the live
 > Worker (see §37.0); do not re-open it. §36.3 still holds the correction to what
 > Google sign-in actually needs. §35 is the Item 1a GO verdict; §34 is the
@@ -4467,6 +4475,119 @@ Append a `§37.7 ☀️ RETURN SUMMARY` with, in this order:
 Do not report an item as done unless its verification block in §37.5 actually
 ran and passed. If the window ends mid-item, say exactly where it stopped.
 
+## 37.7 ☀️ RETURN SUMMARY — read this first
+
+**All three queue items landed.** Tree is on `main`, clean, in sync with
+`origin/main`. Every commit below is pushed.
+
+### 1. What landed
+
+| Item | Commit(s) | State |
+|---|---|---|
+| **A** — one email, one role at both login doors | `efb32d8` | ✅ done, fully verified |
+| **B** — collapsible admin sidebar sections | `8fc1963` | ✅ built & test-verified — **your visual check still owed** |
+| **C** — purge demo data, wire the real DB | `0ef6598`, `b3c02fd`, `1389991`, `dfaae2a`, `2e991c0` | ✅ done for every KPI figure; **table rows still fabricated** |
+| — correction to §37.3 (not a queue item) | `1567903` | ⚠️ read §37.10 |
+| — MEMORY/hash bookkeeping | `2086fb1`, `7a12d77` | — |
+
+Detail: **§37.8** (Item A), **§37.9** (Item B), **§37.11** (Item C),
+**§37.10** (the correction).
+
+### 2. Item C — what is real now and what is not
+
+**Real, queried, and honest about zero:** every StatCard on every panel, all
+five sidebar badges, and the Recent Activity feed. The invented people —
+"Priya Mehta", "Rajesh Kumar", "Amit Sharma" — are gone from the feed.
+
+**The admin panel will look very empty, and that is correct.** `payments`,
+`service_packages`, `subscriptions`, `alert_subscriptions` and
+`channel_partner_applications` are all genuinely **0 rows**. The figures that
+are not zero: 12 listings, 5 users, 1 callback, **145 listing views**.
+
+**Nine figures show `—` rather than a number**, because no table records them
+at all (emails sent, WhatsApp queue, open/click rates, PDF downloads, campaign
+templates, view→signup rate). Deliberately not `0`: a zero would claim we
+measured and found none. Each says what is missing.
+
+**❗ Still fabricated — the one thing to know before a client demo:** the
+**table rows** on Packages, Payments, All Users, Channel Partners, Success Fees
+and Service Pipeline still name invented people with invented amounts. Every
+*figure* is real; those six *table bodies* are not. This was outside the three
+stages §37.2 defined for Item C, and I left them untouched rather than
+half-wired. **This is the top of the list next.**
+
+### 3. What needs your hands
+
+1. **Item B's visual check** — you said you would do this on return. Open
+   `/admin` as superadmin and try: collapse `Engagement` → refresh → it should
+   still be collapsed while `Listings` (holding the active Dashboard) is open;
+   collapse `Leads & Sales` → its unread callback count should appear as a chip
+   on the collapsed header; jump to Add Listing from the Dashboard → that group
+   should open itself; collapse the group you are *currently* in → it should
+   stay collapsed and not fight you.
+2. **Nothing else.** No dashboard actions were needed this window, and the
+   `profiles.role` migration I queued earlier has been **withdrawn** — see the
+   next section. There is nothing waiting on you in Cloudflare, Supabase,
+   Google or GitHub.
+
+### 4. Things found and NOT touched, with reasons
+
+- **The six demo tables** (above). Outside the item's defined stages; needs its
+  own commit.
+- **`pnpm run lint` cannot run at all.** `package.json:9` defines
+  `"lint": "eslint ."` but **eslint is in neither `dependencies` nor
+  `devDependencies`**, at HEAD before this window as well. Not a regression —
+  the lint line in the §37.5 bar has never been runnable here. I did not add
+  the dependency: that is a package.json decision, not mine to make unattended.
+  `tsc --noEmit` and a full `next build` carried the static checking instead.
+- **Signing *up* at `/partner/login`** still creates an ordinary `user`
+  account, because the partner door renders the same component. Not a hole —
+  the account gets the role it deserves and the door refuses it next login —
+  but confusing. Closing it means hiding the tab or building a partner
+  application flow, and §37.2 explicitly forbade an invite flow.
+- **"Real-time matching is ON"** on the Alert Engine panel asserts a feature is
+  running. I did not verify whether anything actually fires on listing change.
+  It is a claim about behaviour rather than a fabricated number, so it fell
+  outside "purge the demo data" — but it is worth confirming before a demo.
+- **Pre-existing items from §36.5** (header "Log In" link dropping context,
+  `bulkCommitListings` silently dropping rejected rows, the Worker bundle
+  re-measure) — untouched, still open, still listed in `SPRINT_CALENDAR.md`.
+
+### 5. One correction you should read: §37.10
+
+**§37.3 was wrong about `profiles.role`.** It reported no CHECK constraint and
+concluded any string could be written. The column is of Postgres **enum** type
+`public."Role"` — the four values are enforced by the database. Absence of a
+CHECK is not absence of enforcement.
+
+Consequence: the migration I wrote earlier in this window and queued for your
+approval was unnecessary and **has been deleted**. If you saw a note saying a
+`role` CHECK migration was waiting on you, ignore it. Item A's behaviour is
+unaffected. Full detail in **§37.10**.
+
+### 6. Verification — the standing bar
+
+Run at every stage. Final state:
+
+```
+npx tsc --noEmit            clean, exit 0
+pnpm run build              green (25/25 static pages)
+leak-test.mjs               12/12 PASS — baseline held
+access-matrix-test.mjs      49/49 gating PASS — baseline held
+                          + 23/23 login doors PASS — new this window
+pnpm run lint               CANNOT RUN — eslint not installed (pre-existing)
+```
+
+The 49 gating assertions are deliberately kept as their own tally inside
+`access-matrix-test.mjs` so the baseline stays comparable across sessions; the
+8 role/door pairs report separately.
+
+### 7. Files kept in sync (the UPDATE RULE)
+
+`MEMORY.md` (§37.7–§37.11), `SPRINT_CALENDAR.md` (afternoon-loop section added,
+`NEXT_PUBLIC_SITE_URL` ticked off), `project_calendar.html` (status banner
+rewritten for the §37 queue).
+
 ### 37.8 ITEM A — one email, one role, enforced at both login doors ✅ LANDED
 
 **Commit:** `efb32d8`
@@ -4814,3 +4935,157 @@ estimates — §32.0):
 
 Five of the tables behind the admin panel's money and engagement screens are
 **completely empty**. That is the ground truth Item C has to render honestly.
+
+### 37.11 ITEM C — demo data purged, admin panel wired to the database ✅ LANDED
+
+**Commits, in order:** `0ef6598` (C1 badges) · `b3c02fd` (C2 activity feed) ·
+`1389991` (C3 the four named StatCard groups) · `dfaae2a` (C4 the four groups
+the brief did not list) · `2e991c0` (C5 the success-fee banner).
+
+**The governing instruction was "if it's 0 let it be 0", and the panel now
+obeys it.** Nothing was seeded, nothing was hidden for being zero.
+
+#### What is now real, panel by panel
+
+| Panel | Figure | Source | Live value |
+|---|---|---|---|
+| Sidebar | All Listings | `kpis.activeListings` | 12 |
+| Sidebar | Callback Requests | `kpis.callbackRequestsUnread` | 1 |
+| Sidebar | Package Purchases | `kpis.packagePurchases` | 0 → no chip |
+| Sidebar | Success Fees | `kpis.successFeesPending` | 0 → no chip |
+| Sidebar | Channel Partners | `kpis.pendingPartnerApplications` | 0 → no chip |
+| Dashboard | all 8 StatCards | `getDashboardKpis()` | already real before this window |
+| Dashboard | Recent Activity | `getRecentActivity()` | 1 real callback + real listings |
+| Packages | Sold / revenue / this month / conversion | `service_packages` | 0, ₹0, 0, 0.0% |
+| Payments | All-time and this-month revenue + counts | `payments` where `status='paid'` | ₹0, 0 |
+| Users | Total / paid / free / requested callback | `profiles`, `service_packages`, `callback_requests` | 5, 0, 5, 1 |
+| Alerts | Total / email / WhatsApp subscribers | `alert_subscriptions` | 0, 0, 0 |
+| Alert Engine | Active Alert Rules | `alert_subscriptions` | 0 |
+| WhatsApp | WhatsApp Subscribers | `alert_subscriptions` | 0 |
+| Site Analytics | Listing views this month / all time | `listing_views` | **145 / 145** |
+
+`listing_views` is the one table with substantial real data, so Site Analytics
+is the only panel that now shows a big honest number.
+
+#### What says "not tracked" instead of a number, and why
+
+Nine figures had **no table behind them at all**: Emails Sent Today, WhatsApp
+Queued, Alert → Click Rate, Active Templates, Sent This Month, Avg Open Rate,
+Avg Click Rate, PDF Downloads, View → Signup Rate. They render `—` with a
+short reason ("No send log yet", "No click tracking yet").
+
+**They are not zeros on purpose.** A zero claims we measured and found none;
+the truth is there is nothing to measure. Showing `0 emails sent` would be a
+different lie from `38,420 emails sent`, not an improvement on it. The card
+stays so the metric someone planned for is not silently dropped.
+
+`Outstanding Success Fees` is the one figure left at a hard-coded **0**, and
+the card now says why on its face: no table records a success fee as owed.
+`service_packages.successFeePct` is a *rate*, not a debt, and nothing records
+an auction being won. §37.2 said to leave the zero with a comment rather than
+invent a derivation, and that is what happened.
+
+#### The invented people are gone from the feed
+
+The Recent Activity panel was five hardcoded events: *"Priya Mehta requested a
+callback"*, *"Rajesh Kumar purchased ₹9,999 package"*, *"Amit Sharma won auction
+₹82,00,000"*. All removed. `getRecentActivity()` merges the newest rows from
+`callback_requests`, `listings` and paid `payments`; with nothing to show it
+renders an empty state rather than filler.
+
+**A real bug avoided while building it.** Every `createdAt` in this schema is
+`timestamp without time zone` holding UTC, and PostgREST returns it bare.
+`new Date("2026-08-31T11:12:32.254")` is read as *local* time, so on this IST
+machine an event from ten minutes ago rendered as **"5 hours ago"** — measured,
+not theorised:
+
+```
+stored value:      2026-08-31T11:12:32.254
+local TZ offset:   -330 minutes
+parsed WITH Z   -> 10 minutes ago
+parsed WITHOUT  -> 5 hours ago
+```
+
+`utcDate()` in `lib/data/admin.ts` stamps the Z. The relative time is also
+computed **server-side**, because `/admin` is server-rendered and computing it
+on both sides would produce two different strings and a hydration mismatch.
+
+#### Also removed
+
+- **The invented arrow deltas** on the Users cards (`↑ 34%`, `↑ 9`, `↑ 18`) and
+  across Site Analytics and Email Campaigns. There is no historical baseline to
+  compute a change from — which is exactly why `getDashboardKpis()` never
+  produced trend figures either. Dropped, not recomputed.
+- **`This Month (Jun 2026)`** on Payments — a hardcoded month label that had
+  already gone stale.
+- **Two mislabelled Analytics cards.** "Page Views This Month" and "Listing
+  Detail Views" were both fed from `listing_views`, which records only listing
+  detail views. They now read "Listing Views This Month" and "Listing Views (All
+  Time)". A truthful label matters as much as a truthful number.
+- **The success-fee banner** (`2e991c0`), which opened the Payments panel with
+  *"4 success fees outstanding — ₹1,12,400 total due. These clients have won
+  auctions."* Nothing had won an auction; nothing was due. Unlike a StatCard it
+  was phrased as an urgent instruction to go and collect money. Now conditional
+  on the real figure, like the callback and partner strips above it — so it does
+  not render at all.
+
+#### One build failure worth remembering
+
+Importing `NOT_TRACKED` — a **value**, not a type — from `lib/data/admin.ts`
+into `components/admin-view.tsx` pulled the `server-only` module into the client
+bundle and failed the Turbopack build with *"The error was caused by importing
+'lib/data'"*. `tsc --noEmit` passed it happily. The constant now lives in the
+client component. **Type imports from a server-only module are fine; value
+imports are not, and only the build catches it.**
+
+#### Verification
+
+`npx tsc --noEmit` — clean. `pnpm run build` — green at every stage.
+
+```
+Column-key checks: 96
+Non-empty value checks: 96
+RESULT: PASS — no gated data in guest HTML
+
+49 assertions across 7 viewer states
+RESULT: PASS — gating matrix correct
+23 assertions across 8 role/door pairs
+RESULT: PASS — login doors correct
+```
+
+The check §37.2 asked for:
+
+```
+$ grep -nE 'StatCard[^>]*value="[0-9₹]' components/admin-view.tsx
+RESULT: no StatCard carries a hardcoded numeric value
+```
+
+Three figures cross-checked against direct SQL (`count(*)`, not planner
+estimates): `profiles` = 5, `callback_requests` = 1, `listing_views` = 145 —
+matching what the Users, Users-callback and Site Analytics cards now render.
+
+#### ⚠️ STILL FABRICATED: the demo table ROWS
+
+Every **KPI figure** on the admin panel is now real. The **table bodies are
+not.** These still contain hardcoded rows naming invented people —
+"Rajesh Kumar", "Amit Sharma" — with invented amounts:
+
+| Panel | What the table shows |
+|---|---|
+| Package Purchases | fake buyer rows |
+| Payments | fake transactions incl. `RZP-98765` |
+| All Users | fake user rows |
+| Channel Partners | fake partner rows with commission figures |
+| Success Fees | a fake won auction at ₹82,00,000 |
+| Service Pipeline | a fake client in "Due Diligence" |
+
+**This was outside what §37.2 defined for Item C** — C1/C2/C3 named the badges,
+the activity feed and the StatCards specifically, and all of those are done.
+The tables are the natural next stage and are the single most client-visible
+fabrication left on the panel. They were not started rather than left
+half-wired: four of the six have empty source tables and need an empty state,
+`All Users` can be wired to the 5 real `profiles`, and doing that properly is
+its own commit, not a rushed one at the end of a window.
+
+**Until they are done, `show.md`'s advice holds: do not open those tabs in a
+client demo.**
