@@ -1,5 +1,11 @@
 # BOLIWALA.COM — PROJECT MEMORY & HANDOFF
 
+> **▶ START HERE (2026-08-31): read §36 first — the live handoff.** It carries
+> the current state, one missing Cloudflare build variable that is breaking every
+> canonical URL and sitemap entry on the live site (§36.1), a correction to what
+> Google sign-in actually needs (§36.3), and the ordered pick-up list (§36.5).
+> §35 is the Item 1a GO verdict; §34 is the overnight loop record.
+
 > **🔄 UPDATE RULE (MANDATORY):** On every code change and commit, the following files
 > MUST be updated to reflect the current state:
 > - `MEMORY.md` — update the relevant sprint section, add new sections as needed
@@ -3998,3 +4004,161 @@ is not needed.
    doing before Item 1b.
 
 **Item 1a is done. Item 1b (DNS) is next, and is blocked on D2 — the domain.**
+
+---
+
+## 36. ▶▶ LIVE HANDOFF — post-loop session, 2026-08-31 (read this first)
+
+**Tree at handoff:** `main`, clean, in sync with `origin/main`. The overnight
+loop (§34) and the Item 1a verdict (§35) are both closed and pushed. This
+section records what was found **after** the loop, in conversation with the
+user, and none of it is written down anywhere else.
+
+### 36.1 ⚠️ `NEXT_PUBLIC_SITE_URL` IS NOT SET ON CLOUDFLARE — highest-value fix
+
+Found by reading the deployed Worker's own output, not by inspecting config:
+
+```
+<link rel="canonical" href="http://localhost:3000"/>
+<meta property="og:url" content="http://localhost:3000"/>
+Sitemap: http://localhost:3000/sitemap.xml
+<loc>http://localhost:3000/</loc>      <-- every entry in sitemap.xml
+```
+
+`lib/seo.ts:8` falls back to `http://localhost:3000` when the variable is
+absent, so **every canonical URL, OG tag and sitemap entry on the live Worker
+currently points at localhost.** Nothing looks broken in a browser, which is
+exactly why it survived — but if Google indexed the site in this state it would
+be actively destructive, and `coparison.md` §1 calls the SEO index our single
+biggest competitive gap.
+
+**It is set on Vercel** (added 22 Aug, confirmed from the user's screenshot of
+the Vercel env panel) — so this is a **Cloudflare-only regression**, not a
+long-standing bug. It is the same defect ROADMAP Item 1d anticipates absorbing.
+
+**Fix:** set `NEXT_PUBLIC_SITE_URL` as a **build variable** in Workers Builds —
+not a secret; `NEXT_PUBLIC_*` values are inlined at compile time (§27.6). Use
+the workers.dev URL now, the real domain when D2 lands. **Dashboard-side, so
+rule 4 blocks an agent from doing it — it is the user's action.**
+
+### 36.2 Full env-var mapping, Vercel → Cloudflare
+
+Derived from every `process.env.*` reference in `app/`, `lib/`, `components/`
+and `scripts/`, cross-checked against the user's Vercel panel:
+
+| Vercel variable | Cloudflare | status |
+|---|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | **runtime secret** | ✅ set 2026-08-31 (§35.1) |
+| `NEXT_PUBLIC_SITE_URL` | **build variable** | ❌ **MISSING — §36.1** |
+| `NEXT_PUBLIC_SUPABASE_URL` | build variable | ✅ set |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | build variable | ✅ set |
+| `DATABASE_URL` | **not needed** | unused by app code |
+| `DIRECT_URL` | **not needed** | only `scripts/apply-sql.mjs`, run locally |
+
+`SUPABASE_SERVICE_ROLE_KEY` remains **the only non-`NEXT_PUBLIC_` variable in
+the codebase** (§34.8). Three more are referenced but set nowhere, on either
+host — `NEXT_PUBLIC_CONTACT_EMAIL`, `NEXT_PUBLIC_CONTACT_PHONE` and
+`NEXT_PUBLIC_WHATSAPP_NUMBER`. They belong to **D9** (contact details) and are
+not a Cloudflare gap.
+
+### 36.3 Google sign-in: the account chooser, and a correction to §32.2
+
+**The user's report:** Google login works on the Worker, but the account-picker
+dialog never appears — it did on Vercel.
+
+**Diagnosis (mechanism, not measurement — the user's Google session state cannot
+be observed from here).** `handleGoogleLogin` in `components/auth-view.tsx`
+passes no `queryParams`, so no `prompt` reaches Google. Google shows the picker
+only when it has a reason to: several signed-in accounts, or consent not yet
+granted. After a first consent with a single Google session it auto-selects
+silently and keeps doing so. The Vercel dialog was almost certainly that first
+consent.
+
+**Fix if the picker is wanted every time** — one option on the existing call:
+
+```ts
+options: { redirectTo: `${window.location.origin}/auth/callback`,
+           queryParams: { prompt: "select_account" } }
+```
+
+**⚠️ CORRECTION to §32.2 item 2, §33.2 item 5 and §35.3.** Those all say Google
+login needs the **Worker origin added in the Google Cloud console**. That is
+wrong. Google's authorized redirect URI is
+`https://<project-ref>.supabase.co/auth/v1/callback` — **origin-independent**,
+already registered, and unaffected by which host serves the app. What actually
+needs the Worker origin is **Supabase's own Redirect URLs allowlist**, and since
+the user completed a Google login on the Worker, that allowlist evidently
+already permits it. **Google sign-in on Cloudflare is therefore not an open
+risk, and §35.3 item 1 is resolved rather than outstanding.**
+
+The S9 cookie decision in §34.4 is **unaffected and still correct** — it avoided
+depending on that allowlist at all, which remains the right call.
+
+### 36.4 Host decision: STAY ON WORKERS (reaffirmed 2026-08-31)
+
+The user asked directly whether to keep Workers + R2 + Supabase or fall back to
+Vercel + R2 + Supabase. **Recommendation given: stay on Workers**, and the §25
+decision stands unchanged.
+
+Reasoning: Item 1a is a GO on evidence rather than preference (§35.2); the only
+thing that ever looked like a platform problem was a missing secret; and the
+deciding factor is **R2 economics at 50k listings with photos and PDFs** — R2 is
+usable from Vercel, but then Vercel bandwidth is paid to re-serve it, whereas on
+Workers the object store and the CDN are one platform. Vercel Pro was never
+bought, so no sunk cost pulls either way.
+
+**Counterweights recorded honestly, because they are real:**
+
+1. **Bundle headroom is the near-term risk.** §27 measured **2.74 MiB gzip
+   against the free tier's 3 MB cap — 91% full.** Workers Paid (10 MB) is
+   deferred to w/c 2026-09-07. Until then a few new dependencies could break the
+   deploy. **That figure predates the overnight work and was NOT re-measured** —
+   the local `.open-next/` is stale (`worker.js` is a 2 KB stub). **Re-measure
+   before adding any dependency.**
+2. No deployable bundle can be built on this machine (§5 gotcha #10) — always CI.
+3. `sharp` does not run on Workers; renditions need the Node ingest job plus
+   Cloudflare Images (`INFRA_R2_SCALING_ANALYSIS.md` §6).
+4. OpenNext is a community adapter; Next upgrades can break it.
+
+### 36.5 What to pick up, in order
+
+**User actions (dashboard-side, rule 4 blocks an agent):**
+
+1. **Set `NEXT_PUBLIC_SITE_URL` as a Workers Builds *build* variable** (§36.1).
+   Highest value of anything outstanding.
+2. Sign in with email/password on the deployed origin and confirm `/profile`
+   renders — the one Item 1a check never run (§35.3 item 2). Google is now
+   resolved (§36.3), so this is the only auth gap left.
+
+**Code work, none of it blocked:**
+
+3. `prompt: "select_account"` on the Google call (§36.3) — three lines.
+4. Header "Log In" link still drops context — `components/header.tsx:119` and
+   `:203` go to a bare `/login`; use `withNext("/login", currentPath())`. Same
+   leak S9 closed, deliberately left outside §33.2's agreed scope (§34.4).
+5. `bulkCommitListings` swallows insert failures —
+   `app/actions/admin-listings.ts:211` is `if (!error) committed += 1`, so a row
+   the DB rejects vanishes silently while the toast reports a smaller number.
+   **Worth doing before real inventory arrives** (§34.2).
+6. Re-measure the Worker bundle (§36.4 item 1).
+7. **S5 (SEO route scaffolding)** and **S3 (lender model, on a branch)** — the
+   two items deliberately skipped overnight (§33.3) and the natural next
+   substantial work. Item 1b (DNS) is blocked on **D2**.
+
+**A browser eyeball pass is owed on everything from §34** — the sample-CSV
+button, the ₹/sq ft line, the login redirect flow. All verified at code and HTTP
+level only; nothing has been looked at.
+
+### 36.6 Do not redo these
+
+- **§30.4 is closed** (§35.1). Listing pages 200, bad slug 404. It was a missing
+  secret, never the adapter.
+- **Item 1a is decided: GO** (§35.2). Do not re-litigate the host.
+- **Item 5 is merged** as `e0b0f43` (§33.0). Branches
+  `item5-navbar-partner-auth` and `feat_hriday` are stale and deletable.
+- **`channel_partner_applications` exists, 0 rows** — a migration-provenance
+  gap, not data loss (§32.0). Not a bug.
+- The bulk-upload date corruption is **fixed** (§34.2); `cellDates: true` must
+  stay on that `XLSX.read` call.
+- `wrangler tail` takes the worker as a **positional**, not `--name`, on
+  wrangler 4.127.1 (§34.8).

@@ -402,3 +402,20 @@ gap. It should be escalated ahead of everything else in this table.
 - [x] **Item 1a — Cloudflare go/no-go: GO (2026-08-31).** Secret set; leak test
       12/12 against the deployed Worker, access matrix 49/49, 22-route sweep clean.
       `MEMORY.md` §35.
+
+### Post-loop findings, 2026-08-31 — see `MEMORY.md` §36
+
+- [ ] **`NEXT_PUBLIC_SITE_URL` missing on Cloudflare** — every canonical URL, OG
+      tag and sitemap entry on the live Worker reads `http://localhost:3000`.
+      Set it as a Workers Builds **build variable** (not a secret). Highest-value
+      outstanding item. `MEMORY.md` §36.1.
+- [ ] Sign in with email/password on the deployed origin and confirm `/profile`
+      renders — the one Item 1a check never run. `MEMORY.md` §35.3.
+- [ ] `prompt: "select_account"` on the Google sign-in call, if the account
+      picker is wanted every time. `MEMORY.md` §36.3.
+- [ ] Header "Log In" link still drops context (`components/header.tsx:119`, `:203`).
+- [ ] `bulkCommitListings` silently drops rows the DB rejects
+      (`app/actions/admin-listings.ts:211`) — fix before real inventory arrives.
+- [ ] Re-measure the Worker bundle: 2.74 MiB of a 3 MB free-tier cap, and that
+      figure predates the overnight work. `MEMORY.md` §36.4.
+- Host decision reaffirmed: **stay on Workers + R2 + Supabase**. `MEMORY.md` §36.4.

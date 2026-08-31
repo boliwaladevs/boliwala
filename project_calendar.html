@@ -483,6 +483,11 @@
       The Cloudflare listing-page 500s are root-caused — a missing
       <code>SUPABASE_SERVICE_ROLE_KEY</code> secret on the Worker, fixed by one
       <code>wrangler secret put</code>; see <code>MEMORY.md</code> §34.10 for the morning summary.
+      <br><br><b>Item 1a is decided: GO</b> — the secret was set, the leak test now
+      passes 12/12 against the deployed Worker, and the host decision (Workers + R2 +
+      Supabase) is reaffirmed. <b>One open defect:</b> <code>NEXT_PUBLIC_SITE_URL</code>
+      is not set on Cloudflare, so every canonical URL and sitemap entry on the live
+      site reads <code>localhost:3000</code>. See <code>MEMORY.md</code> §36 — the live handoff.
     </div>
   </div>
 </div>
