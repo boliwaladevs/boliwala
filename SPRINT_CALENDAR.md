@@ -457,9 +457,9 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
       constraint migration written earlier in the window was unnecessary and has
       been deleted; **nothing is waiting on you there.**
 
-- [ ] **Demo table ROWS still name invented people** — Packages, Payments, Users,
-      Partners, Success Fees and Service Pipeline. KPI figures are all real now;
-      these table bodies are not. **Top of the list next.** `MEMORY.md` §37.7.
+- [x] **Demo table ROWS no longer name invented people** — Packages, Payments, Users,
+      Partners, Success Fees and Service Pipeline, plus three more the plan had not
+      listed. Fixed by W1; see `MEMORY.md` §39.2.
 - [ ] Signing *up* at `/partner/login` still creates an ordinary `user` account.
       Not a hole, but confusing. `MEMORY.md` §37.8.
 - [ ] `pnpm run lint` cannot run — **eslint is not a dependency of this project**
@@ -474,7 +474,14 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
       35 inline `font-['Plus_Jakarta_Sans']` classes in
       `components/partner-dashboard-view.tsx` removed. `grep -ri satoshi` is clean.
       Standing bar green: tsc 0, build 25/25, leak 12/12, matrix 49/49 + 23/23.
-- [ ] W1 — purge the six fabricated admin tables (top demo risk)
+- [x] **W1 — the fabricated admin tables are gone.** Nine table bodies, not six —
+      Alert Subscribers, the Dispatch Log and the WhatsApp Queue carried the same
+      invented rows. All Users, Channel Partners and Alert Subscribers now query the
+      database (5 real users; the other two are genuinely empty); Packages, Payments,
+      Service Pipeline, Success Fees, the Dispatch Log and the WhatsApp Queue show an
+      empty state that says why it is empty. The hardcoded "31 active · 6 pending"
+      partner count and the invented Service Pipeline tab counts are gone too.
+      `MEMORY.md` §39.2.
 - [ ] W2 — Contact Sales enquiry flow *(the notification decision is with the user)*
 - [ ] W3 — security housekeeping *(the password rotation is with the user)*
 - [ ] W4 — lender model, `banks` → `lenders`

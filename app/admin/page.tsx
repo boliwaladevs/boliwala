@@ -7,6 +7,9 @@ import {
   getCallbackRequests,
   getRecentActivity,
   getAdminSectionStats,
+  getAdminUsers,
+  getPartnerApplications,
+  getAlertSubscribersForAdmin,
 } from "@/lib/data/admin"
 import { getPricingSettings } from "@/lib/access/settings"
 import { pageMetadata } from "@/lib/seo"
@@ -21,16 +24,29 @@ export const metadata = pageMetadata({
 export default async function AdminPage() {
   const admin = await requireAdmin()
 
-  const [kpis, initialListings, banks, initialCallbacks, pricingSettings, activity, sectionStats] =
-    await Promise.all([
-      getDashboardKpis(),
-      getAdminListings({}),
-      getBanksForAdmin(),
-      getCallbackRequests({}),
-      getPricingSettings(),
-      getRecentActivity(),
-      getAdminSectionStats(),
-    ])
+  const [
+    kpis,
+    initialListings,
+    banks,
+    initialCallbacks,
+    pricingSettings,
+    activity,
+    sectionStats,
+    users,
+    partnerApplications,
+    alertSubscribers,
+  ] = await Promise.all([
+    getDashboardKpis(),
+    getAdminListings({}),
+    getBanksForAdmin(),
+    getCallbackRequests({}),
+    getPricingSettings(),
+    getRecentActivity(),
+    getAdminSectionStats(),
+    getAdminUsers(),
+    getPartnerApplications(),
+    getAlertSubscribersForAdmin(),
+  ])
 
   return (
     <AdminView
@@ -42,6 +58,9 @@ export default async function AdminPage() {
       pricingSettings={pricingSettings}
       activity={activity}
       sectionStats={sectionStats}
+      users={users}
+      partnerApplications={partnerApplications}
+      alertSubscribers={alertSubscribers}
     />
   )
 }

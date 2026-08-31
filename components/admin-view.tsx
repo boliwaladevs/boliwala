@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ChevronDown } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { describeAlertFilters } from "@/lib/alerts"
 import { ListingsPanel } from "./admin/listings-panel"
 import { ListingFormPanel } from "./admin/listing-form-panel"
 import { BulkUploadPanel } from "./admin/bulk-upload-panel"
@@ -15,6 +16,9 @@ import type {
   AdminCallbackRow,
   AdminActivityEvent,
   AdminSectionStats,
+  AdminUserRow,
+  AdminPartnerApplicationRow,
+  AdminAlertSubscriberRow,
 } from "@/lib/data/admin"
 import type { PricingSettings } from "@/lib/access/types"
 
@@ -78,6 +82,14 @@ const NOT_TRACKED = "—"
 
 const NAV_COLLAPSED_KEY = "bw_admin_nav_collapsed"
 
+/** Pill tint per application status. The label is the status itself. */
+const PARTNER_STATUS_PILL: Record<AdminPartnerApplicationRow["status"], string> = {
+  new: "gold",
+  contacted: "blue",
+  approved: "green",
+  rejected: "gray",
+}
+
 /** Icon and tint per activity kind. The text itself comes from the database. */
 const ACTIVITY_STYLE: Record<AdminActivityEvent["kind"], { icon: string; bg: string }> = {
   callback: { icon: "📞", bg: "bg-red-100 dark:bg-red-500/20" },
@@ -94,6 +106,9 @@ export function AdminView({
   pricingSettings,
   activity,
   sectionStats,
+  users,
+  partnerApplications,
+  alertSubscribers,
 }: {
   adminName: string
   kpis: DashboardKpis
@@ -103,6 +118,9 @@ export function AdminView({
   pricingSettings: PricingSettings
   activity: AdminActivityEvent[]
   sectionStats: AdminSectionStats
+  users: AdminUserRow[]
+  partnerApplications: AdminPartnerApplicationRow[]
+  alertSubscribers: AdminAlertSubscriberRow[]
 }) {
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -111,8 +129,39 @@ export function AdminView({
 
   const currentPage = pageMap[activePage] || pageMap['dashboard']
 
+  /**
+   * The Channel Partners header used to carry a hardcoded active/pending count.
+   * Counted from the rows instead — an application is pending until someone
+   * decides on it, and `contacted` is still undecided.
+   */
+  /** Resolves bank ids in saved alert filters to names, so chips read "SBI", not a UUID. */
+  const bankNames = new Map(banks.map((b) => [b.id, b.name]))
+
+  const partnerCounts = {
+    approved: partnerApplications.filter((p) => p.status === 'approved').length,
+    pending: partnerApplications.filter((p) => p.status === 'new' || p.status === 'contacted').length,
+  }
+
   /** Indian-format rupees. Whole rupees only — no fractional paise on a KPI card. */
   const inr = (amount: number) => `₹${Math.round(amount).toLocaleString('en-IN')}`
+
+  /** Same short form the Callbacks panel uses, so dates read alike across the admin. */
+  const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+
+  /**
+   * A table with nothing in it says **why** it is empty.
+   *
+   * "No data" invites the reading that something is broken. Every one of these
+   * tables is empty because the table behind it has no rows yet, and several
+   * cannot have rows until a flow that does not exist is built — the copy has
+   * to carry that, because the alternative is what used to be here: invented
+   * people making an empty product look busy.
+   */
+  const EmptyRow = ({ cols, children }: { cols: number; children: React.ReactNode }) => (
+    <tr>
+      <td colSpan={cols} className="p-8 text-center text-muted-foreground text-[13px] leading-relaxed">{children}</td>
+    </tr>
+  )
 
   const goToAddListing = () => { setEditingListingId(null); setActivePage('add-listing') }
   const goToEditListing = (id: string) => { setEditingListingId(id); setActivePage('listing-detail') }
@@ -514,12 +563,10 @@ export function AdminView({
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>Client</Th><Th>Property of Interest</Th><Th>Package</Th><Th>Txn ID</Th><Th>Pipeline Status</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <tr className="border-b border-border hover:bg-muted/30">
-                      <Td><div className="font-bold text-foreground">Rajesh Kumar</div><div className="text-[11px]">rajesh@gmail.com</div></Td>
-                      <Td>Flat 303, Vithai Apt, Airoli</Td><Td><Pill type="blue">DD + Bid Mgmt</Pill></Td>
-                      <Td className="font-mono text-xs">RZP-98765</Td><Td><Pill type="gold">In Progress</Pill></Td>
-                      <Td><div className="flex gap-1.5"><RaBtn>View Pipeline</RaBtn><RaBtn>📄 Invoice</RaBtn></div></Td>
-                    </tr>
+                    <EmptyRow cols={6}>
+                      No package purchases yet. Packages are sold by the team, so a row appears here once a
+                      sales enquiry is converted — there is no self-serve checkout.
+                    </EmptyRow>
                   </tbody>
                 </table></div>
               </div>
@@ -539,14 +586,10 @@ export function AdminView({
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>Date</Th><Th>Client</Th><Th>Type</Th><Th>Txn ID</Th><Th>Amount</Th><Th>Status</Th></tr></thead>
                   <tbody>
-                    <tr className="border-b border-border hover:bg-muted/30">
-                      <Td>30 Jun 2026</Td><Td className="font-bold text-foreground">Rajesh Kumar</Td><Td>₹9,999 Package</Td><Td className="font-mono text-xs">RZP-98765</Td>
-                      <Td className="font-bold text-foreground">₹9,999</Td><Td><Pill type="green">Received</Pill></Td>
-                    </tr>
-                    <tr className="border-b border-border hover:bg-muted/30">
-                      <Td>22 Jun 2026</Td><Td className="font-bold text-foreground">Vikram Patel</Td><Td>1% Success Fee</Td><Td className="font-mono text-xs">—</Td>
-                      <Td className="font-bold text-foreground">₹60,120</Td><Td><Pill type="red">Outstanding</Pill></Td>
-                    </tr>
+                    <EmptyRow cols={6}>
+                      No transactions yet. Online payment is not connected, so nothing writes to this table —
+                      entitlements granted by an admin will show here once that path exists.
+                    </EmptyRow>
                   </tbody>
                 </table></div>
               </div>
@@ -567,16 +610,25 @@ export function AdminView({
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>User</Th><Th>Phone</Th><Th>Signed Up</Th><Th>Shortlisted</Th><Th>Type</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <tr className="border-b border-border hover:bg-muted/30">
-                      <Td><div className="font-bold text-foreground">Rajesh Kumar</div><div className="text-[11px]">rajesh@gmail.com</div></Td>
-                      <Td>9876543210</Td><Td>30 Jun</Td><Td>3 properties</Td><Td><Pill type="green">Paid</Pill></Td>
-                      <Td><RaBtn>View</RaBtn></Td>
-                    </tr>
-                    <tr className="border-b border-border hover:bg-muted/30">
-                      <Td><div className="font-bold text-foreground">Suresh Rathi</div><div className="text-[11px]">suresh@gmail.com</div></Td>
-                      <Td>9654321098</Td><Td>28 Jun</Td><Td>2 properties</Td><Td><Pill type="gray">Free</Pill></Td>
-                      <Td><div className="flex gap-1.5"><RaBtn>View</RaBtn><RaBtn>📞 Call</RaBtn></div></Td>
-                    </tr>
+                    {users.length === 0 ? (
+                      <EmptyRow cols={6}>No users yet.</EmptyRow>
+                    ) : users.map((u) => (
+                      <tr key={u.id} className="border-b border-border hover:bg-muted/30">
+                        <Td>
+                          <div className="font-bold text-foreground">{u.fullName?.trim() || '—'}</div>
+                          <div className="text-[11px]">{u.email}{u.city ? ` · ${u.city}` : ''}</div>
+                        </Td>
+                        <Td>{u.phone || '—'}</Td>
+                        <Td>{shortDate(u.createdAt)}</Td>
+                        <Td>{u.shortlistCount === 0 ? '—' : `${u.shortlistCount} propert${u.shortlistCount === 1 ? 'y' : 'ies'}`}</Td>
+                        <Td>
+                          {u.role !== 'user'
+                            ? <Pill type="purple">{u.role.replace('_', ' ')}</Pill>
+                            : u.hasPackage ? <Pill type="green">Paid</Pill> : <Pill type="gray">Free</Pill>}
+                        </Td>
+                        <Td><RaBtn>View</RaBtn></Td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table></div>
               </div>
@@ -590,7 +642,7 @@ export function AdminView({
           {activePage === 'requests' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="flex border-b-2 border-border mb-4 overflow-x-auto">
-                {['All (47)', 'New (12)', 'In Progress (18)', 'Completed (14)', 'Dropped (3)'].map((t, i) => (
+                {['All', 'New', 'In Progress', 'Completed', 'Dropped'].map((t, i) => (
                   <div key={i} className={`px-4 py-2 text-[13px] cursor-pointer font-medium whitespace-nowrap -mb-[2px] border-b-2 ${i === 0 ? 'text-primary border-primary font-bold' : 'text-muted-foreground border-transparent'}`}>{t}</div>
                 ))}
               </div>
@@ -599,12 +651,10 @@ export function AdminView({
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>Client</Th><Th>Service</Th><Th>City</Th><Th>Property</Th><Th>Stage</Th><Th>Status</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <tr className="border-b border-border hover:bg-muted/30">
-                      <Td><div className="font-bold text-foreground">Rajesh Kumar</div><div className="text-[11px]">📞 9876543210</div></Td>
-                      <Td>DD + Bid Mgmt</Td><Td>Navi Mumbai</Td><Td>Flat 303, Airoli</Td><Td>Due Diligence</Td>
-                      <Td><Pill type="gold">In Progress</Pill></Td>
-                      <Td><div className="flex gap-1.5"><RaBtn>View</RaBtn><RaBtn>💬 WhatsApp</RaBtn></div></Td>
-                    </tr>
+                    <EmptyRow cols={7}>
+                      Nothing in the pipeline yet. A job appears here when a client buys a service package,
+                      which today happens through a sales enquiry rather than a checkout.
+                    </EmptyRow>
                   </tbody>
                 </table></div>
               </div>
@@ -622,11 +672,11 @@ export function AdminView({
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>Client</Th><Th>Property Won</Th><Th>Winning Bid</Th><Th>Base Paid</Th><Th>1% Due</Th><Th>Date Won</Th><Th>Status</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <tr className="border-b border-border hover:bg-muted/30">
-                      <Td className="font-bold text-foreground">Amit Sharma</Td><Td>3BHK Andheri West</Td><Td>₹82,00,000</Td><Td>✅ ₹9,999</Td>
-                      <Td className="font-bold text-red-600">₹82,000</Td><Td>18 Jun 2026</Td><Td><Pill type="red">Outstanding</Pill></Td>
-                      <Td><div className="flex gap-1.5"><RaBtn>📄 Send Invoice</RaBtn><RaBtn primary>Mark Paid</RaBtn></div></Td>
-                    </tr>
+                    <EmptyRow cols={8}>
+                      Nothing is tracked here yet. No table records an auction being won or a success fee
+                      falling due — <code className="text-xs">service_packages.successFeePct</code> is a rate,
+                      not a debt. This section stays empty until that is built.
+                    </EmptyRow>
                   </tbody>
                 </table></div>
               </div>
@@ -637,20 +687,39 @@ export function AdminView({
           {activePage === 'partners' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                <TcHead title={<>🤝 Channel Partners <span className="text-xs font-normal text-muted-foreground">31 active · 6 pending</span></>} acts={<><TcActionSelect options={['All Tiers', 'Associate', 'Silver', 'Gold']} /><TcActionSelect options={['All Status', 'Pending', 'Active']} /><TcActionBtn>⬇️ Export</TcActionBtn></>} />
+                <TcHead title={<>🤝 Channel Partners <span className="text-xs font-normal text-muted-foreground">{partnerCounts.approved} approved · {partnerCounts.pending} pending</span></>} acts={<><TcActionSelect options={['All Tiers', 'Associate', 'Silver', 'Gold']} /><TcActionSelect options={['All Status', 'Pending', 'Active']} /><TcActionBtn>⬇️ Export</TcActionBtn></>} />
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>Partner</Th><Th>City / Localities</Th><Th>Tier</Th><Th>Referrals</Th><Th>Converted</Th><Th>Commission</Th><Th>Status</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <tr className="bg-amber-50/50 dark:bg-amber-500/5 border-b border-border">
-                      <Td><div className="font-bold text-foreground">Vikram Patel</div><div className="text-[11px]">Ahmedabad</div></Td>
-                      <Td>Navrangpura, SG Road</Td><Td>—</Td><Td>0</Td><Td>0</Td><Td>—</Td><Td><Pill type="gold">Pending</Pill></Td>
-                      <Td><div className="flex gap-1.5"><RaBtn primary>✅ Approve</RaBtn><RaBtn danger>✕ Reject</RaBtn></div></Td>
-                    </tr>
-                    <tr className="border-b border-border hover:bg-muted/30">
-                      <Td><div className="font-bold text-foreground">Suresh Nair</div><div className="text-[11px]">9876543210 · Kochi</div></Td>
-                      <Td>Ernakulam, Kakkanad</Td><Td><Pill type="gold">Silver</Pill></Td><Td>8</Td><Td>5</Td><Td>₹12,400</Td><Td><Pill type="green">Active</Pill></Td>
-                      <Td><div className="flex gap-1.5"><RaBtn>View</RaBtn><RaBtn>Creatives</RaBtn></div></Td>
-                    </tr>
+                    {partnerApplications.length === 0 ? (
+                      <EmptyRow cols={8}>
+                        No channel partner applications yet. The application form at <code className="text-xs">/partner</code> writes
+                        here, so a real submission appears the moment it arrives.
+                      </EmptyRow>
+                    ) : partnerApplications.map((p) => {
+                      const awaiting = p.status === 'new' || p.status === 'contacted'
+                      return (
+                        <tr key={p.id} className={`border-b border-border ${awaiting ? 'bg-amber-50/50 dark:bg-amber-500/5' : 'hover:bg-muted/30'}`}>
+                          <Td>
+                            <div className="font-bold text-foreground">{p.name}</div>
+                            <div className="text-[11px]">{p.phone} · {p.email}</div>
+                          </Td>
+                          <Td>{p.city}, {p.state}</Td>
+                          <Td>{NOT_TRACKED}</Td>
+                          <Td>{NOT_TRACKED}</Td>
+                          <Td>{NOT_TRACKED}</Td>
+                          <Td>{NOT_TRACKED}</Td>
+                          <Td><Pill type={PARTNER_STATUS_PILL[p.status]}>{p.status}</Pill></Td>
+                          <Td>
+                            <div className="flex gap-1.5">
+                              {awaiting
+                                ? <><RaBtn primary>✅ Approve</RaBtn><RaBtn danger>✕ Reject</RaBtn></>
+                                : <RaBtn>View</RaBtn>}
+                            </div>
+                          </Td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table></div>
               </div>
@@ -676,9 +745,25 @@ export function AdminView({
               <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                 <TcHead title="Alert Subscribers" acts={<><input className="h-8 px-3 border-2 border-border rounded-lg text-[13px] bg-background w-[180px]" placeholder="Search email…" /><TcActionBtn>⬇️ Export</TcActionBtn></>} />
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-muted/50 border-b border-border"><Th>Email / WhatsApp</Th><Th>City</Th><Th>Type</Th><Th>Bank</Th><Th>Budget</Th><Th>Subscribed</Th><Th>Actions</Th></tr></thead>
+                  <thead><tr className="bg-muted/50 border-b border-border"><Th>Email / WhatsApp</Th><Th>What they are watching</Th><Th>Frequency</Th><Th>Subscribed</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <tr className="border-b border-border hover:bg-muted/30"><Td className="font-bold text-foreground">rajesh@gmail.com</Td><Td>Mumbai</Td><Td>Residential</Td><Td>Any</Td><Td>₹50L–1Cr</Td><Td>30 Jun 2026</Td><Td><RaBtn danger>Unsubscribe</RaBtn></Td></tr>
+                    {alertSubscribers.length === 0 ? (
+                      <EmptyRow cols={5}>No active alert subscriptions yet.</EmptyRow>
+                    ) : alertSubscribers.map((a) => (
+                      <tr key={a.id} className="border-b border-border hover:bg-muted/30">
+                        <Td className="font-bold text-foreground">{a.email || a.whatsapp || '—'}</Td>
+                        <Td>
+                          <div className="flex flex-wrap gap-1">
+                            {describeAlertFilters(a.filters, bankNames).map((chip, i) => (
+                              <span key={i} className="text-[11px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full">{chip}</span>
+                            ))}
+                          </div>
+                        </Td>
+                        <Td>{a.frequency}</Td>
+                        <Td>{shortDate(a.createdAt)}</Td>
+                        <Td><RaBtn danger>Unsubscribe</RaBtn></Td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table></div>
               </div>
@@ -710,8 +795,10 @@ export function AdminView({
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>Time</Th><Th>Recipient</Th><Th>Type</Th><Th>Trigger</Th><Th>Channel</Th><Th>Status</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <tr className="border-b border-border hover:bg-muted/30"><Td>2 min ago</Td><Td className="font-bold text-foreground">rajesh@gmail.com</Td><Td>Match Alert</Td><Td>New listing: Flat 303 Airoli</Td><Td>📧 Email</Td><Td><Pill type="green">Delivered</Pill></Td><Td><RaBtn>View</RaBtn></Td></tr>
-                    <tr className="border-b border-border hover:bg-muted/30"><Td>2 min ago</Td><Td className="font-bold text-foreground">+91 9876543210</Td><Td>Match Alert</Td><Td>New listing: Flat 303 Airoli</Td><Td>💬 WhatsApp</Td><Td><Pill type="gold">Queued — Manual</Pill></Td><Td><RaBtn primary>💬 Send Now</RaBtn></Td></tr>
+                    <EmptyRow cols={7}>
+                      No dispatches logged. Nothing sends notifications yet — there is no email or WhatsApp
+                      integration and no table recording a send.
+                    </EmptyRow>
                   </tbody>
                 </table></div>
               </div>
@@ -773,7 +860,9 @@ export function AdminView({
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>Recipient</Th><Th>Message Type</Th><Th>Property</Th><Th>Queued</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <tr className="border-b border-border hover:bg-muted/30"><Td className="font-bold text-foreground">+91 9876543210</Td><Td>Match Alert</Td><Td>Flat 303, Airoli</Td><Td>2 min ago</Td><Td><div className="flex gap-1.5"><RaBtn primary>💬 Open Chat</RaBtn><RaBtn>Mark Sent</RaBtn></div></Td></tr>
+                    <EmptyRow cols={5}>
+                      Nothing queued. No table holds an outbound WhatsApp message yet.
+                    </EmptyRow>
                   </tbody>
                 </table></div>
               </div>

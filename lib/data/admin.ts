@@ -2,6 +2,7 @@ import "server-only"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { Listing, ListingStatus } from "@/lib/data/types"
+import type { AlertFilters } from "@/lib/data/alerts"
 
 export interface DashboardKpis {
   activeListings: number
@@ -437,6 +438,132 @@ export async function getCallbackRequests(filters: CallbackFilters): Promise<Adm
   const { data, error } = await query.limit(200)
   if (error) throw error
   return (data ?? []) as unknown as AdminCallbackRow[]
+}
+
+export type PartnerApplicationStatus = "new" | "contacted" | "approved" | "rejected"
+
+export interface AdminUserRow {
+  id: string
+  fullName: string | null
+  email: string
+  phone: string | null
+  city: string | null
+  role: "user" | "admin" | "channel_partner" | "superadmin"
+  createdAt: string
+  shortlistCount: number
+  hasPackage: boolean
+}
+
+/**
+ * Every profile, newest first, for the admin Users table.
+ *
+ * `hasPackage` is the only honest reading of the "Paid" pill available today:
+ * a user has bought something iff a `service_packages` row names them. That
+ * table is empty, so every user currently reads Free — which is correct, not a
+ * bug. It is the same source `getAdminSectionStats().users.paidPackage` counts,
+ * so the pill and the StatCard above it can never disagree.
+ *
+ * Shortlist counts and package ownership are folded in from two more selects
+ * rather than a join, matching how this file already aggregates in JS. At five
+ * profiles that is free; revisit it at the same time as the rest of the file.
+ */
+export async function getAdminUsers(limit = 200): Promise<AdminUserRow[]> {
+  const admin = createAdminClient()
+
+  const [profiles, shortlists, packages] = await Promise.all([
+    admin
+      .from("profiles")
+      .select('id, "fullName", email, phone, city, role, "createdAt"')
+      .order("createdAt", { ascending: false })
+      .limit(limit),
+    admin.from("shortlists").select("userId"),
+    admin.from("service_packages").select("userId"),
+  ])
+
+  if (profiles.error) throw profiles.error
+
+  const shortlistCounts = new Map<string, number>()
+  for (const row of (shortlists.data ?? []) as { userId: string }[]) {
+    shortlistCounts.set(row.userId, (shortlistCounts.get(row.userId) ?? 0) + 1)
+  }
+  const paidUserIds = new Set((packages.data ?? []).map((r) => (r as { userId: string }).userId))
+
+  return ((profiles.data ?? []) as unknown as Omit<AdminUserRow, "shortlistCount" | "hasPackage">[]).map(
+    (row) => ({
+      ...row,
+      shortlistCount: shortlistCounts.get(row.id) ?? 0,
+      hasPackage: paidUserIds.has(row.id),
+    }),
+  )
+}
+
+export interface AdminPartnerApplicationRow {
+  id: string
+  name: string
+  phone: string
+  email: string
+  city: string
+  state: string
+  occupation: string | null
+  experience: string | null
+  status: PartnerApplicationStatus
+  createdAt: string
+}
+
+/**
+ * Channel partner applications, newest first.
+ *
+ * `app/actions/partner.ts` genuinely inserts into this table, so these rows are
+ * real leads. The table is empty today; an empty admin table is the correct
+ * rendering of that. Referral, conversion and commission figures are **not**
+ * returned here — nothing records them yet. W6 adds those tables; until then
+ * the columns say so rather than showing a number.
+ */
+export async function getPartnerApplications(limit = 200): Promise<AdminPartnerApplicationRow[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("channel_partner_applications")
+    .select('id, name, phone, email, city, state, occupation, experience, status, "createdAt"')
+    .order("createdAt", { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return (data ?? []) as unknown as AdminPartnerApplicationRow[]
+}
+
+export interface AdminAlertSubscriberRow {
+  id: string
+  email: string | null
+  whatsapp: string | null
+  filters: AlertFilters
+  frequency: string
+  createdAt: string
+}
+
+/**
+ * Active alert subscriptions for the admin Alert Subscribers table.
+ *
+ * Reads the same table the StatCards above it count, so the list and the
+ * totals cannot drift apart. Inactive rows are excluded for the same reason
+ * `getAdminSectionStats()` filters on `isActive` — an unsubscribed row is not
+ * a subscriber.
+ */
+export async function getAlertSubscribersForAdmin(limit = 200): Promise<AdminAlertSubscriberRow[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("alert_subscriptions")
+    .select('id, email, whatsapp, filters, frequency, "createdAt"')
+    .eq("isActive", true)
+    .order("createdAt", { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return ((data ?? []) as unknown as AdminAlertSubscriberRow[]).map((row) => ({
+    ...row,
+    // Same reason as getAlertSubscriptions(): rows predating the filters
+    // column hold null rather than an object.
+    filters: row.filters ?? {},
+  }))
 }
 
 export interface EditablePricingSettings {

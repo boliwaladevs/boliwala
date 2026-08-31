@@ -5235,7 +5235,7 @@ check. Instruction was explicit — **do not stop execution waiting for any of t
 | | Workstream | Status | Commit |
 |---|---|---|---|
 | W0 | Plus Jakarta Sans | ✅ **LANDED** | see below |
-| W1 | Purge the six admin tables | ⬜ | |
+| W1 | Purge the six admin tables | ✅ **LANDED** | see §39.2 |
 | W2 | Contact Sales flow | ⬜ | |
 | W3 | Security housekeeping | ⬜ | |
 | W4 | Lender model | ⬜ | |
@@ -5291,3 +5291,68 @@ pnpm run build              green, 25/25 static      ✅
 leak-test.mjs               12/12 PASS               ✅
 access-matrix-test.mjs      49/49 + 23/23 PASS       ✅
 ```
+
+### 39.2 W1 — the fabricated admin tables ✅ LANDED
+
+**Nine table bodies changed, not six.** The plan named six; the sweep found three
+more of exactly the same kind, and they are fixed here rather than left for later:
+Alert Subscribers, the Notification Dispatch Log and the Manual WhatsApp Queue all
+carried `rajesh@gmail.com` / `+91 9876543210` rows. W1's own gate says *no invented
+person appears anywhere*, so they were in scope.
+
+**Wired to real queries (3):**
+
+| Table | Source | Shows today |
+|---|---|---|
+| All Users | `getAdminUsers()` — new in `lib/data/admin.ts` | **5 real profiles** |
+| Channel Partners | `getPartnerApplications()` — new | empty (0 applications) |
+| Alert Subscribers | `getAlertSubscribersForAdmin()` — new | empty (0 active) |
+
+**Honest empty states (6):** Package Purchases, Payments, Service Pipeline, Success
+Fees, Dispatch Log, WhatsApp Queue. Each says *why* it is empty, not "No data" — the
+`EmptyRow` helper in `admin-view.tsx` carries the reasoning in its docblock.
+
+**Also removed, both fabricated figures the earlier purge missed because they sit
+outside a `<tbody>`:**
+- the hardcoded **`31 active · 6 pending`** in the Channel Partners header → now
+  counted from the rows (`partnerCounts`, approved vs. new+contacted);
+- the Service Pipeline tab counts **`All (47) / New (12) / In Progress (18) /
+  Completed (14) / Dropped (3)`** → now plain labels. Nothing counted those.
+
+**Decisions worth keeping:**
+
+1. **"Paid" is defined as owning a `service_packages` row** — the same source
+   `getAdminSectionStats().users.paidPackage` counts, so the pill and the StatCard
+   above it cannot disagree. Every user reads Free today because that table is
+   empty. Non-`user` roles show the role instead.
+2. **Alert Subscribers lost four columns and gained one.** City / Type / Bank /
+   Budget became a single "What they are watching" column rendering
+   `describeAlertFilters()` chips — the same helper the profile page uses. The
+   filters are a jsonb blob that need not contain any given field, so four fixed
+   columns would have been "— — — —" for most real rows.
+3. **Partner tier / referrals / converted / commission render `NOT_TRACKED`.** No
+   table records them until W6. The Approve/Reject buttons are still inert — **W6.6
+   wires them**, as planned.
+
+**Found and NOT touched:** `admin-view.tsx` — the Click-to-Chat generator has
+`defaultValue="+91 98765 43210"` and a matching `wa.me/919876543210` preview. That is
+a form placeholder for a contact number, not a fabricated data row, and
+**`NEXT_PUBLIC_WHATSAPP_NUMBER` is W7.2's job.** Left for W7.2 deliberately.
+
+**Verification.** A scratch smoke script ran all five new PostgREST selects against
+the live database — `tsc` cannot catch a wrong quoted camelCase column name, and
+this file is full of them:
+```
+PASS  profiles 5 rows · shortlists 1 · service_packages 0
+PASS  channel_partner_applications 0 · alert_subscriptions 0
+```
+**Gate:** the W1.3 sweep grep returns only `components/partner-view.tsx:299`, the
+legitimate form placeholder. ✅
+
+**Standing bar:** tsc 0 · build green 25/25 · leak 12/12 · matrix 49/49 + 23/23. ✅
+
+> **⚠️ Gotcha, cost ~10 minutes:** `TaskStop` on the backgrounded `pnpm start`
+> **did not kill `next start`** — the process kept port 3000, the restart died with
+> `EADDRINUSE`, and the first leak-test run silently tested the **previous build**.
+> Kill it with `taskkill //PID <pid> //T //F` (find it via `netstat -ano | grep :3000`)
+> and re-run. Any bar run after a rebuild is only valid if the server was restarted.
