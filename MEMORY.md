@@ -4644,7 +4644,7 @@ dependency was left alone as out-of-scope and not mine to decide unattended.
 
 ### 37.9 ITEM B — collapsible admin sidebar sections ✅ LANDED (visual check still owed)
 
-**Commit:** `ITEM_B_HASH`
+**Commit:** `8fc1963`
 
 **What changed in `components/admin-view.tsx`:** the sidebar was a flat run of
 `SectionLabel` + `NavItem` markup — six labels and 19 items, all siblings, with
