@@ -614,7 +614,9 @@ export function AdminView({
           {/* SUCCESS FEES */}
           {activePage === 'success-fees' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <AlertStrip type="danger" icon="🏆" title="4 success fees outstanding — ₹1,12,400 total due" subtitle="These clients have won auctions. Send invoices and collect 1% success fee." />
+              {sectionStats.payments.outstandingSuccessFees > 0 && (
+                <AlertStrip type="danger" icon="🏆" title={`${inr(sectionStats.payments.outstandingSuccessFees)} in success fees outstanding`} subtitle="These clients have won auctions. Send invoices and collect the success fee." />
+              )}
               <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                 <TcHead title="🏆 Success Fee Tracker" acts={<></>} />
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
