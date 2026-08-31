@@ -12,10 +12,15 @@ export const ADMIN_ROLES = ["admin", "superadmin"] as const
 /**
  * The live role vocabulary, verified against `public.profiles` on 2026-08-31.
  *
- * Note there is no CHECK constraint on `profiles.role` in the database, so any
- * string can be written to it today — see `scripts/2026-08-31-profiles-role-check.sql`
- * for the migration that closes that, pending approval. Everything below
- * therefore treats an unrecognised role as "not staff, not a partner".
+ * These four are enforced by the database, not just by convention: the column
+ * is of Postgres enum type `public."Role"`, so Postgres rejects anything else.
+ * (MEMORY.md §37.3 said the opposite — it checked `pg_constraint`, found no
+ * CHECK, and concluded the column was unconstrained. Absence of a CHECK is not
+ * absence of enforcement when the type itself is an enum. See §37.10.)
+ *
+ * Everything below still treats an unrecognised role as "not staff, not a
+ * partner", because the value also arrives here from a profile row that may
+ * be missing entirely.
  */
 export const ROLES = ["user", "channel_partner", "admin", "superadmin"] as const
 export type Role = (typeof ROLES)[number]

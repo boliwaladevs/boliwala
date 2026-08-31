@@ -4519,10 +4519,11 @@ otherwise permissive about unknown roles — it is the default door, a transient
 profile-read failure there would lock real customers out of the whole site, and
 `/admin` and `/partner/dashboard` carry their own server-side guards regardless.
 
-**Migration written, NOT applied** (§37.1 rule 3):
-`scripts/2026-08-31-profiles-role-check.sql` adds
-`profiles_role_check` constraining `role` to the four values, with the
-pre-flight query to run first and a rollback line. **Needs the user's hands.**
+**~~Migration written, NOT applied~~ — WITHDRAWN, and nothing is owed here.**
+This paragraph originally recorded a `scripts/2026-08-31-profiles-role-check.sql`
+awaiting your approval. It was **unnecessary and has been deleted** — see
+§37.10. `profiles.role` is already an enum column; there was never a gap to
+close.
 
 #### Verification — the full standing bar
 
@@ -4741,3 +4742,75 @@ split, not a skipped step.
    (e.g. Add Listing) → that group opens by itself.
 5. Collapse the group you are *currently* in → it should stay collapsed and
    not fight you.
+
+### 37.10 ⚠️ A CORRECTION TO §37.3 — `profiles.role` IS constrained by the database
+
+**§37.3 says:** *"There is NO `CHECK` constraint on `profiles.role`. The only
+constraints on the table are `profiles_pkey`, `profiles_id_fkey`,
+`profiles_pan_format` and `profiles_aadhaar_format`. Any string can be written
+to `role` today."*
+
+**The first two sentences are true. The conclusion is false.** The column is of
+Postgres enum type `public."Role"`:
+
+```sql
+select a.attname, t.typname, t.typtype, format_type(a.atttypid, a.atttypmod)
+from pg_attribute a
+join pg_class c on c.oid = a.attrelid
+join pg_type t on t.oid = a.atttypid
+where c.relname = 'profiles' and a.attname = 'role';
+
+--  attname | typname | typtype | format_type
+--  role    | Role    | e       | "Role"
+```
+
+`typtype = 'e'` is an enum. Its labels, from `pg_enum`, are exactly
+**`user, admin, channel_partner, superadmin`**. Postgres rejects anything else
+at write time. The earlier check looked at `pg_constraint`, found no CHECK, and
+read that as "unconstrained" — but **absence of a CHECK is not absence of
+enforcement when the type itself is an enum.**
+
+**What this changes:**
+
+1. `scripts/2026-08-31-profiles-role-check.sql`, written earlier in this window
+   under §37.8, **has been deleted.** Adding
+   `check (role in ('user','channel_partner','admin','superadmin'))` to a column
+   already typed as that exact enum is a redundant constraint. **There is now
+   nothing for you to approve or apply here** — ignore any earlier note saying
+   a migration was waiting on you.
+2. The source comments that repeated the wrong fact are fixed, in
+   `lib/auth/landing.ts` and `app/partner/dashboard/page.tsx`. The latter is
+   mildly embarrassing: the *original* comment there called `channel_partner`
+   an enum value and was **right**; §37.2 told me it was wrong on both counts,
+   so I "fixed" a correct statement into an incorrect one before catching it.
+   It now says enum again, plus the part that genuinely was stale (that no
+   account holds the role — one does).
+3. **Item A's behaviour is unaffected.** The doors were never relying on the
+   absence of a constraint; the code still treats an unrecognised role as
+   "not staff, not a partner", which is the right posture for a value that can
+   also arrive from a profile row that does not exist at all.
+
+**The wider lesson matches §29.5:** check the actual object before forming a
+theory. Reading `pg_constraint` alone does not tell you what a column accepts.
+
+**Other live facts confirmed in the same pass** (all `count(*)`, not planner
+estimates — §32.0):
+
+| Table | Rows |
+|---|---|
+| `listings` | 12 |
+| `banks` | 6 |
+| `profiles` | 5 |
+| `listing_views` | 145 |
+| `credit_transactions` | 7 |
+| `unlocks` | 2 |
+| `callback_requests` | 1 |
+| `shortlists` | 1 |
+| `payments` | **0** |
+| `service_packages` | **0** |
+| `subscriptions` | **0** |
+| `alert_subscriptions` | **0** |
+| `channel_partner_applications` | **0** |
+
+Five of the tables behind the admin panel's money and engagement screens are
+**completely empty**. That is the ground truth Item C has to render honestly.

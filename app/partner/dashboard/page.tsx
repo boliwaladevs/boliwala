@@ -24,9 +24,9 @@ export const metadata = pageMetadata({
  *
  * `channel_partner` is a live role: one account held it as of 2026-08-31, and
  * that account now reaches this page by signing in at /partner/login, which
- * admits no other role (lib/auth/landing.ts). It is not a Postgres enum —
- * there is no CHECK constraint on profiles.role yet, see
- * scripts/2026-08-31-profiles-role-check.sql.
+ * admits no other role (lib/auth/landing.ts). It is a value of the Postgres
+ * enum `public."Role"`, so the four-role vocabulary is enforced by the
+ * database and not only by this code.
  *
  * The portal itself is still a mockup — show.md lists /partner/dashboard as
  * "do not open" during a client demo. The approval flow and commission logic
