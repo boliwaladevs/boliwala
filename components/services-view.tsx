@@ -212,7 +212,9 @@ export function ServicesView({ settings }: { settings: PricingSettings }) {
                 </div>
               </CardHeader>
               <CardContent className="px-8 pb-8 flex-1 flex flex-col relative z-10">
-                <Button size="lg" className="w-full mb-8 h-12 font-medium bg-amber-600 hover:bg-amber-700 text-white">Hire Boliwala</Button>
+                <Button size="lg" className="w-full mb-8 h-12 font-medium bg-amber-600 hover:bg-amber-700 text-white" asChild>
+                  <Link href="/contact?plan=service">Hire Boliwala</Link>
+                </Button>
                 <ul className="space-y-4 mb-4 flex-1">
                   {[
                     { text: "Everything in Annual, plus:", included: true, bold: true },

@@ -5383,3 +5383,25 @@ profiles `on delete set null`, and two indexes (createdAt desc, status).
 
 **W2.2 — server action ✅** `app/actions/contact-sales.ts`, `submitSalesEnquiry()`,
 mirroring `submitCallbackRequest` in `app/actions/callback.ts` exactly.
+
+**W2.3 — CTAs ✅** The Annual card's "Get Annual Membership" (which pointed at
+`/signup`, implying a checkout that does not exist) and both "Hire Boliwala" buttons
+now go to `/contact?plan=annual` and `/contact?plan=service`. Two lines of hero and
+closing copy that said "Upgrade" now say "Talk to us", and a fifth pricing FAQ says
+plainly that there is no card checkout and the team takes payment directly.
+`components/services-view.tsx:215` was a bare `<Button>` with no link at all — a
+dead CTA on the services page — now an `asChild` link like the others.
+
+**W2.4 — the form ✅** `components/contact-form.tsx` takes an optional `plan`. With it
+the form writes a sales enquiry instead of a callback, shows which plan is being asked
+about, submits as "Send Enquiry", and succeeds with *"Our team will reach out within 24
+hours to set up your ‹plan›."* Under the button, where the callback form promises a
+call back, the sales form says **"No payment is taken here. Our team confirms the
+details with you first."** — the honest description of what actually happens.
+`/contact?plan=` maps `annual`→`annual_subscription`, `service`→`service_package`, and
+**anything unrecognised falls through to the ordinary callback form** rather than
+erroring. Verified over HTTP: both plans render their label, `?plan=bogus` renders
+"Talk to Our Team".
+
+**RLS proof (scratch script, run against live):** anon **can** insert an enquiry;
+anon read → `42501`, anon update → `42501`; service role reads it back. Test row deleted.

@@ -2,15 +2,32 @@
 
 import { useState } from "react"
 import { submitCallbackRequest } from "@/app/actions/callback"
+import { submitSalesEnquiry, type SalesEnquiryPlan } from "@/app/actions/contact-sales"
 
+/** What each plan is called on screen, and what the enquiry is asking for. */
+const PLAN_LABEL: Record<SalesEnquiryPlan, string> = {
+  annual_subscription: "Annual Membership",
+  service_package: "Full Service package",
+}
+
+/**
+ * One form, two destinations.
+ *
+ * Without `plan` this is the callback request it has always been. With `plan`
+ * — set from `/contact?plan=annual` or `?plan=service` — it is a sales enquiry
+ * and writes to `contact_sales_enquiries` instead, because a person asking to
+ * buy something needs a different queue from a person asking a question.
+ */
 export function ContactForm({
   source,
   listingId,
   listingTitle,
+  plan,
 }: {
   source: "listing" | "contact" | "services"
   listingId?: string
   listingTitle?: string
+  plan?: SalesEnquiryPlan
 }) {
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -24,7 +41,9 @@ export function ContactForm({
     e.preventDefault()
     setSubmitting(true)
     setError(null)
-    const result = await submitCallbackRequest({ name, phone, email, message, source, listingId })
+    const result = plan
+      ? await submitSalesEnquiry({ name, phone, email, message, plan })
+      : await submitCallbackRequest({ name, phone, email, message, source, listingId })
     setSubmitting(false)
     if (!result.ok) {
       setError(result.error)
@@ -37,14 +56,21 @@ export function ContactForm({
     return (
       <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-8 text-center">
         <div className="text-3xl mb-3">✅</div>
-        <h3 className="text-lg font-bold text-foreground mb-2">Request received</h3>
-        <p className="text-sm text-muted-foreground">Our team will call you back within 24 hours.</p>
+        <h3 className="text-lg font-bold text-foreground mb-2">{plan ? "Enquiry received" : "Request received"}</h3>
+        <p className="text-sm text-muted-foreground">
+          {plan
+            ? `Our team will reach out within 24 hours to set up your ${PLAN_LABEL[plan]}.`
+            : "Our team will call you back within 24 hours."}
+        </p>
       </div>
     )
   }
 
   return (
     <form onSubmit={handleSubmit} className="bg-background border border-border rounded-xl p-6 md:p-8 shadow-sm flex flex-col gap-5">
+      {plan && (
+        <div className="text-xs font-semibold text-orange-400 bg-orange-400/10 rounded-lg px-3 py-2">Enquiring about: {PLAN_LABEL[plan]}</div>
+      )}
       {listingTitle && (
         <div className="text-xs font-semibold text-orange-400 bg-orange-400/10 rounded-lg px-3 py-2">Regarding: {listingTitle}</div>
       )}
@@ -85,7 +111,7 @@ export function ContactForm({
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Tell us what you're looking for…"
+          placeholder={plan ? "Anything we should know before we call?" : "Tell us what you're looking for…"}
           className="w-full min-h-[100px] p-4 border border-border rounded-lg text-sm bg-background focus:outline-none focus:border-orange-400/50 resize-y"
         />
       </div>
@@ -95,9 +121,13 @@ export function ContactForm({
         disabled={submitting}
         className="h-12 bg-orange-400 hover:bg-orange-500 disabled:opacity-60 text-white font-semibold rounded-lg transition-colors"
       >
-        {submitting ? "Sending…" : "Request a Callback"}
+        {submitting ? "Sending…" : plan ? "Send Enquiry" : "Request a Callback"}
       </button>
-      <p className="text-xs text-muted-foreground text-center">Free, no account needed. We'll call you back within 24 hours.</p>
+      <p className="text-xs text-muted-foreground text-center">
+        {plan
+          ? "No payment is taken here. Our team confirms the details with you first."
+          : "Free, no account needed. We'll call you back within 24 hours."}
+      </p>
     </form>
   )
 }

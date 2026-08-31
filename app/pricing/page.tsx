@@ -38,7 +38,7 @@ export default async function PricingPage() {
           Browse for free.<br />Pay only when you're serious.
         </h1>
         <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Start with unlimited free listings. Upgrade to unlock every detail, or hand the whole auction to our experts — you only pay a success fee if you win.
+          Start with unlimited free listings. Talk to us to unlock every detail, or hand the whole auction to our experts — you only pay a success fee if you win.
         </p>
         <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-500 flex flex-wrap justify-center gap-2 items-center">
           <span>✓ No signup needed to browse</span>
@@ -109,7 +109,7 @@ export default async function PricingPage() {
           </CardHeader>
           <CardContent className="flex-1">
             <Button className="w-full mb-6" asChild>
-              <Link href="/signup?next=%2Fpricing">Get Annual Membership</Link>
+              <Link href="/contact?plan=annual">Contact Sales</Link>
             </Button>
             <ul className="space-y-3">
               {[
@@ -155,7 +155,7 @@ export default async function PricingPage() {
           </CardHeader>
           <CardContent className="flex-1">
             <Button className="w-full mb-6 bg-amber-600 hover:bg-amber-700 text-white border-0" asChild>
-              <Link href="/services">Hire Boliwala</Link>
+              <Link href="/contact?plan=service">Hire Boliwala</Link>
             </Button>
             <ul className="space-y-3">
               {[
@@ -371,6 +371,12 @@ export default async function PricingPage() {
               Never. Browsing listings, searching, viewing the full address, and requesting a callback are all completely free and don't even require an account.
             </AccordionContent>
           </AccordionItem>
+          <AccordionItem value="item-5" className="border rounded-lg bg-card px-4">
+            <AccordionTrigger className="text-[15px] font-semibold hover:no-underline">How do I actually buy a plan?</AccordionTrigger>
+            <AccordionContent className="text-muted-foreground text-[15px] leading-relaxed">
+              Through our team. Tell us which plan you want and we'll call you back within 24 hours, agree the details, take payment directly, and activate your account. There is no card checkout on the site.
+            </AccordionContent>
+          </AccordionItem>
         </Accordion>
       </section>
 
@@ -379,7 +385,7 @@ export default async function PricingPage() {
         <div className="bg-gradient-to-br from-primary to-blue-600 rounded-3xl p-10 md:p-14 text-center text-primary-foreground shadow-xl">
           <h2 className="text-3xl md:text-4xl font-extrabold mb-4">Start with a free account today</h2>
           <p className="text-primary-foreground/90 text-lg max-w-2xl mx-auto mb-8">
-            Browse thousands of bank auction properties across India. Upgrade only when you find one worth pursuing.
+            Browse thousands of bank auction properties across India. Talk to us only when you find one worth pursuing.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button variant="secondary" size="lg" className="font-semibold" asChild>
