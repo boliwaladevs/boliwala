@@ -1,9 +1,24 @@
 # BOLIWALA.COM — PROJECT MEMORY & HANDOFF
 
-> **▶ START HERE (2026-08-31, evening): read §37.7 — the RETURN SUMMARY.**
-> The §37 loop queue is **complete**: Items A, B and C all landed and are
-> pushed. §37.7 says what is real on the admin panel, what is still fabricated,
-> and the one thing that needs your hands (Item B's visual check).
+> **▶▶ START HERE (2026-08-31, evening): read §38 — THE LIVE EXECUTION BRIEF.**
+> Then open **`immediate_plan.md`** and execute it top to bottom. It is a nine-
+> workstream queue (W0–W8), everything in it is unblocked today, and it ends at a
+> hard **`=== STOP: CSV REQUIRED ===`** marker. **Halt there.** Do not start
+> W-INGEST, W-SEO or W-DNS.
+>
+> Supporting docs: **`REALITY_CHECK.md`** (why this order — its §7 tiers are the
+> reasoning) and **`deferred_plan.md`** (post-launch; now holds D7 vector search,
+> moved out of the pre-launch plan).
+>
+> **⚠️ §38.3 corrects a common misreading of §37.7.** The admin data purge is
+> **not** finished: every *figure* is real, but **six table bodies still name
+> invented people**. That is **W1**, and it is the top demo risk in the project.
+>
+> **▶ Previous handoff (still accurate, now superseded by §38): §37.7 — the
+> RETURN SUMMARY.** The §37 loop queue is **complete**: Items A, B and C all
+> landed and are pushed. §37.7 says what is real on the admin panel, what is
+> still fabricated, and the one thing that needs your hands (Item B's visual
+> check — **still owed**, see §38.7).
 > Per-item detail is §37.8 (A), §37.9 (B), §37.11 (C).
 >
 > **⚠️ §37.3 CONTAINS A KNOWN ERROR — read §37.10 before trusting it.**
@@ -5089,3 +5104,113 @@ its own commit, not a rushed one at the end of a window.
 
 **Until they are done, `show.md`'s advice holds: do not open those tabs in a
 client demo.**
+
+---
+
+## 38. ▶▶ LIVE EXECUTION BRIEF — the pre-launch queue (2026-08-31, evening)
+
+> **THIS IS THE CURRENT BRIEF. If you are a fresh session, read this section,
+> then open `immediate_plan.md` and execute it top to bottom.**
+
+### 38.1 What happened in this session
+
+No code changed. This was a planning session. Three documents were written and
+then audited against the actual codebase:
+
+- **`REALITY_CHECK.md`** — an honest scoreboard: what is real, what is fake, and
+  how far the product is from FindAuction. Its §7 priority tiers are the
+  reasoning behind the queue order.
+- **`immediate_plan.md`** — **rewritten as an executable queue** with a hard STOP.
+- **`deferred_plan.md`** — post-launch. Gained **D7 (vector search)**, moved out
+  of the pre-launch plan.
+
+### 38.2 What the audit found in the first draft of the plan
+
+Recorded because these are the kinds of errors worth not repeating:
+
+1. **The dependency graph was corrupt** — every arrow terminated in `DONE`,
+   including workstreams the same document marked "Not started". Redrawn.
+2. **Vector search was in the pre-launch plan**, contradicting `REALITY_CHECK.md`
+   §7, which places it in Tier 4. Moved to `deferred_plan.md` D7.
+3. **The Channel Partner portal was a sub-bullet** next to "Profile tabs",
+   despite the client requiring it live at launch. Promoted to its own
+   workstream, W6.
+4. **The security migration was dangerous as written.** It revoked everything
+   from `anon`/`authenticated` and then re-granted SELECT/INSERT/UPDATE/DELETE on
+   *every* table, leaning entirely on RLS, with no `ALTER DEFAULT PRIVILEGES`.
+   W3 now says explicitly not to run it and gives the per-table approach instead.
+5. **Contact Sales had no notification path.** `RESEND_API_KEY` is empty and
+   there is no email code. W2 now forces the decision rather than assuming one.
+
+### 38.3 The correction to §37.7's status
+
+The user's read was that "the data purge is complete." **Half right, and worth
+being precise about:**
+
+- Item C's three *defined stages* — sidebar badges, activity feed, per-section
+  StatCards — **are** complete and pushed (`0ef6598`…`2e991c0`). Every *figure*
+  on the admin panel is a real query.
+- The *goal* is not complete. **Six table bodies are still fabricated**, verified
+  at `components/admin-view.tsx` lines 518, 543, 547, 571, 603, 626, 645, plus a
+  hardcoded `31 active · 6 pending` string in the Partners section header.
+  `components/partner-dashboard-view.tsx` is 583 hardcoded lines.
+
+This is now **W1**, and it is first after the font switch. Real figures sitting
+next to invented people is worse than the old all-fake state, because the fake
+names now borrow credibility from the real numbers.
+
+### 38.4 The queue
+
+`immediate_plan.md`, in order. All nine are unblocked today.
+
+| | Workstream | Effort | Notes |
+|---|---|---|---|
+| **W0** | Plus Jakarta Sans | ~1h | Satoshi "fonts" are 597-byte CSS text files |
+| **W1** | Purge the six admin tables | ~1d | Top demo risk |
+| **W2** | Contact Sales flow | ~2d | Month-one revenue, no Razorpay |
+| **W3** | Security housekeeping | ~0.5d | Password rotation + per-table grants |
+| **W4** | Lender model (banks→lenders) | ~2d | **240 `bank` refs / ~30 files.** Do it at 12 rows, not 50,000 |
+| **W5** | R2 + PDF documents | ~2d | Use `*.r2.dev`, do not wait for the domain |
+| **W6** | Channel Partner portal | ~4d | **Must follow W2** |
+| **W7** | Legal routes + contact wiring | ~0.5d | Routes now, copy later |
+| **W8** | eslint + the three §36.5 defects | ~0.5d | Then lint joins the standing bar |
+
+**Then STOP.** The plan carries a `=== STOP: CSV REQUIRED ===` marker. Do not
+start W-INGEST, W-SEO or W-DNS. Write a return summary here, sync the calendars,
+and report.
+
+### 38.5 The one sequencing decision that matters
+
+**W6 depends on W2, and this is not arbitrary.** A commission has to attach to a
+revenue event. There is no Razorpay and there will be none before launch. The
+only revenue events that will exist at launch are the manual "Grant Subscription"
+/ "Grant Credits" actions built in **W2.5**. Building the commission engine first
+gives it nothing to hook into.
+
+### 38.6 Two things to ask the client, both five minutes
+
+1. **One sample CSV/Excel file.** Not the dataset — one file. W-INGEST's dedup
+   key cannot be designed without the real column names. Highest-leverage
+   unblock available.
+2. **Commission rates and the Associate/Silver/Gold thresholds.** W6 builds them
+   configurable from admin settings either way, seeded with the current
+   hardcoded 10%/15% labelled PLACEHOLDER — but the portal cannot go live with
+   placeholder percentages in it.
+
+### 38.7 Still owed by the user from §37.7
+
+**Item B's visual check** on the collapsible admin sidebar. Five minutes, and it
+is the last thing standing between Item B and closed. Detail in §37.7 §3.
+
+### 38.8 Standing verification bar — unchanged baselines
+
+```
+npx tsc --noEmit            clean, exit 0
+pnpm run build              green (25/25 static pages — rises as routes are added)
+leak-test.mjs               12/12 PASS
+access-matrix-test.mjs      49/49 gating PASS + 23/23 login doors PASS
+pnpm run lint               CANNOT RUN — eslint not installed (W8 fixes this)
+```
+
+Keep the 49 and the 23 as separate tallies. W6.7 adds a **third** tally for
+partner-data isolation — do not fold new cases into the existing counts.

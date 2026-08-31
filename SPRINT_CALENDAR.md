@@ -7,6 +7,16 @@
 > and repeated in `CLAUDE.md`, `MEMORY.md`, and `project_calendar.html`.
 
 > [!CAUTION]
+> **⛔ 31 AUG 2026 — `immediate_plan.md` IS NOW THE EXECUTION QUEUE.**
+>
+> `ROADMAP.md` remains the strategic ordering, but the **active work queue** is
+> **`immediate_plan.md`** — nine workstreams (W0–W8), all unblocked, ending at a hard
+> `=== STOP: CSV REQUIRED ===` marker. The operating brief is **`MEMORY.md` §38**.
+> Rationale and priority tiers: **`REALITY_CHECK.md`**. Post-launch: **`deferred_plan.md`**.
+>
+> Mark W0–W8 complete here as they land, alongside the sprint task detail below.
+
+> [!CAUTION]
 > **⛔ THE SCHEDULE IN THIS FILE IS HISTORICAL. `ROADMAP.md` IS THE AUTHORITY ON WHAT TO DO NEXT.**
 >
 > A brainstorm on **30 August 2026** reset the infrastructure plan and the launch
