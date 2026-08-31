@@ -5236,7 +5236,7 @@ check. Instruction was explicit — **do not stop execution waiting for any of t
 |---|---|---|---|
 | W0 | Plus Jakarta Sans | ✅ **LANDED** | see below |
 | W1 | Purge the six admin tables | ✅ **LANDED** | see §39.2 |
-| W2 | Contact Sales flow | ⬜ | |
+| W2 | Contact Sales flow | 🟡 in progress | W2.1 · W2.2 done |
 | W3 | Security housekeeping | ⬜ | |
 | W4 | Lender model | ⬜ | |
 | W5 | R2 + PDF documents | ⬜ | |
@@ -5356,3 +5356,30 @@ legitimate form placeholder. ✅
 > `EADDRINUSE`, and the first leak-test run silently tested the **previous build**.
 > Kill it with `taskkill //PID <pid> //T //F` (find it via `netstat -ano | grep :3000`)
 > and re-run. Any bar run after a rebuild is only valid if the server was restarted.
+
+### 39.3 W2 — Contact Sales enquiry flow (in progress)
+
+**Notification decision, taken as the plan directed:** admin-panel-only. `RESEND_API_KEY`
+is empty and the repo has no email code, so an enquiry lands in the database and is
+surfaced by the panel plus a sidebar badge. Nothing pretends to send an email. The
+user has this item; if they want email on submit it is a scoped addition, not an
+assumption baked in now.
+
+**W2.1 — schema ✅** `supabase/migrations/0014_contact_sales_enquiries.sql`, applied to
+the live database with `node scripts/apply-sql.mjs`. Table `contact_sales_enquiries`
+with enums `"SalesEnquiryPlan"` (annual_subscription | service_package) and
+`"SalesEnquiryStatus"` (new | contacted | converted | closed), `handledBy` FK to
+profiles `on delete set null`, and two indexes (createdAt desc, status).
+
+> **One deliberate deviation from the plan's W2.1 sketch.** It asked for SELECT/UPDATE
+> policies for admin and superadmin. There is no such policy anywhere in this schema:
+> **the admin panel does not read through RLS**, it reads with the service-role client,
+> which bypasses RLS. Role-checking policies would have handed the anon key real reach
+> while changing nothing about how the panel works. The table is insert-only for
+> anon/authenticated — the same shape `callback_requests` has and 0007 gave the other
+> admin-internal tables — and the migration also revokes the default blanket grant, so
+> the live grants are exactly `anon: INSERT` / `authenticated: INSERT`, verified after
+> applying.
+
+**W2.2 — server action ✅** `app/actions/contact-sales.ts`, `submitSalesEnquiry()`,
+mirroring `submitCallbackRequest` in `app/actions/callback.ts` exactly.
