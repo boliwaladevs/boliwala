@@ -339,18 +339,18 @@ export interface AdminListingRow {
   viewCount: number
   noticeUrl: string | null
   status: ListingStatus
-  bank: { id: string; name: string; shortName: string }
+  lender: { id: string; name: string; shortName: string }
 }
 
 export interface AdminListingFilters {
   q?: string
-  bankId?: string
+  lenderId?: string
   status?: ListingStatus
 }
 
 const ADMIN_LISTING_COLUMNS = `
   id, slug, title, city, "reservePrice", "emdAmount", "auctionDate", "viewCount", "noticeUrl", status,
-  bank:banks(id, name, "shortName")
+  lender:lenders(id, name, "shortName")
 `
 
 function sanitizeForFilter(text: string): string {
@@ -363,7 +363,7 @@ export async function getAdminListings(filters: AdminListingFilters): Promise<Ad
   let query = admin.from("listings").select(ADMIN_LISTING_COLUMNS).order("createdAt", { ascending: false })
 
   if (filters.status) query = query.eq("status", filters.status)
-  if (filters.bankId) query = query.eq("bankId", filters.bankId)
+  if (filters.lenderId) query = query.eq("lenderId", filters.lenderId)
   if (filters.q) {
     const text = sanitizeForFilter(filters.q)
     if (text) query = query.or(`title.ilike.%${text}%,city.ilike.%${text}%,slug.ilike.%${text}%`)
@@ -376,7 +376,7 @@ export async function getAdminListings(filters: AdminListingFilters): Promise<Ad
 
 const FULL_EDIT_COLUMNS = `
   id, slug, title, "propertyType", "possessionType", status,
-  "bankId", bank:banks(id, name, "shortName"),
+  "lenderId", lender:lenders(id, name, "shortName"),
   "addressLine", locality, city, state, pincode,
   "reservePrice", "emdAmount", "estimatedMarketValue",
   "auctionDate", "auctionTime", mode, "emdDeadline", "bidIncreaseAmount", "totalOutstandingDues",
@@ -386,9 +386,9 @@ const FULL_EDIT_COLUMNS = `
   images:listing_images(id, url, "sortOrder", "isPrimary")
 `
 
-export type AdminEditableListing = Omit<Listing, "images" | "bank"> & {
-  bankId: string
-  bank: { id: string; name: string; shortName: string }
+export type AdminEditableListing = Omit<Listing, "images" | "lender"> & {
+  lenderId: string
+  lender: { id: string; name: string; shortName: string }
   images: { id: string; url: string; sortOrder: number; isPrimary: boolean }[]
 }
 
@@ -399,9 +399,9 @@ export async function getListingForEdit(id: string): Promise<AdminEditableListin
   return (data as unknown as AdminEditableListing) ?? null
 }
 
-export async function getBanksForAdmin(): Promise<{ id: string; name: string }[]> {
+export async function getLendersForAdmin(): Promise<{ id: string; name: string }[]> {
   const admin = createAdminClient()
-  const { data, error } = await admin.from("banks").select("id, name").order("name")
+  const { data, error } = await admin.from("lenders").select("id, name").order("name")
   if (error) throw error
   return data ?? []
 }

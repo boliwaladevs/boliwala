@@ -21,7 +21,7 @@ export interface AlertFilters {
   location?: string
   propertyType?: string
   possession?: string
-  bankIds?: string[]
+  lenderIds?: string[]
   minPrice?: number
   maxPrice?: number
   auctionWindow?: "week" | "month"

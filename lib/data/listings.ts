@@ -5,16 +5,27 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import type { Bank, Listing, PossessionType, PropertyType } from "@/lib/data/types"
+import type { Lender, LenderType, Listing, PossessionType, PropertyType } from "@/lib/data/types"
 
 export const PAGE_SIZE = 12
+
+/** Kept in step with the "LenderType" enum in migration 0017. */
+export const LENDER_TYPES: LenderType[] = ["bank", "nbfc", "arc", "hfc"]
+
+export const LENDER_TYPE_LABELS: Record<LenderType, string> = {
+  bank: "Banks",
+  nbfc: "NBFCs",
+  arc: "Asset reconstruction",
+  hfc: "Housing finance",
+}
 
 export interface SearchFilters {
   q?: string
   location?: string
   propertyType?: PropertyType
   possession?: PossessionType
-  bankIds: string[]
+  lenderIds: string[]
+  lenderTypes: LenderType[]
   minPrice?: number
   maxPrice?: number
   auctionWindow?: "week" | "month"
@@ -50,7 +61,8 @@ export function parseSearchFilters(searchParams: SearchParamsInput): SearchFilte
     location: first(searchParams.location)?.trim() || undefined,
     propertyType: PROPERTY_TYPES.includes(propertyType as PropertyType) ? (propertyType as PropertyType) : undefined,
     possession: POSSESSION_TYPES.includes(possession as PossessionType) ? (possession as PossessionType) : undefined,
-    bankIds: all(searchParams.bank),
+    lenderIds: all(searchParams.lender),
+    lenderTypes: all(searchParams.lenderType).filter((t): t is LenderType => LENDER_TYPES.includes(t as LenderType)),
     minPrice: Number.isFinite(minPrice) && minPrice > 0 ? minPrice : undefined,
     maxPrice: Number.isFinite(maxPrice) && maxPrice > 0 ? maxPrice : undefined,
     auctionWindow: auctionWindow === "week" || auctionWindow === "month" ? auctionWindow : undefined,
@@ -69,7 +81,7 @@ const SEARCH_CARD_COLUMNS = `
   id, slug, title, "propertyType", "possessionType", status,
   "addressLine", locality, city, state, "reservePrice", "emdAmount",
   "auctionDate", "areaSqft", "bedrooms", "viewCount",
-  bank:banks(id, name, "shortName", "logoUrl"),
+  lender:lenders(id, name, "shortName", "logoUrl", "lenderType"),
   images:listing_images(url)
 `
 
@@ -90,13 +102,13 @@ export interface SearchListing {
   areaSqft: number | null
   bedrooms: number | null
   viewCount: number
-  bank: Bank
+  lender: Lender
   images: { url: string }[]
 }
 
-/** Applies every filter except the bank filter — reused so the bank sidebar can show counts narrowed by the other active filters, without a bank selection narrowing its own counts to zero. */
+/** Applies every filter except the lender filter — reused so the lender sidebar can show counts narrowed by the other active filters, without a lender selection narrowing its own counts to zero. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyNonBankFilters(query: any, filters: SearchFilters) {
+function applyNonLenderFilters(query: any, filters: SearchFilters) {
   query = query.eq("status", "live")
 
   if (filters.location) {
@@ -121,14 +133,38 @@ function applyNonBankFilters(query: any, filters: SearchFilters) {
   return query
 }
 
+/**
+ * Which lender ids satisfy the active filters, or null when the caller has not
+ * narrowed by lender at all.
+ *
+ * An empty array is meaningful and different from null: it means "a type was
+ * chosen and nothing matches it", which must return no listings rather than
+ * silently dropping the filter.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveLenderIds(supabase: any, filters: SearchFilters): Promise<string[] | null> {
+  if (filters.lenderTypes.length === 0) {
+    return filters.lenderIds.length > 0 ? filters.lenderIds : null
+  }
+
+  const { data } = await supabase.from("lenders").select("id").in("lenderType", filters.lenderTypes)
+  const ofType = (data ?? []).map((r: { id: string }) => r.id)
+  // Both a lender and a type chosen: the named lenders still have to be of
+  // that type, so the two narrow together rather than one overriding.
+  return filters.lenderIds.length > 0 ? filters.lenderIds.filter((id) => ofType.includes(id)) : ofType
+}
+
 export async function searchListings(
   filters: SearchFilters,
 ): Promise<{ listings: SearchListing[]; totalCount: number }> {
   const supabase = await createClient()
 
+  const lenderIds = await resolveLenderIds(supabase, filters)
+  if (lenderIds !== null && lenderIds.length === 0) return { listings: [], totalCount: 0 }
+
   let query = supabase.from("listings").select(SEARCH_CARD_COLUMNS, { count: "exact" })
-  query = applyNonBankFilters(query, filters)
-  if (filters.bankIds.length > 0) query = query.in("bankId", filters.bankIds)
+  query = applyNonLenderFilters(query, filters)
+  if (lenderIds !== null) query = query.in("lenderId", lenderIds)
 
   switch (filters.sort) {
     // viewCount is already tracked server-side on every listing view, so
@@ -156,43 +192,44 @@ export async function searchListings(
   return { listings: (data ?? []) as unknown as SearchListing[], totalCount: count ?? 0 }
 }
 
-export interface BankWithCount extends Bank {
+export interface LenderWithCount extends Lender {
   count: number
 }
 
-/** Real bank list + live listing counts narrowed by every active filter except bank itself. */
-export async function getBanksWithCounts(filters: SearchFilters): Promise<BankWithCount[]> {
+/** Real lender list + live listing counts narrowed by every active filter except lender itself. */
+export async function getLendersWithCounts(filters: SearchFilters): Promise<LenderWithCount[]> {
   const supabase = await createClient()
 
-  const { data: banks, error: banksError } = await supabase
-    .from("banks")
-    .select("id, name, shortName, logoUrl")
+  const { data: lenders, error: banksError } = await supabase
+    .from("lenders")
+    .select('id, name, "shortName", "logoUrl", "lenderType"')
     .eq("isActive", true)
     .order("name")
   if (banksError) throw banksError
 
-  let countQuery = supabase.from("listings").select("bankId")
-  countQuery = applyNonBankFilters(countQuery, filters)
+  let countQuery = supabase.from("listings").select("lenderId")
+  countQuery = applyNonLenderFilters(countQuery, filters)
   const { data: rows, error: countError } = await countQuery
   if (countError) throw countError
 
   const counts = new Map<string, number>()
   for (const row of rows ?? []) {
-    counts.set(row.bankId, (counts.get(row.bankId) ?? 0) + 1)
+    counts.set(row.lenderId, (counts.get(row.lenderId) ?? 0) + 1)
   }
 
-  return (banks ?? []).map((b) => ({
+  return (lenders ?? []).map((b) => ({
     id: b.id,
     name: b.name,
     shortName: b.shortName,
     logoUrl: b.logoUrl,
+    lenderType: b.lenderType,
     count: counts.get(b.id) ?? 0,
   }))
 }
 
 const FULL_LISTING_COLUMNS = `
   id, slug, title, "propertyType", "possessionType", status,
-  bank:banks(id, name, "shortName", "logoUrl"),
+  lender:lenders(id, name, "shortName", "logoUrl"),
   "addressLine", locality, city, state, pincode,
   "reservePrice", "emdAmount", "estimatedMarketValue",
   "auctionDate", "auctionTime", mode, "emdDeadline", "bidIncreaseAmount", "totalOutstandingDues",

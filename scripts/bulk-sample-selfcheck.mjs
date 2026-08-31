@@ -28,23 +28,27 @@ const TARGET_FIELDS = eval("([" + between(/const TARGET_FIELDS:[^=]+= \[/, "\n]"
 const SAMPLE_VALUES = eval("({" + between(/const SAMPLE_VALUES:[^=]+= \{/, "\n}") + "})")
 const csvEscape = eval("(" + src.match(/const csvEscape = (\(v: string\) => [^\n]+)/)[1].replace(": string", "") + ")")
 const isoInDays = eval("(" + src.match(/const isoInDays = (\(days: number\) => [^\n]+)/)[1].replace(": number", "") + ")")
+// Pulled out verbatim too: guessColumn closes over it, and a synonym list that
+// drifted from the component would let this check pass against code that does
+// not exist.
+const HEADER_SYNONYMS = eval("({" + between(/const HEADER_SYNONYMS: Record<string, string\[\]> = \{/, "\n}") + "})")
 const guessColumn = eval("(" + src.match(/function guessColumn[\s\S]*?\n\}/)[0]
   .replace(/headers: string\[\], fieldKey: string, fieldLabel: string\): string/, "headers, fieldKey, fieldLabel)")
   .replace("(s: string)", "(s)") + ")")
 
-// --- the real bank list from the live DB (names only), as the prop would supply
-// Fixture only — the six banks live in the DB on 2026-08-31. The shipped button fills this
-// column from the `banks` prop, so what is checked here is the format, not the bank list.
+// --- the real lender list from the live DB (names only), as the prop would supply
+// Fixture only — the six lenders live in the DB on 2026-08-31. The shipped button fills this
+// column from the `lenders` prop, so what is checked here is the format, not the lender list.
 // Override with BANKS_JSON if the real list has moved on.
-const banks = JSON.parse(process.env.BANKS_JSON ?? JSON.stringify(
+const lenders = JSON.parse(process.env.BANKS_JSON ?? JSON.stringify(
   ["Bank of Baroda","Canara Bank","IDBI Bank","Punjab National Bank","State Bank of India","Union Bank of India"]
     .map((name, i) => ({ id: String(i), name }))))
 
 // --- downloadSample(), reproduced step for step
-const bankFor = (i) => (banks.length > 0 ? banks[i % banks.length].name : "")
+const lenderFor = (i) => (lenders.length > 0 ? lenders[i % lenders.length].name : "")
 const values = {
   ...SAMPLE_VALUES,
-  bankId: [bankFor(0), bankFor(1), bankFor(2)],
+  lenderId: [lenderFor(0), lenderFor(1), lenderFor(2)],
   auctionDate: [isoInDays(30), isoInDays(45), isoInDays(60)],
   emdDeadline: [isoInDays(23), isoInDays(38), isoInDays(53)],
 }
@@ -64,9 +68,9 @@ const detectedHeaders = Object.keys(rawRows[0])
 const mapping = {}
 for (const f of TARGET_FIELDS) mapping[f.key] = guessColumn(detectedHeaders, f.key, f.label)
 
-const findBank = (name) => {
+const findLender = (name) => {
   const n = name.trim().toLowerCase()
-  return banks.find((b) => b.name.toLowerCase() === n || b.name.toLowerCase().includes(n) || n.includes(b.name.toLowerCase()))?.id
+  return lenders.find((b) => b.name.toLowerCase() === n || b.name.toLowerCase().includes(n) || n.includes(b.name.toLowerCase()))?.id
 }
 
 let fail = 0
@@ -83,17 +87,17 @@ const parsedOut = []
 rawRows.forEach((raw, i) => {
   const errors = []
   const get = (key) => { const c = mapping[key]; return c ? String(raw[c] ?? "").trim() : "" }
-  const bankName = get("bankId")
-  const bankId = bankName ? findBank(bankName) : undefined
-  if (bankName && !bankId) errors.push(`Bank "${bankName}" not recognized`)
-  else if (!bankName) errors.push("Bank column not mapped or empty")
+  const lenderName = get("lenderId")
+  const lenderId = lenderName ? findLender(lenderName) : undefined
+  if (lenderName && !lenderId) errors.push(`Lender "${lenderName}" not recognized`)
+  else if (!lenderName) errors.push("Lender column not mapped or empty")
   const reservePrice = Number(get("reservePrice"))
   const emdAmount = Number(get("emdAmount"))
   const adRaw = get("auctionDate"), edRaw = get("emdDeadline")
   const auctionDate = adRaw && !isNaN(Date.parse(adRaw)) ? new Date(adRaw).toISOString() : ""
   const emdDeadline = edRaw && !isNaN(Date.parse(edRaw)) ? new Date(edRaw).toISOString() : ""
   for (const f of TARGET_FIELDS) {
-    if (!f.required || f.key === "bankId") continue
+    if (!f.required || f.key === "lenderId") continue
     if (f.key === "reservePrice" && (!reservePrice || reservePrice <= 0)) errors.push("Missing/invalid reserve price")
     else if (f.key === "emdAmount" && (!emdAmount || emdAmount <= 0)) errors.push("Missing/invalid EMD amount")
     else if (f.key === "auctionDate" && !auctionDate) errors.push("Missing/invalid auction date")
@@ -126,6 +130,16 @@ console.log("\n=== HEADER/COLUMN COUNT ===")
 if (detectedHeaders.length !== 14) bad(`expected 14 columns, got ${detectedHeaders.length}`)
 if (rawRows.length !== 3) bad(`expected 3 rows, got ${rawRows.length}`)
 console.log(`  columns=${detectedHeaders.length} rows=${rawRows.length}`)
+
+console.log("\n=== REAL-WORLD HEADER SPELLINGS ===")
+// W4 renamed the field from Bank to Lender. Inventory files in the wild still say
+// "Bank", so the mapping has to survive the rename or W-INGEST starts by rejecting
+// every row.
+for (const [header, expected] of [["Bank", "Bank"], ["Bank Name", "Bank Name"], ["Lender", "Lender"], ["Financial Institution", "Financial Institution"]]) {
+  const got = guessColumn([header, "Title", "City"], "lenderId", "Lender (name)")
+  if (got !== expected) bad(`header "${header}" should map to the lender field, got "${got || "nothing"}"`)
+  else console.log(`  "${header}" -> lender field`)
+}
 
 console.log(fail === 0 ? "\n✅ SELF-CHECK PASS" : `\n❌ SELF-CHECK FAIL (${fail})`)
 process.exit(fail === 0 ? 0 : 1)

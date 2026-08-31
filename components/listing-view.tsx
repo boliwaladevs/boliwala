@@ -136,7 +136,7 @@ export function ListingView({
         <span className="text-border">›</span>
         <Link href={`/search?location=${encodeURIComponent(listing.locality)}`} className="hover:text-orange-400 transition-colors cursor-pointer">{listing.locality}</Link>
         <span className="text-border">›</span>
-        <Link href={`/search?bank=${listing.bank.id}`} className="hover:text-orange-400 transition-colors cursor-pointer">{listing.bank.name}</Link>
+        <Link href={`/search?bank=${listing.lender.id}`} className="hover:text-orange-400 transition-colors cursor-pointer">{listing.lender.name}</Link>
         <span className="text-border">›</span>
         <span className="text-foreground font-medium">{listing.title}</span>
       </div>
@@ -195,7 +195,7 @@ export function ListingView({
           {/* Tags */}
           <div className="flex items-center gap-2 flex-wrap mb-4">
             <span className="inline-flex items-center gap-1.5 bg-emerald-100/80 text-emerald-700 border border-emerald-200 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-md">
-              <Check className="w-3.5 h-3.5" /> {listing.bank.name} — SARFAESI
+              <Check className="w-3.5 h-3.5" /> {listing.lender.name} — SARFAESI
             </span>
             <span className="inline-flex items-center gap-1.5 bg-amber-100/80 text-amber-700 border border-amber-200 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-md">
               📅 Auction: {formatDateShort(listing.auctionDate)}
@@ -333,18 +333,18 @@ export function ListingView({
             )}
           </div>
 
-          {/* Officer / Bank Contact */}
+          {/* Officer / Lender Contact */}
           <div className="bg-background border border-border rounded-xl shadow-sm mb-6 overflow-hidden">
             <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-secondary/30">
               <div className="w-9 h-9 rounded-md bg-secondary flex items-center justify-center shrink-0 text-muted-foreground"><Search className="w-5 h-5" /></div>
-              <h2 className="text-base font-bold text-foreground">Authorised Officer & Bank Contact</h2>
+              <h2 className="text-base font-bold text-foreground">Authorised Officer & Lender Contact</h2>
             </div>
             {officerContact.decision.visible ? (
               <div className="px-6 py-5 text-sm space-y-1.5">
                 {officerContact.value?.authorisedOfficerName && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Officer</span><span className="font-medium text-foreground">{officerContact.value.authorisedOfficerName}</span></div>}
                 {officerContact.value?.authorisedOfficerPhone && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Phone</span><span className="font-medium text-foreground">{officerContact.value.authorisedOfficerPhone}</span></div>}
                 {officerContact.value?.authorisedOfficerEmail && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Email</span><span className="font-medium text-foreground">{officerContact.value.authorisedOfficerEmail}</span></div>}
-                {officerContact.value?.bankContact && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Bank Contact</span><span className="font-medium text-foreground">{officerContact.value.bankContact}</span></div>}
+                {officerContact.value?.bankContact && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Lender Contact</span><span className="font-medium text-foreground">{officerContact.value.bankContact}</span></div>}
               </div>
             ) : (
               <div className="px-6 py-8 text-center">
@@ -383,7 +383,7 @@ export function ListingView({
 
           {/* Disclaimer */}
           <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-5 text-sm text-amber-900/80 leading-relaxed">
-            <strong className="text-amber-600">⚠️ Important:</strong> This property is sold on an <strong>&ldquo;As is where is&rdquo;, &ldquo;As is what is&rdquo;</strong> and <strong>&ldquo;Whatever there is&rdquo;</strong> basis. Intending bidders should make their own independent enquiries and verify the property, title, encumbrances, dues and statutory charges before bidding. Source: {listing.bank.name} E-Auction Sale Notice.
+            <strong className="text-amber-600">⚠️ Important:</strong> This property is sold on an <strong>&ldquo;As is where is&rdquo;, &ldquo;As is what is&rdquo;</strong> and <strong>&ldquo;Whatever there is&rdquo;</strong> basis. Intending bidders should make their own independent enquiries and verify the property, title, encumbrances, dues and statutory charges before bidding. Source: {listing.lender.name} E-Auction Sale Notice.
           </div>
         </div>
 
@@ -432,7 +432,7 @@ export function ListingView({
             </Link>
             {listing.noticeUrl && (
               <a href={listing.noticeUrl} target="_blank" rel="noopener noreferrer" className="w-full bg-transparent border border-border hover:bg-secondary text-foreground font-medium py-3 rounded-md flex items-center justify-center gap-2 transition-colors">
-                📄 Download Bank Notice (PDF)
+                📄 Download Auction Notice (PDF)
               </a>
             )}
 
@@ -494,7 +494,7 @@ export function ListingView({
               <Link href={`/listing/${s.slug}`} key={s.id} className="bg-background border border-border rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:-translate-y-1 flex flex-col overflow-hidden">
                 <div className="h-40 bg-gradient-to-br from-secondary/80 to-secondary flex items-center justify-center relative">
                   <Building2 className="w-12 h-12 text-muted-foreground/30" />
-                  <div className="absolute top-2.5 left-2.5 bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">{s.bank.shortName}</div>
+                  <div className="absolute top-2.5 left-2.5 bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">{s.lender.shortName}</div>
                   <div className="absolute bottom-2.5 left-2.5 bg-black/60 text-white text-[10px] font-semibold px-2 py-1 rounded backdrop-blur-sm">📅 {formatDateShort(s.auctionDate)}</div>
                 </div>
                 <div className="p-4 flex-1 flex flex-col">

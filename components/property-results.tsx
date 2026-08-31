@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { MapPin, Home, X, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
-import { getBanksWithCounts, parseSearchFilters, searchListings, PAGE_SIZE, type SearchParamsInput } from "@/lib/data/listings"
+import { getLendersWithCounts, parseSearchFilters, searchListings, PAGE_SIZE, LENDER_TYPES, LENDER_TYPE_LABELS, type SearchParamsInput } from "@/lib/data/listings"
 import { buildSearchHref, filterHref, toggleArrayValue } from "@/lib/search-url"
 import { formatINR } from "@/lib/format"
 import { SearchSortSelect } from "@/components/search-sort-select"
@@ -30,9 +30,9 @@ export async function PropertyResults({ searchParams }: { searchParams: SearchPa
   const filters = parseSearchFilters(searchParams)
   const base = "/search"
 
-  const [{ listings, totalCount }, banks] = await Promise.all([
+  const [{ listings, totalCount }, lenders] = await Promise.all([
     searchListings(filters),
-    getBanksWithCounts(filters),
+    getLendersWithCounts(filters),
   ])
 
   const supabase = await createClient()
@@ -54,7 +54,7 @@ export async function PropertyResults({ searchParams }: { searchParams: SearchPa
   }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-  const bankById = new Map(banks.map((b) => [b.id, b]))
+  const lenderById = new Map(lenders.map((b) => [b.id, b]))
 
   const activeChips: { label: string; href: string }[] = []
   if (filters.location) activeChips.push({ label: filters.location, href: filterHref(base, searchParams, { location: null }) })
@@ -71,10 +71,16 @@ export async function PropertyResults({ searchParams }: { searchParams: SearchPa
       href: filterHref(base, searchParams, { possession: null }),
     })
   }
-  for (const bankId of filters.bankIds) {
+  for (const lenderType of filters.lenderTypes) {
     activeChips.push({
-      label: bankById.get(bankId)?.shortName ?? "Bank",
-      href: filterHref(base, searchParams, { bank: toggleArrayValue(searchParams, "bank", bankId) }),
+      label: LENDER_TYPE_LABELS[lenderType],
+      href: filterHref(base, searchParams, { lenderType: toggleArrayValue(searchParams, "lenderType", lenderType) }),
+    })
+  }
+  for (const lenderId of filters.lenderIds) {
+    activeChips.push({
+      label: lenderById.get(lenderId)?.shortName ?? "Lender",
+      href: filterHref(base, searchParams, { lender: toggleArrayValue(searchParams, "lender", lenderId) }),
     })
   }
   if (filters.minPrice || filters.maxPrice) {
@@ -162,14 +168,39 @@ export async function PropertyResults({ searchParams }: { searchParams: SearchPa
           </div>
 
           <div className="p-4 border-b border-border">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Bank</h4>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Lender Type</h4>
             <div className="space-y-2.5">
-              {banks.map((bank) => {
-                const checked = filters.bankIds.includes(bank.id)
+              {LENDER_TYPES.map((type) => {
+                const checked = filters.lenderTypes.includes(type)
                 return (
                   <Link
-                    key={bank.id}
-                    href={filterHref(base, searchParams, { bank: toggleArrayValue(searchParams, "bank", bank.id) })}
+                    key={type}
+                    href={filterHref(base, searchParams, { lenderType: toggleArrayValue(searchParams, "lenderType", type) })}
+                    className="flex items-center gap-3 cursor-pointer group"
+                  >
+                    <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${checked ? "bg-orange-400 border-orange-400" : "border-muted-foreground/50 group-hover:border-foreground/50"}`}>
+                      {checked && (
+                        <svg viewBox="0 0 14 14" fill="none" className="w-3 h-3 text-white">
+                          <path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{LENDER_TYPE_LABELS[type]}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="p-4 border-b border-border">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Lender</h4>
+            <div className="space-y-2.5">
+              {lenders.map((lender) => {
+                const checked = filters.lenderIds.includes(lender.id)
+                return (
+                  <Link
+                    key={lender.id}
+                    href={filterHref(base, searchParams, { lender: toggleArrayValue(searchParams, "lender", lender.id) })}
                     className="flex items-center justify-between cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
@@ -180,9 +211,9 @@ export async function PropertyResults({ searchParams }: { searchParams: SearchPa
                           </svg>
                         )}
                       </div>
-                      <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{bank.name}</span>
+                      <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{lender.name}</span>
                     </div>
-                    <span className="text-[11px] text-muted-foreground bg-secondary/60 px-2 py-0.5 rounded-full">{bank.count}</span>
+                    <span className="text-[11px] text-muted-foreground bg-secondary/60 px-2 py-0.5 rounded-full">{lender.count}</span>
                   </Link>
                 )
               })}

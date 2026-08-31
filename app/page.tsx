@@ -53,8 +53,8 @@ const websiteJsonLd = {
 
 export default async function Home() {
   const supabase = await createClient()
-  const [{ data: banks }, stats] = await Promise.all([
-    supabase.from("banks").select("id, name, shortName").eq("isActive", true).order("name"),
+  const [{ data: lenders }, stats] = await Promise.all([
+    supabase.from("lenders").select("id, name, shortName").eq("isActive", true).order("name"),
     getSiteStats(),
   ])
 
@@ -64,7 +64,7 @@ export default async function Home() {
       <JsonLd data={websiteJsonLd} />
       <Header />
       <Hero stats={stats} />
-      <SearchSection banks={banks ?? []} />
+      <SearchSection lenders={lenders ?? []} />
       <TrustBanner />
       <Philosophy />
       <AuctionsByCity />

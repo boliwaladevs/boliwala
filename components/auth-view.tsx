@@ -180,7 +180,7 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
               <em className="text-amber-300 not-italic">Found, Bid & Won.</em>
             </h1>
             <p className="text-white/60 text-lg leading-relaxed max-w-md">
-              {`Verified SARFAESI and NPA listings from ${displayCount(stats.banks)} banks, with reserve prices well below market value.`}
+              {`Verified SARFAESI and NPA listings from ${displayCount(stats.lenders)} lenders, with reserve prices well below market value.`}
             </p>
           </div>
         </div>

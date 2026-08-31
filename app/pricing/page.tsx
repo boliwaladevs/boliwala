@@ -116,7 +116,7 @@ export default async function PricingPage() {
                 { text: "Everything in Free, plus:", included: true, bold: true },
                 { text: <span className="font-semibold text-foreground">Unlimited</span>, suffix: " unlocking of all hidden fields", included: true },
                 { text: "Flat number, floor & inspection details", included: true },
-                { text: "Authorised officer & bank contact info", included: true },
+                { text: "Authorised officer & lender contact info", included: true },
                 { text: "Priority email & WhatsApp alerts", included: true },
                 { text: "Save unlimited shortlists", included: true },
                 { text: "Hands-on auction management", included: false },
@@ -275,7 +275,7 @@ export default async function PricingPage() {
                 </tr>
                 <tr className="hover:bg-muted/30 transition-colors">
                   <td className="p-4 border-b">
-                    <div className="font-semibold text-[15px]">Authorised officer & bank contact</div>
+                    <div className="font-semibold text-[15px]">Authorised officer & lender contact</div>
                   </td>
                   <td className="p-4 border-b text-center font-medium text-muted-foreground">{officerContactCost} credit{officerContactCost === 1 ? "" : "s"}</td>
                   <td className="p-4 border-b text-center"><Check className="w-5 h-5 mx-auto text-emerald-500" /></td>

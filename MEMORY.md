@@ -5238,7 +5238,7 @@ check. Instruction was explicit — **do not stop execution waiting for any of t
 | W1 | Purge the six admin tables | ✅ **LANDED** | see §39.2 |
 | W2 | Contact Sales flow | ✅ **LANDED** | see §39.3 |
 | W3 | Security housekeeping | ✅ **LANDED** (rotation still yours) | see §39.4 |
-| W4 | Lender model | ⬜ | |
+| W4 | Lender model (banks→lenders) | ✅ **LANDED** | see §39.5 |
 | W5 | R2 + PDF documents | ⬜ | |
 | W6 | Channel Partner portal | ⬜ | |
 | W7 | Legal routes + contact wiring | ⬜ | |
@@ -5558,3 +5558,92 @@ Kept as its own tally — **do not fold these 27 into the 49 or the 23.**
 
 **Standing bar:** tsc 0 · build green 25/25 · leak 12/12 · matrix 49/49 + 23/23 ·
 grants 27/27. ✅
+
+### 39.5 W4 — the lender model ✅ LANDED
+
+**`supabase/migrations/0017_lenders.sql`** (not 0015 — W2 and W3 took 0015 and 0016).
+`banks` → `lenders`, `listings."bankId"` → `"lenderId"`, both renamed constraints, the
+policy renamed to `lenders_public_read`, and a new `"LenderType"` enum
+(`bank | nbfc | arc | hfc`) as `lenders."lenderType"`, defaulting to `'bank'` — which
+backfills the six existing rows in place, all of which genuinely are banks.
+
+**Renames, not copies.** Verified afterwards that the primary key, the foreign key, both
+policies **and the column-level grants from W3 all followed the rename**:
+`lenders` still SELECT-only for anon/authenticated, and `listings."lenderId"` is still
+inside the 27-column public SELECT grant. No temporary `banks` view was needed; nothing
+depended on the old name once the code landed.
+
+**The code: 69 identifier-level references across 21 files**, done in three passes with
+`tsc` after each — first the precise identifiers (`bankId`, `getBanksForAdmin`,
+`BankWithCount`, the `bank:banks(...)` PostgREST alias), then the relation property and
+the props, then the URL parameter. Prose was left alone deliberately; W4.5 below.
+
+> **The trap in the middle of it.** Pass 1 renamed the PostgREST alias to
+> `lender:lenders(...)` but not the `.bank` property reads — and **`tsc` stayed green**,
+> because those query results are cast rather than inferred. Every listing page would
+> have rendered `undefined` for the lender at runtime. Pass 2 existed only to close
+> that. If this rename ever needs redoing: **the type checker will not catch it.**
+
+**W4.3 — the lender-type facet.** New sidebar section above the lender list, with a
+removable active-filter chip.
+
+The type lives on `lenders`, not on `listings`, so filtering it as an embedded PostgREST
+resource would need `!inner` and would break the sibling count query — which selects only
+`lenderId` and embeds nothing. `resolveLenderIds()` resolves ids by type first instead:
+one extra round trip against a six-row table, and both queries keep reading the same way.
+**An empty result from that resolver is meaningful and distinct from "no filter"** — a
+type with no lenders must return nothing, not silently drop the filter. Verified over
+HTTP against a production build:
+
+```
+/search                                    12 listings
+/search?lenderType=bank                    12
+/search?lenderType=nbfc                     0   <- filter held, not dropped
+/search?lender=<SBI>                        3
+/search?lenderType=nbfc&lender=<SBI>        0   <- the two narrow together
+```
+
+**W4.4 — bulk upload. Two findings worth reading before W-INGEST.**
+
+1. **The rename silently broke auto-detection of a real inventory file.**
+   `guessColumn()` builds its candidates from the field *label*, so once the label became
+   "Lender (name)" a sheet with a **`Bank`** column matched nothing, and every row would
+   have failed with *"Lender column not mapped or empty"*. The files the client is
+   preparing say Bank. Fixed with an explicit `HEADER_SYNONYMS` table
+   (`bank`, `bankname`, `financialinstitution`), and `scripts/bulk-sample-selfcheck.mjs`
+   now asserts all four spellings map — it pulls the synonym table out of the component
+   verbatim, like everything else it checks, so the two cannot drift.
+
+2. **The "Lender Type" column the plan asked for was deliberately NOT added, and this
+   needs your decision.** A listing CSV cannot set it: the type belongs to the *lender*
+   row, and bulk upload does not create lenders — an unrecognised lender is a rejected
+   row, on purpose. Adding the column would mean a listing import quietly rewriting
+   lender records, which is a worse idea than the missing column.
+   **The real gap it exposes: there is no admin UI for lenders at all** — no create, no
+   edit, no way to set a type. That is pre-existing (lenders have only ever been a
+   dropdown source), but the facet makes it visible, because until a lender is marked
+   `nbfc` the NBFC filter will always be empty. **W-INGEST is the natural owner** — it
+   has to create lenders from the real file anyway — but if you want the facet usable
+   before then, say so and it is a small admin panel.
+
+**W4.5 — copy.** Changed only where the rename made it wrong, per the plan: the
+"Authorised officer & bank contact" label (it will hold an NBFC's contact), the "Banks"
+stat label under a count that now counts every lender type, "All Banks" filter options,
+and the bulk-upload help text. **Deliberately kept:** "bank auction properties" in
+marketing copy and the `/search` SEO title — every lender in the database today is a
+bank, and it is the phrase people actually search for.
+
+**Also caught and fixed:** the rename corrupted two real bank names in the self-check
+fixture (`Canara Bank` → "Canara Lender", `IDBI Bank` → "IDBI Lender"). A blanket
+identifier rename over a file containing real-world names is exactly how that happens.
+
+**Left alone, deliberately:** `listings."bankContact"` keeps its name. It is not a
+foreign key and renaming it means another migration plus changes in `redact.ts` and the
+access types for no functional gain; its *label* now reads "Lender Contact".
+
+**Gate:** `grep -rn '\bbanks\b|bankId|getBanksForAdmin' lib/ components/ app/` returns
+**zero** schema or identifier hits. ✅
+
+**Standing bar:** tsc 0 · build green 25/25 · leak 12/12 · matrix 49/49 + 23/23 ·
+grants 27/27 (its `banks` case updated to `lenders`) · bulk self-check PASS + 4 header
+spellings. ✅

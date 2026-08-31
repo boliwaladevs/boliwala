@@ -22,7 +22,7 @@ export interface ListingInput {
   propertyType: PropertyType
   possessionType: PossessionType
   status: ListingStatus
-  bankId: string
+  lenderId: string
   addressLine: string
   locality: string
   city: string
@@ -59,8 +59,8 @@ function slugify(input: string): string {
 
 async function generateUniqueSlug(input: ListingInput): Promise<string> {
   const admin = createAdminClient()
-  const { data: bank } = await admin.from("banks").select("shortName").eq("id", input.bankId).single()
-  const base = slugify(`${input.title}-${input.city}-${bank?.shortName ?? ""}`)
+  const { data: lender } = await admin.from("lenders").select("shortName").eq("id", input.lenderId).single()
+  const base = slugify(`${input.title}-${input.city}-${lender?.shortName ?? ""}`)
 
   let slug = base
   let suffix = 1

@@ -92,7 +92,7 @@ export function PropertyGrid({
             <div className="h-44 bg-gradient-to-br from-secondary/80 to-secondary flex items-center justify-center relative shrink-0">
               <Building2 className="w-16 h-16 text-muted-foreground/30 group-hover:text-orange-400/30 transition-colors" />
               <div className="absolute top-3 left-3 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
-                {p.bank.shortName}
+                {p.lender.shortName}
               </div>
               <div className="absolute top-3 right-3 bg-white/95 text-foreground text-[10px] font-semibold px-2.5 py-1 rounded-md shadow-sm">
                 {PROPERTY_TYPE_LABELS[p.propertyType]}

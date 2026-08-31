@@ -41,7 +41,7 @@ export async function generateMetadata({
   const title = mentionsCity ? listing.title : `${listing.title}, ${listing.city}`
 
   const description =
-    `${listing.bank.name} auction: ${listing.title} at ${listing.locality}, ${listing.city}, ` +
+    `${listing.lender.name} auction: ${listing.title} at ${listing.locality}, ${listing.city}, ` +
     `${listing.state}. Reserve price ${formatINR(listing.reservePrice)}, EMD ${formatINR(listing.emdAmount)}. ` +
     `Auction on ${formatDateLong(listing.auctionDate)}.`
 
@@ -124,7 +124,7 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
       priceCurrency: "INR",
       availability: "https://schema.org/InStock",
       validThrough: safeListing.auctionDate,
-      seller: { "@type": "Organization", name: safeListing.bank.name },
+      seller: { "@type": "Organization", name: safeListing.lender.name },
     },
     ...(safeListing.areaSqft
       ? {

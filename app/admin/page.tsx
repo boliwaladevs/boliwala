@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/auth/admin"
 import {
   getDashboardKpis,
   getAdminListings,
-  getBanksForAdmin,
+  getLendersForAdmin,
   getCallbackRequests,
   getRecentActivity,
   getAdminSectionStats,
@@ -30,7 +30,7 @@ export default async function AdminPage() {
   const [
     kpis,
     initialListings,
-    banks,
+    lenders,
     initialCallbacks,
     pricingSettings,
     activity,
@@ -44,7 +44,7 @@ export default async function AdminPage() {
   ] = await Promise.all([
     getDashboardKpis(),
     getAdminListings({}),
-    getBanksForAdmin(),
+    getLendersForAdmin(),
     getCallbackRequests({}),
     getPricingSettings(),
     getRecentActivity(),
@@ -62,7 +62,7 @@ export default async function AdminPage() {
       adminName={admin.fullName?.trim() || admin.email}
       kpis={kpis}
       initialListings={initialListings}
-      banks={banks}
+      lenders={lenders}
       initialCallbacks={initialCallbacks}
       pricingSettings={pricingSettings}
       activity={activity}

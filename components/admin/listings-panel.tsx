@@ -16,20 +16,20 @@ const STATUS_LABELS: Record<string, { label: string; pill: "green" | "gold" | "g
 
 export function ListingsPanel({
   initialListings,
-  banks,
+  lenders,
   onAddListing,
   onEditListing,
   onBulkUpload,
 }: {
   initialListings: AdminListingRow[]
-  banks: { id: string; name: string }[]
+  lenders: { id: string; name: string }[]
   onAddListing: () => void
   onEditListing: (id: string) => void
   onBulkUpload: () => void
 }) {
   const [listings, setListings] = useState(initialListings)
   const [q, setQ] = useState("")
-  const [bankId, setBankId] = useState("")
+  const [lenderId, setBankId] = useState("")
   const [status, setStatus] = useState("")
   const [, startTransition] = useTransition()
   const { toast } = useToast()
@@ -39,7 +39,7 @@ export function ListingsPanel({
       startTransition(async () => {
         const result = await searchAdminListingsAction({
           q: q || undefined,
-          bankId: bankId || undefined,
+          lenderId: lenderId || undefined,
           status: (status || undefined) as never,
         })
         setListings(result)
@@ -47,7 +47,7 @@ export function ListingsPanel({
     }, 300)
     return () => clearTimeout(timeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, bankId, status])
+  }, [q, lenderId, status])
 
   const handleCancel = async (id: string) => {
     if (!confirm("Cancel this listing? It will stop showing on the public site.")) return
@@ -79,9 +79,9 @@ export function ListingsPanel({
                 className="h-8 px-3 border-2 border-border rounded-lg text-[13px] outline-none focus:border-primary bg-background w-[180px]"
               />
               <TcActionSelect
-                value={bankId}
+                value={lenderId}
                 onChange={setBankId}
-                options={[{ label: "All Banks", value: "" }, ...banks.map((b) => ({ label: b.name, value: b.id }))]}
+                options={[{ label: "All Lenders", value: "" }, ...lenders.map((b) => ({ label: b.name, value: b.id }))]}
               />
               <TcActionSelect
                 value={status}
@@ -106,7 +106,7 @@ export function ListingsPanel({
             <thead>
               <tr className="bg-muted/50 border-b border-border">
                 <Th>Property</Th>
-                <Th>Bank</Th>
+                <Th>Lender</Th>
                 <Th>Reserve Price</Th>
                 <Th>EMD</Th>
                 <Th>Auction Date</Th>
@@ -130,7 +130,7 @@ export function ListingsPanel({
                       <div className="font-semibold text-foreground">{row.title}</div>
                       <div className="text-[11px]">{row.city}</div>
                     </Td>
-                    <Td>{row.bank.shortName}</Td>
+                    <Td>{row.lender.shortName}</Td>
                     <Td className="font-semibold text-foreground">{formatINR(row.reservePrice)}</Td>
                     <Td>{formatINR(row.emdAmount)}</Td>
                     <Td>{formatDateShort(row.auctionDate)}</Td>

@@ -114,7 +114,7 @@ export function AdminView({
   adminName,
   kpis,
   initialListings,
-  banks,
+  lenders,
   initialCallbacks,
   pricingSettings,
   activity,
@@ -129,7 +129,7 @@ export function AdminView({
   adminName: string
   kpis: DashboardKpis
   initialListings: AdminListingRow[]
-  banks: { id: string; name: string }[]
+  lenders: { id: string; name: string }[]
   initialCallbacks: AdminCallbackRow[]
   pricingSettings: PricingSettings
   activity: AdminActivityEvent[]
@@ -154,7 +154,7 @@ export function AdminView({
    * decides on it, and `contacted` is still undecided.
    */
   /** Resolves bank ids in saved alert filters to names, so chips read "SBI", not a UUID. */
-  const bankNames = new Map(banks.map((b) => [b.id, b.name]))
+  const lenderNames = new Map(lenders.map((b) => [b.id, b.name]))
 
   const partnerCounts = {
     approved: partnerApplications.filter((p) => p.status === 'approved').length,
@@ -547,7 +547,7 @@ export function AdminView({
           {activePage === 'listings' && (
             <ListingsPanel
               initialListings={initialListings}
-              banks={banks}
+              lenders={lenders}
               onAddListing={goToAddListing}
               onEditListing={goToEditListing}
               onBulkUpload={goToBulkUpload}
@@ -558,14 +558,14 @@ export function AdminView({
           {(activePage === 'add-listing' || activePage === 'listing-detail') && (
             <ListingFormPanel
               listingId={editingListingId}
-              banks={banks}
+              lenders={lenders}
               onSaved={(id) => { setEditingListingId(id); setActivePage('listing-detail') }}
               onCancel={() => setActivePage('listings')}
             />
           )}
 
           {/* BULK UPLOAD */}
-          {activePage === 'bulk-upload' && <BulkUploadPanel banks={banks} />}
+          {activePage === 'bulk-upload' && <BulkUploadPanel lenders={lenders} />}
 
           {/* CALLBACKS */}
           {activePage === 'callbacks' && <CallbacksPanel initialRows={initialCallbacks} />}
@@ -817,7 +817,7 @@ export function AdminView({
                         <Td className="font-bold text-foreground">{a.email || a.whatsapp || '—'}</Td>
                         <Td>
                           <div className="flex flex-wrap gap-1">
-                            {describeAlertFilters(a.filters, bankNames).map((chip, i) => (
+                            {describeAlertFilters(a.filters, lenderNames).map((chip, i) => (
                               <span key={i} className="text-[11px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full">{chip}</span>
                             ))}
                           </div>

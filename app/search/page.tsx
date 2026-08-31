@@ -11,7 +11,7 @@ import { pageMetadata } from "@/lib/seo"
 export const metadata = pageMetadata({
   title: "Search Bank Auction Properties",
   description:
-    "Search live SARFAESI bank auction properties across India. Filter by city, price, bank, property type, and possession status.",
+    "Search live SARFAESI bank auction properties across India. Filter by city, price, lender, property type, and possession status.",
   path: "/search",
 })
 
@@ -23,8 +23,8 @@ export default async function SearchPage({
   const params = await searchParams
 
   const supabase = await createClient()
-  const { data: banks } = await supabase
-    .from("banks")
+  const { data: lenders } = await supabase
+    .from("lenders")
     .select("id, name, shortName")
     .eq("isActive", true)
     .order("name")
@@ -33,7 +33,7 @@ export default async function SearchPage({
     <main className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
       <div className="flex-1 pt-24 md:pt-28">
-        <SearchSection banks={banks ?? []} initialParams={params} />
+        <SearchSection lenders={lenders ?? []} initialParams={params} />
         {/* Rendered unconditionally: the filter sidebar lives inside
             PropertyResults, so gating this on "has the user searched yet"
             meant /search with no params — which is where "Browse More" and

@@ -103,8 +103,8 @@ export function Hero({ stats }: { stats: SiteStats }) {
                 <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">Cities</span>
               </div>
               <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white mb-2">{displayCount(stats.banks)}</span>
-                <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">Banks</span>
+                <span className="text-3xl md:text-4xl font-bold text-white mb-2">{displayCount(stats.lenders)}</span>
+                <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">Lenders</span>
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-3xl md:text-4xl font-bold text-white mb-2">₹0</span>

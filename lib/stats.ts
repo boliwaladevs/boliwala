@@ -11,7 +11,7 @@
 export interface SiteStats {
   liveAuctions: number
   cities: number
-  banks: number
+  lenders: number
   /**
    * Mean discount of reserve price against estimated market value, across live
    * listings that carry both figures. Null when too few listings have an

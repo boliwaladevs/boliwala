@@ -35,7 +35,7 @@ export interface SafeListing {
   propertyType: Listing["propertyType"];
   possessionType: Listing["possessionType"];
   status: Listing["status"];
-  bank: Listing["bank"];
+  lender: Listing["lender"];
 
   addressLine: string;
   locality: string;
@@ -83,7 +83,7 @@ export function redactListing(
     propertyType: listing.propertyType,
     possessionType: listing.possessionType,
     status: listing.status,
-    bank: listing.bank,
+    lender: listing.lender,
 
     addressLine: listing.addressLine,
     locality: listing.locality,

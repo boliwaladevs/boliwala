@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast"
 
 const TARGET_FIELDS: { key: keyof ListingInput; label: string; required: boolean }[] = [
   { key: "title", label: "Title", required: true },
-  { key: "bankId", label: "Bank (name)", required: true },
+  { key: "lenderId", label: "Lender (name)", required: true },
   { key: "city", label: "City", required: true },
   { key: "addressLine", label: "Address Line", required: true },
   { key: "locality", label: "Locality", required: false },
@@ -53,13 +53,23 @@ interface ParsedRow {
   errors: string[]
 }
 
+/**
+ * Header spellings a real file uses that the field label does not imply.
+ *
+ * The lender column is the case that matters: an inventory sheet says "Bank",
+ * and after W4 renamed the field to Lender nothing would have matched it.
+ */
+const HEADER_SYNONYMS: Record<string, string[]> = {
+  lenderId: ["bank", "bankname", "financialinstitution"],
+}
+
 function guessColumn(headers: string[], fieldKey: string, fieldLabel: string): string {
   const normalized = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "")
-  // "Bank (name)" -> "bankname" — strip a parenthetical qualifier so it also matches a bare "Bank" column.
+  // "Lender (name)" -> "lendername" — strip a parenthetical qualifier so it also matches a bare "Lender" column.
   const targetBare = normalized(fieldLabel.replace(/\(.*?\)/g, ""))
   const target = normalized(fieldLabel)
   const targetKey = normalized(fieldKey)
-  const candidates = [target, targetKey, targetBare]
+  const candidates = [target, targetKey, targetBare, ...(HEADER_SYNONYMS[fieldKey] ?? [])]
 
   const exact = headers.find((h) => candidates.includes(normalized(h)))
   if (exact) return exact
@@ -70,7 +80,7 @@ function guessColumn(headers: string[], fieldKey: string, fieldLabel: string): s
   }) ?? ""
 }
 
-export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }[] }) {
+export function BulkUploadPanel({ lenders }: { lenders: { id: string; name: string }[] }) {
   const [headers, setHeaders] = useState<string[]>([])
   const [rawRows, setRawRows] = useState<Record<string, unknown>[]>([])
   const [mapping, setMapping] = useState<Record<string, string>>({})
@@ -102,12 +112,12 @@ export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }
   }
 
   const downloadSample = () => {
-    // Bank must resolve against the real list or every row errors, so the sample is filled
-    // from the banks actually in the database rather than an invented name.
-    const bankFor = (i: number) => (banks.length > 0 ? banks[i % banks.length].name : "")
+    // Lender must resolve against the real list or every row errors, so the sample is filled
+    // from the lenders actually in the database rather than an invented name.
+    const lenderFor = (i: number) => (lenders.length > 0 ? lenders[i % lenders.length].name : "")
     const values: Partial<Record<keyof ListingInput, [string, string, string]>> = {
       ...SAMPLE_VALUES,
-      bankId: [bankFor(0), bankFor(1), bankFor(2)],
+      lenderId: [lenderFor(0), lenderFor(1), lenderFor(2)],
       auctionDate: [isoInDays(30), isoInDays(45), isoInDays(60)],
       emdDeadline: [isoInDays(23), isoInDays(38), isoInDays(53)],
     }
@@ -127,9 +137,9 @@ export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }
     URL.revokeObjectURL(url)
   }
 
-  const findBank = (name: string): string | undefined => {
+  const findLender = (name: string): string | undefined => {
     const normalized = name.trim().toLowerCase()
-    return banks.find((b) => b.name.toLowerCase() === normalized || b.name.toLowerCase().includes(normalized) || normalized.includes(b.name.toLowerCase()))?.id
+    return lenders.find((b) => b.name.toLowerCase() === normalized || b.name.toLowerCase().includes(normalized) || normalized.includes(b.name.toLowerCase()))?.id
   }
 
   const buildPreview = () => {
@@ -140,10 +150,10 @@ export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }
         return col ? String(raw[col] ?? "").trim() : ""
       }
 
-      const bankName = get("bankId")
-      const bankId = bankName ? findBank(bankName) : undefined
-      if (bankName && !bankId) errors.push(`Bank "${bankName}" not recognized`)
-      else if (!bankName) errors.push("Bank column not mapped or empty")
+      const lenderName = get("lenderId")
+      const lenderId = lenderName ? findLender(lenderName) : undefined
+      if (lenderName && !lenderId) errors.push(`Lender "${lenderName}" not recognized`)
+      else if (!lenderName) errors.push("Lender column not mapped or empty")
 
       const reservePrice = Number(get("reservePrice"))
       const emdAmount = Number(get("emdAmount"))
@@ -154,7 +164,7 @@ export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }
 
       for (const field of TARGET_FIELDS) {
         if (!field.required) continue
-        if (field.key === "bankId") continue
+        if (field.key === "lenderId") continue
         if (field.key === "reservePrice" && (!reservePrice || reservePrice <= 0)) errors.push("Missing/invalid reserve price")
         else if (field.key === "emdAmount" && (!emdAmount || emdAmount <= 0)) errors.push("Missing/invalid EMD amount")
         else if (field.key === "auctionDate" && !auctionDate) errors.push("Missing/invalid auction date")
@@ -167,7 +177,7 @@ export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }
         propertyType: (get("propertyType").toLowerCase() as ListingInput["propertyType"]) || "residential",
         possessionType: (get("possessionType").toLowerCase() as ListingInput["possessionType"]) || "physical",
         status: "draft",
-        bankId: bankId ?? "",
+        lenderId: lenderId ?? "",
         addressLine: get("addressLine"),
         locality: get("locality"),
         city: get("city"),
@@ -237,8 +247,8 @@ export function BulkUploadPanel({ banks }: { banks: { id: string; name: string }
             </button>
           </div>
           <ul className="mt-3 pt-3 border-t border-border space-y-1 text-xs text-muted-foreground">
-            <li><strong className="text-foreground">Required:</strong> Title, Bank (name), City, Address Line, Reserve Price, EMD Amount, Auction Date, EMD Deadline. Everything else may be left blank.</li>
-            <li><strong className="text-foreground">Bank (name)</strong> must match a bank already in the system, or the row is rejected.</li>
+            <li><strong className="text-foreground">Required:</strong> Title, Lender (name), City, Address Line, Reserve Price, EMD Amount, Auction Date, EMD Deadline. Everything else may be left blank.</li>
+            <li><strong className="text-foreground">Lender (name)</strong> must match a lender already in the system, or the row is rejected.</li>
             <li><strong className="text-foreground">Dates</strong> must be written as <code className="font-mono">YYYY-MM-DD</code> (e.g. 2026-09-15). <code className="font-mono">15/09/2026</code> is rejected, and <code className="font-mono">09/03/2026</code> is read as 3 September, not 9 March.</li>
             <li><strong className="text-foreground">Property Type:</strong> residential · commercial · industrial · agricultural · mixed_use. <strong className="text-foreground">Possession Type:</strong> physical · symbolic. Left blank they default to residential / physical; a value that is not on these lists can cause the row to be dropped without an error.</li>
             <li>Every imported row is created as a <strong className="text-foreground">draft</strong> — publish from the Listings page. Photos and documents are not part of this file.</li>

@@ -37,7 +37,7 @@ const EMPTY_FORM: ListingInput = {
   propertyType: "residential",
   possessionType: "physical",
   status: "draft",
-  bankId: "",
+  lenderId: "",
   addressLine: "",
   locality: "",
   city: "",
@@ -70,16 +70,16 @@ function toDatetimeLocal(iso: string | null): string {
   return iso.slice(0, 16)
 }
 
-type Tab = "property" | "bank" | "images" | "gated"
+type Tab = "property" | "lender" | "images" | "gated"
 
 export function ListingFormPanel({
   listingId,
-  banks,
+  lenders,
   onSaved,
   onCancel,
 }: {
   listingId: string | null
-  banks: { id: string; name: string }[]
+  lenders: { id: string; name: string }[]
   onSaved: (id: string) => void
   onCancel: () => void
 }) {
@@ -110,7 +110,7 @@ export function ListingFormPanel({
         propertyType: listing.propertyType,
         possessionType: listing.possessionType,
         status: listing.status,
-        bankId: listing.bankId,
+        lenderId: listing.lenderId,
         addressLine: listing.addressLine,
         locality: listing.locality,
         city: listing.city,
@@ -145,8 +145,8 @@ export function ListingFormPanel({
   const set = <K extends keyof ListingInput>(key: K, value: ListingInput[K]) => setForm((prev) => ({ ...prev, [key]: value }))
 
   const handleSave = () => {
-    if (!form.title || !form.bankId || !form.city || !form.reservePrice || !form.auctionDate) {
-      toast({ variant: "destructive", title: "Missing required fields", description: "Title, bank, city, reserve price and auction date are required." })
+    if (!form.title || !form.lenderId || !form.city || !form.reservePrice || !form.auctionDate) {
+      toast({ variant: "destructive", title: "Missing required fields", description: "Title, lender, city, reserve price and auction date are required." })
       return
     }
     startSaving(async () => {
@@ -216,7 +216,7 @@ export function ListingFormPanel({
       <div className="flex border-b-2 border-border mb-4 overflow-x-auto">
         {([
           ["property", "Property Details"],
-          ["bank", "Bank & Auction"],
+          ["lender", "Lender & Auction"],
           ["images", "📷 Images & PDF"],
           ["gated", "Gated Fields"],
         ] as [Tab, string][]).map(([id, label]) => (
@@ -289,9 +289,9 @@ export function ListingFormPanel({
         </FormSection>
       )}
 
-      {tab === "bank" && (
+      {tab === "lender" && (
         <FormSection
-          title="Bank & Auction"
+          title="Lender & Auction"
           foot={
             <>
               <button onClick={onCancel} className="h-9 px-3.5 bg-background border-2 border-border text-muted-foreground text-[13px] rounded-lg">
@@ -305,8 +305,8 @@ export function ListingFormPanel({
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Flbl>Bank *</Flbl>
-              <Fsel options={[{ label: "Select a bank…", value: "" }, ...banks.map((b) => ({ label: b.name, value: b.id }))]} value={form.bankId} onChange={(v) => set("bankId", v)} />
+              <Flbl>Lender *</Flbl>
+              <Fsel options={[{ label: "Select a lender…", value: "" }, ...lenders.map((b) => ({ label: b.name, value: b.id }))]} value={form.lenderId} onChange={(v) => set("lenderId", v)} />
             </div>
             <div>
               <Flbl>Status</Flbl>
@@ -349,7 +349,7 @@ export function ListingFormPanel({
               <Finp type="number" value={form.totalOutstandingDues ?? ""} onChange={(v) => set("totalOutstandingDues", v ? Number(v) : null)} />
             </div>
             <div>
-              <Flbl>Bank Notice PDF URL</Flbl>
+              <Flbl>Auction Notice PDF URL</Flbl>
               <Finp value={form.noticeUrl ?? ""} onChange={(v) => set("noticeUrl", v || null)} placeholder="https://…" />
             </div>
           </div>
@@ -434,7 +434,7 @@ export function ListingFormPanel({
               <Finp value={form.authorisedOfficerEmail ?? ""} onChange={(v) => set("authorisedOfficerEmail", v || null)} />
             </div>
             <div>
-              <Flbl>Bank Contact</Flbl>
+              <Flbl>Lender Contact</Flbl>
               <Finp value={form.bankContact ?? ""} onChange={(v) => set("bankContact", v || null)} />
             </div>
           </div>

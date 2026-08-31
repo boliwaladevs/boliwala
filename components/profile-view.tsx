@@ -350,7 +350,7 @@ export function ProfileView({
                       <div key={listing.id} className="bg-background rounded-2xl border border-border overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
                         <div className="relative h-48 bg-secondary/50">
                           <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-xs font-bold px-3 py-1.5 rounded-lg text-slate-800 shadow-sm flex items-center gap-2">
-                            <span>{listing.bank.shortName}</span>
+                            <span>{listing.lender.shortName}</span>
                           </div>
                           <div className="absolute top-3 right-3 bg-red-100 text-red-700 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
                             {formatDateShort(listing.auctionDate)}

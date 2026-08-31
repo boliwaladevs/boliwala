@@ -9,11 +9,15 @@ export type PossessionType = "physical" | "symbolic"
 
 export type ListingStatus = "draft" | "live" | "closed" | "cancelled"
 
-export interface Bank {
+/** What kind of institution is selling. Not every SARFAESI seller is a bank. */
+export type LenderType = "bank" | "nbfc" | "arc" | "hfc"
+
+export interface Lender {
   id: string
   name: string
   shortName: string
   logoUrl: string | null
+  lenderType: LenderType
 }
 
 /** Shape of a row read with full column access (server-side, post-gating-check only). */
@@ -24,7 +28,7 @@ export interface Listing {
   propertyType: PropertyType
   possessionType: PossessionType
   status: ListingStatus
-  bank: Bank
+  lender: Lender
 
   addressLine: string
   locality: string

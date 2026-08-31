@@ -130,7 +130,7 @@ export function AboutView({ stats }: { stats: SiteStats }) {
               <span className="text-sm text-muted-foreground leading-relaxed block">Cities with auctions on the platform</span>
             </div>
             <div className="bg-background rounded-2xl p-8 text-center border border-border shadow-sm hover:-translate-y-1 transition-transform">
-              <span className="font-display text-4xl font-extrabold text-amber-500 block mb-3">{displayCount(stats.banks)}</span>
+              <span className="font-display text-4xl font-extrabold text-amber-500 block mb-3">{displayCount(stats.lenders)}</span>
               <span className="text-sm text-muted-foreground leading-relaxed block">Banks &amp; NBFCs whose auctions we track</span>
             </div>
             {stats.avgDiscountPct !== null && (

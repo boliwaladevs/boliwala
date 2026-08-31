@@ -4,12 +4,12 @@
  * Business rules recovered from the pricing table in demo/services.html:
  *
  *   ALWAYS PUBLIC (no login, never paywalled)
- *     full address · reserve price · EMD · auction dates · bank notice
+ *     full address · reserve price · EMD · auction dates · auction notice
  *
  *   GATED — 1 credit per group
  *     flat_floor       flat number & floor
  *     inspection       inspection date & time
- *     officer_contact  authorised officer & bank contact
+ *     officer_contact  authorised officer & lender contact
  *
  *   TIERS
  *     Free      ₹0        5 credits on signup
@@ -24,7 +24,7 @@ export type FieldGroup = (typeof FIELD_GROUPS)[number];
 export const FIELD_GROUP_LABELS: Record<FieldGroup, string> = {
   flat_floor: "Flat number & floor",
   inspection: "Inspection date & time",
-  officer_contact: "Authorised officer & bank contact",
+  officer_contact: "Authorised officer & lender contact",
 };
 
 /** The four states the whole business model turns on. */

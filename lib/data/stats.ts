@@ -10,9 +10,9 @@ import type { SiteStats } from "@/lib/stats"
  * Headline figures for the marketing surfaces.
  *
  * These were hardcoded in three places — hero.tsx ("12,400+ Live Auctions",
- * "140+ Cities", "18+ Banks"), auth-view.tsx ("40+ banks", "12,400+") and
+ * "140+ Cities", "18+ Banks"), auth-view.tsx ("40+ lenders", "12,400+") and
  * about-view.tsx — and disagreed with each other and with reality: the
- * database holds 12 listings and 6 banks. Publishing "12,400+" is not a
+ * database holds 12 listings and 6 lenders. Publishing "12,400+" is not a
  * rounding difference, and in a financial-services context an unverifiable
  * public claim carries real exposure.
  *
@@ -44,10 +44,10 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
     { auth: { autoRefreshToken: false, persistSession: false } },
   )
 
-  const [{ count: liveAuctions }, { data: rows }, { count: banks }] = await Promise.all([
+  const [{ count: liveAuctions }, { data: rows }, { count: lenders }] = await Promise.all([
     supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "live"),
     supabase.from("listings").select('city, "reservePrice", "estimatedMarketValue"').eq("status", "live"),
-    supabase.from("banks").select("id", { count: "exact", head: true }).eq("isActive", true),
+    supabase.from("lenders").select("id", { count: "exact", head: true }).eq("isActive", true),
   ])
 
   const listings = rows ?? []
@@ -61,7 +61,7 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
   return {
     liveAuctions: liveAuctions ?? 0,
     cities,
-    banks: banks ?? 0,
+    lenders: lenders ?? 0,
     avgDiscountPct:
       discounts.length >= 5
         ? Math.round(discounts.reduce((a, b) => a + b, 0) / discounts.length)

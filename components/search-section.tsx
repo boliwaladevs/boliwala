@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation"
 import { Search, MapPin, Building, CreditCard, Key, RotateCcw, Home, Factory, Store, Tractor, LayoutGrid, Building2 } from "lucide-react"
 import type { SearchParamsInput } from "@/lib/data/listings"
 
-interface Bank {
+interface Lender {
   id: string
   name: string
   shortName: string
 }
 
 interface SearchSectionProps {
-  banks?: Bank[]
+  lenders?: Lender[]
   initialParams?: SearchParamsInput
 }
 
@@ -20,14 +20,14 @@ function firstParam(v: string | string[] | undefined): string {
   return (Array.isArray(v) ? v[0] : v) ?? ""
 }
 
-export function SearchSection({ banks = [], initialParams = {} }: SearchSectionProps = {}) {
+export function SearchSection({ lenders = [], initialParams = {} }: SearchSectionProps = {}) {
   const router = useRouter()
 
   const [location, setLocation] = useState(firstParam(initialParams.location))
   const [keyword, setKeyword] = useState(firstParam(initialParams.q))
   const [minPrice, setMinPrice] = useState(firstParam(initialParams.minPrice))
   const [maxPrice, setMaxPrice] = useState(firstParam(initialParams.maxPrice))
-  const [bank, setBank] = useState(firstParam(initialParams.bank))
+  const [lender, setLender] = useState(firstParam(initialParams.lender))
   const [propertyType, setPropertyType] = useState(firstParam(initialParams.propertyType) || "all")
   const [possessionType, setPossessionType] = useState(firstParam(initialParams.possession) || "all")
 
@@ -46,7 +46,7 @@ export function SearchSection({ banks = [], initialParams = {} }: SearchSectionP
     if (keyword) params.set("q", keyword)
     if (minPrice) params.set("minPrice", minPrice)
     if (maxPrice) params.set("maxPrice", maxPrice)
-    if (bank) params.set("bank", bank)
+    if (lender) params.set("lender", lender)
     if (propertyType !== "all") params.set("propertyType", propertyType)
     if (possessionType !== "all") params.set("possession", possessionType)
     const qs = params.toString()
@@ -58,7 +58,7 @@ export function SearchSection({ banks = [], initialParams = {} }: SearchSectionP
     setKeyword("")
     setMinPrice("")
     setMaxPrice("")
-    setBank("")
+    setLender("")
     setPropertyType("all")
     setPossessionType("all")
     router.push("/search")
@@ -106,7 +106,7 @@ export function SearchSection({ banks = [], initialParams = {} }: SearchSectionP
               </div>
             </div>
 
-            {/* Row 2: Price Range & Bank */}
+            {/* Row 2: Price Range & Lender */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
@@ -133,15 +133,15 @@ export function SearchSection({ banks = [], initialParams = {} }: SearchSectionP
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <Building className="w-4 h-4 text-purple-400" />
-                  Bank Name
+                  Lender Name
                 </label>
                 <select
-                  value={bank}
-                  onChange={(e) => setBank(e.target.value)}
+                  value={lender}
+                  onChange={(e) => setLender(e.target.value)}
                   className="w-full bg-secondary/50 border border-border rounded-md px-4 py-3 text-sm focus:outline-none focus:border-purple-400/50 transition-colors appearance-none text-foreground/90"
                 >
-                  <option value="">All Banks</option>
-                  {banks.map((b) => (
+                  <option value="">All Lenders</option>
+                  {lenders.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
                     </option>

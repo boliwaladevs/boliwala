@@ -35,7 +35,7 @@ export function alertFiltersFromSearch(params: URLSearchParams): AlertFilters {
   const auctionWindow = params.get("auctionWindow")
   const minPrice = Number(params.get("minPrice"))
   const maxPrice = Number(params.get("maxPrice"))
-  const bankIds = params.getAll("bank").filter(Boolean)
+  const lenderIds = params.getAll("lender").filter(Boolean)
 
   if (q) filters.q = q
   if (location) filters.location = location
@@ -44,7 +44,7 @@ export function alertFiltersFromSearch(params: URLSearchParams): AlertFilters {
   if (auctionWindow === "week" || auctionWindow === "month") filters.auctionWindow = auctionWindow
   if (Number.isFinite(minPrice) && minPrice > 0) filters.minPrice = minPrice
   if (Number.isFinite(maxPrice) && maxPrice > 0) filters.maxPrice = maxPrice
-  if (bankIds.length > 0) filters.bankIds = bankIds
+  if (lenderIds.length > 0) filters.lenderIds = lenderIds
 
   return filters
 }
@@ -59,19 +59,19 @@ export function searchHrefFromAlertFilters(filters: AlertFilters): string {
   if (filters.auctionWindow) params.set("auctionWindow", filters.auctionWindow)
   if (filters.minPrice) params.set("minPrice", String(filters.minPrice))
   if (filters.maxPrice) params.set("maxPrice", String(filters.maxPrice))
-  for (const id of filters.bankIds ?? []) params.append("bank", id)
+  for (const id of filters.lenderIds ?? []) params.append("lender", id)
   const qs = params.toString()
   return qs ? `/search?${qs}` : "/search"
 }
 
 /**
- * Human-readable chips for a saved alert. Bank ids are resolved by the caller
+ * Human-readable chips for a saved alert. Lender ids are resolved by the caller
  * where names are available; unresolved ids are shown as a count rather than
  * as raw UUIDs.
  */
 export function describeAlertFilters(
   filters: AlertFilters,
-  bankNames?: Map<string, string>,
+  lenderNames?: Map<string, string>,
 ): string[] {
   const chips: string[] = []
 
@@ -89,12 +89,12 @@ export function describeAlertFilters(
     chips.push(`Under ${compactINR(filters.maxPrice)}`)
   }
 
-  for (const id of filters.bankIds ?? []) {
-    const name = bankNames?.get(id)
+  for (const id of filters.lenderIds ?? []) {
+    const name = lenderNames?.get(id)
     if (name) chips.push(name)
   }
-  const unresolved = (filters.bankIds ?? []).filter((id) => !bankNames?.has(id)).length
-  if (unresolved > 0) chips.push(`${unresolved} bank${unresolved > 1 ? "s" : ""}`)
+  const unresolved = (filters.lenderIds ?? []).filter((id) => !lenderNames?.has(id)).length
+  if (unresolved > 0) chips.push(`${unresolved} lender${unresolved > 1 ? "s" : ""}`)
 
   if (chips.length === 0) chips.push("All auctions")
   return chips

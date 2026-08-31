@@ -53,8 +53,8 @@ ok(!r.error && r.rows.length === 3, "reads live listings (the public columns)", 
 r = await as("anon", `select "flatNumber", "authorisedOfficerPhone" from public.listings limit 1`)
 ok(!!r.error && /permission denied/i.test(r.error), "CANNOT read the gated columns — the credit gate holds at the database", r.error)
 
-r = await as("anon", `select * from public.banks limit 1`)
-ok(!r.error, "reads banks", r.error)
+r = await as("anon", `select * from public.lenders limit 1`)
+ok(!r.error, "reads lenders", r.error)
 
 r = await as("anon", `select key from public.settings limit 1`)
 ok(!r.error, "reads settings (pricing must render for guests)", r.error)

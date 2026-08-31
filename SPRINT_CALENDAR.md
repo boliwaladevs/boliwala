@@ -503,7 +503,17 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
 - [ ] **W3, still owed by the user: rotate the Supabase DB password** (it was pasted
       into a chat transcript), then update `DATABASE_URL`/`DIRECT_URL` in `.env.local`,
       `.dev.vars` and the Worker secrets.
-- [ ] W4 — lender model, `banks` → `lenders`
+- [x] **W4 — lender model.** `banks` → `lenders`, `bankId` → `lenderId`, a
+      `"LenderType"` enum (bank/nbfc/arc/hfc) and a lender-type facet in search, done at
+      12 listings rather than at 50,000. 69 identifiers across 21 files.
+      Two things worth remembering: the PostgREST alias rename **type-checked clean
+      while breaking every listing page at runtime** (the query result is cast, so tsc
+      cannot see it), and the rename silently broke auto-detection of a real inventory
+      file's "Bank" column — now covered by `HEADER_SYNONYMS` and asserted in the bulk
+      self-check. `MEMORY.md` §39.5.
+- [ ] **Decision needed: there is no admin UI for lenders** — no way to create one or
+      set its type, so the NBFC/ARC/HFC facet stays empty until W-INGEST creates lenders
+      from the real file. Pre-existing gap, newly visible. `MEMORY.md` §39.5.
 - [ ] W5 — R2 storage and PDF documents
 - [ ] W6 — Channel Partner portal (must follow W2)
 - [ ] W7 — legal routes and real contact wiring
