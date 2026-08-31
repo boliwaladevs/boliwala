@@ -10,6 +10,9 @@ import {
   getAdminUsers,
   getPartnerApplications,
   getAlertSubscribersForAdmin,
+  getSalesEnquiries,
+  getAdminPayments,
+  getAdminPackages,
 } from "@/lib/data/admin"
 import { getPricingSettings } from "@/lib/access/settings"
 import { pageMetadata } from "@/lib/seo"
@@ -35,6 +38,9 @@ export default async function AdminPage() {
     users,
     partnerApplications,
     alertSubscribers,
+    salesEnquiries,
+    payments,
+    packages,
   ] = await Promise.all([
     getDashboardKpis(),
     getAdminListings({}),
@@ -46,6 +52,9 @@ export default async function AdminPage() {
     getAdminUsers(),
     getPartnerApplications(),
     getAlertSubscribersForAdmin(),
+    getSalesEnquiries({}),
+    getAdminPayments(),
+    getAdminPackages(),
   ])
 
   return (
@@ -61,6 +70,9 @@ export default async function AdminPage() {
       users={users}
       partnerApplications={partnerApplications}
       alertSubscribers={alertSubscribers}
+      salesEnquiries={salesEnquiries}
+      payments={payments}
+      packages={packages}
     />
   )
 }

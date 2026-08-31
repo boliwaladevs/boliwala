@@ -5236,7 +5236,7 @@ check. Instruction was explicit — **do not stop execution waiting for any of t
 |---|---|---|---|
 | W0 | Plus Jakarta Sans | ✅ **LANDED** | see below |
 | W1 | Purge the six admin tables | ✅ **LANDED** | see §39.2 |
-| W2 | Contact Sales flow | 🟡 in progress | W2.1 · W2.2 done |
+| W2 | Contact Sales flow | ✅ **LANDED** | see §39.3 |
 | W3 | Security housekeeping | ⬜ | |
 | W4 | Lender model | ⬜ | |
 | W5 | R2 + PDF documents | ⬜ | |
@@ -5405,3 +5405,71 @@ erroring. Verified over HTTP: both plans render their label, `?plan=bogus` rende
 
 **RLS proof (scratch script, run against live):** anon **can** insert an enquiry;
 anon read → `42501`, anon update → `42501`; service role reads it back. Test row deleted.
+
+**W2.5 — admin Sales Enquiries ✅** New sidebar item under **Leads & Sales**, between
+Callback Requests and Package Purchases, with a badge on `kpis.salesEnquiriesNew`
+(added to `getDashboardKpis`). `components/admin/sales-enquiries-panel.tsx` mirrors
+`CallbacksPanel` — same debounced search, same status filter, same StatCard row — plus
+two things it does not have: a **grant drawer** and per-enquiry **notes**.
+
+`app/actions/admin-sales.ts` holds the grants:
+
+| Action | Writes | Enquiry |
+|---|---|---|
+| `grantSubscription` | `subscriptions` (active, +1 year) + `payments` (paid) + audit | → converted |
+| `grantServicePackage` | `service_packages` (pending) + `payments` (paid) + audit | → converted |
+| `grantCredits` | `profiles.creditsBalance` + `credit_transactions` (`admin_adjust`) + audit | untouched |
+
+**Four decisions inside that table:**
+
+1. **Grants write a `payments` row, and that needed migration `0015_manual_payments.sql`.**
+   `payments."razorpayOrderId"` was NOT NULL — the schema assumed every payment came
+   through a gateway. Money is now taken offline, so without this the revenue KPIs read
+   ₹0 while real money arrives. Inventing an order id (`manual-<uuid>`) would put a lie
+   in a provider-named column, so the column is nullable instead and carries a
+   `comment` saying why. **Note the knock-on: W4's lender migration is now `0016`, not
+   `0015`.**
+2. **Credits are deliberately not a payment and do not convert the enquiry.** Credits get
+   granted as goodwill or a correction far more often than they are sold, `CreditReason`
+   already has `admin_adjust`, and marking an enquiry converted for a few credits would
+   overstate the pipeline.
+3. **A grant is refused when no profile matches the email.** An enquiry can come from a
+   signed-out visitor, so there may be no account. Refusing beats creating a shadow
+   profile nobody can sign into.
+4. **`admin_audit_log` gets its first ever writer.** The table has existed since the
+   Prisma era with nothing writing to it. An admin opening paid access by hand, after
+   money moved off-platform, is exactly what it was built for.
+
+Not wrapped in a transaction: PostgREST has no client-side transaction and an RPC is
+more machinery than five grants a month justifies. The order is chosen so a failure
+leaves the **customer holding what they paid for** — entitlement first, bookkeeping
+after — with the enquiry still visibly open.
+
+**W2.6 — closing the loop on W1 ✅** Packages, Payments and Service Pipeline now read
+`getAdminPackages()` and `getAdminPayments()` instead of showing an empty state
+unconditionally. Their empty-state copy was rewritten to match what is now true: a row
+appears when an admin grants. Packages lost its **Txn ID** column (meaningless for a
+manual grant) for **Purchased**; a manual payment shows *"Collected directly"* where a
+Razorpay id would go.
+
+**Verification — the W2 "Done when", as far as it can be driven headlessly:**
+```
+PASS  guest submits an enquiry (anon insert, as the form does)
+PASS  it appears in the pipeline as status=new
+PASS  finds the account for the grant / refuses one that does not exist
+PASS  writes subscription + payment (null razorpayOrderId) + audit row
+PASS  marks the enquiry converted
+PASS  getViewer()'s own subscription query now matches -> 'subscriber'  <-- the point
+PASS  credit grant moves the balance 4 -> 7 and writes the ledger row
+```
+11/11, every test row deleted afterwards, run against the **superadmin's own account**
+so no customer was touched even momentarily. Confirmed clean: no `admin_adjust` row
+survives and the balance is back at 4.
+
+> **What this does NOT prove:** that the buttons are wired to the actions. The panel
+> needs a signed-in superadmin browser session, which is not available here — the same
+> gap as Item B's visual check. **Add it to the same five minutes:** open
+> `/admin` → Sales Enquiries, submit an enquiry from `/pricing` first, then use
+> **Grant…** on it.
+
+**Standing bar:** tsc 0 · build green 25/25 · leak 12/12 · matrix 49/49 + 23/23. ✅

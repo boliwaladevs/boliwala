@@ -482,7 +482,14 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
       empty state that says why it is empty. The hardcoded "31 active · 6 pending"
       partner count and the invented Service Pipeline tab counts are gone too.
       `MEMORY.md` §39.2.
-- [ ] W2 — Contact Sales enquiry flow *(the notification decision is with the user)*
+- [x] **W2 — Contact Sales enquiry flow.** `contact_sales_enquiries` + an insert-only
+      RLS path; every "buy" CTA on Pricing and Services now goes to
+      `/contact?plan=…` instead of a checkout that does not exist; a Sales Enquiries
+      section in admin with status workflow, notes, and **Grant Subscription / Grant
+      Package / Grant Credits** writing the real entitlement, a payment row and an
+      audit entry. Packages, Payments and Service Pipeline read those rows.
+      Notification is **admin-panel-only** — no email exists to send.
+      `MEMORY.md` §39.3.
 - [ ] W3 — security housekeeping *(the password rotation is with the user)*
 - [ ] W4 — lender model, `banks` → `lenders`
 - [ ] W5 — R2 storage and PDF documents

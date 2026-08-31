@@ -14,6 +14,7 @@ export interface DashboardKpis {
   alertSubscribers: number
   successFeesPending: number
   pendingPartnerApplications: number
+  salesEnquiriesNew: number
 }
 
 /**
@@ -36,6 +37,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
     auctionsClosed,
     alertSubscribers,
     pendingPartnerApplications,
+    salesEnquiriesNew,
     revenueRows,
   ] = await Promise.all([
     admin.from("listings").select("id", { count: "exact", head: true }).eq("status", "live"),
@@ -45,6 +47,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
     admin.from("listings").select("id", { count: "exact", head: true }).eq("status", "closed"),
     admin.from("alert_subscriptions").select("id", { count: "exact", head: true }).eq("isActive", true),
     admin.from("channel_partner_applications").select("id", { count: "exact", head: true }).eq("status", "new"),
+    admin.from("contact_sales_enquiries").select("id", { count: "exact", head: true }).eq("status", "new"),
     admin.from("payments").select("amount").eq("status", "paid").gte("createdAt", startOfMonth.toISOString()),
   ])
 
@@ -60,6 +63,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
     alertSubscribers: alertSubscribers.count ?? 0,
     successFeesPending: 0,
     pendingPartnerApplications: pendingPartnerApplications.count ?? 0,
+    salesEnquiriesNew: salesEnquiriesNew.count ?? 0,
   }
 }
 
@@ -564,6 +568,98 @@ export async function getAlertSubscribersForAdmin(limit = 200): Promise<AdminAle
     // column hold null rather than an object.
     filters: row.filters ?? {},
   }))
+}
+
+export type SalesEnquiryStatus = "new" | "contacted" | "converted" | "closed"
+export type SalesEnquiryPlan = "annual_subscription" | "service_package"
+
+export interface AdminSalesEnquiryRow {
+  id: string
+  name: string
+  email: string | null
+  phone: string
+  plan: SalesEnquiryPlan
+  message: string | null
+  status: SalesEnquiryStatus
+  notes: string | null
+  handledBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SalesEnquiryFilters {
+  status?: SalesEnquiryStatus
+  q?: string
+}
+
+/**
+ * The sales pipeline, newest first — the only place a pre-Razorpay sale is
+ * recorded. Filtering mirrors `getCallbackRequests()` exactly, including the
+ * same punctuation strip before an `ilike`, because the two searches sit two
+ * sidebar items apart and should behave identically.
+ */
+export async function getSalesEnquiries(filters: SalesEnquiryFilters): Promise<AdminSalesEnquiryRow[]> {
+  const admin = createAdminClient()
+  let query = admin
+    .from("contact_sales_enquiries")
+    .select('id, name, email, phone, plan, message, status, notes, "handledBy", "createdAt", "updatedAt"')
+    .order("createdAt", { ascending: false })
+
+  if (filters.status) query = query.eq("status", filters.status)
+  if (filters.q) {
+    const text = filters.q.replace(/[,()%*]/g, " ").trim()
+    if (text) query = query.or(`name.ilike.%${text}%,phone.ilike.%${text}%,email.ilike.%${text}%`)
+  }
+
+  const { data, error } = await query.limit(200)
+  if (error) throw error
+  return (data ?? []) as unknown as AdminSalesEnquiryRow[]
+}
+
+export interface AdminPaymentRow {
+  id: string
+  amount: number
+  type: "subscription" | "service_package"
+  status: "created" | "paid" | "failed" | "refunded"
+  razorpayPaymentId: string | null
+  createdAt: string
+  user: { fullName: string | null; email: string } | null
+}
+
+/** Every payment, newest first. Manual grants appear here with null razorpay ids. */
+export async function getAdminPayments(limit = 200): Promise<AdminPaymentRow[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("payments")
+    .select('id, amount, type, status, "razorpayPaymentId", "createdAt", user:profiles("fullName", email)')
+    .order("createdAt", { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return (data ?? []) as unknown as AdminPaymentRow[]
+}
+
+export interface AdminPackageRow {
+  id: string
+  status: "pending" | "active" | "completed" | "cancelled"
+  amountPaid: number
+  successFeePct: number
+  createdAt: string
+  user: { fullName: string | null; email: string; phone: string | null } | null
+  listing: { title: string; city: string } | null
+}
+
+/** Service packages, newest first — both the Packages table and the Service Pipeline read this. */
+export async function getAdminPackages(limit = 200): Promise<AdminPackageRow[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("service_packages")
+    .select('id, status, "amountPaid", "successFeePct", "createdAt", user:profiles("fullName", email, phone), listing:listings(title, city)')
+    .order("createdAt", { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return (data ?? []) as unknown as AdminPackageRow[]
 }
 
 export interface EditablePricingSettings {

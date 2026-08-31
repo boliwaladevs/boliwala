@@ -9,6 +9,7 @@ import { ListingsPanel } from "./admin/listings-panel"
 import { ListingFormPanel } from "./admin/listing-form-panel"
 import { BulkUploadPanel } from "./admin/bulk-upload-panel"
 import { CallbacksPanel } from "./admin/callbacks-panel"
+import { SalesEnquiriesPanel } from "./admin/sales-enquiries-panel"
 import { SettingsPanel } from "./admin/settings-panel"
 import type {
   DashboardKpis,
@@ -19,6 +20,9 @@ import type {
   AdminUserRow,
   AdminPartnerApplicationRow,
   AdminAlertSubscriberRow,
+  AdminSalesEnquiryRow,
+  AdminPaymentRow,
+  AdminPackageRow,
 } from "@/lib/data/admin"
 import type { PricingSettings } from "@/lib/access/types"
 
@@ -29,6 +33,7 @@ const pageMap: Record<string, { title: string; crumb: string }> = {
   'listing-detail': { title: 'Edit Listing + Images', crumb: 'Boliwala Admin › Listings › Flat 303, Airoli' },
   'bulk-upload': { title: 'Bulk Upload Excel', crumb: 'Boliwala Admin › Listings › Bulk Upload' },
   'callbacks': { title: 'Callback Requests', crumb: 'Boliwala Admin › Leads › Callbacks' },
+  'sales-enquiries': { title: 'Sales Enquiries', crumb: 'Boliwala Admin › Leads › Sales Enquiries' },
   'packages': { title: 'Package Purchases', crumb: 'Boliwala Admin › Leads › Packages' },
   'requests': { title: 'Service Pipeline', crumb: 'Boliwala Admin › Leads › Pipeline' },
   'payments': { title: 'Payments', crumb: 'Boliwala Admin › Finance › Payments' },
@@ -82,6 +87,14 @@ const NOT_TRACKED = "—"
 
 const NAV_COLLAPSED_KEY = "bw_admin_nav_collapsed"
 
+/** Pill tint per service-package status. The label is the status itself. */
+const PACKAGE_STATUS_PILL: Record<AdminPackageRow["status"], "gold" | "blue" | "green" | "gray"> = {
+  pending: "gold",
+  active: "blue",
+  completed: "green",
+  cancelled: "gray",
+}
+
 /** Pill tint per application status. The label is the status itself. */
 const PARTNER_STATUS_PILL: Record<AdminPartnerApplicationRow["status"], string> = {
   new: "gold",
@@ -109,6 +122,9 @@ export function AdminView({
   users,
   partnerApplications,
   alertSubscribers,
+  salesEnquiries,
+  payments,
+  packages,
 }: {
   adminName: string
   kpis: DashboardKpis
@@ -121,6 +137,9 @@ export function AdminView({
   users: AdminUserRow[]
   partnerApplications: AdminPartnerApplicationRow[]
   alertSubscribers: AdminAlertSubscriberRow[]
+  salesEnquiries: AdminSalesEnquiryRow[]
+  payments: AdminPaymentRow[]
+  packages: AdminPackageRow[]
 }) {
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -204,6 +223,7 @@ export function AdminView({
       label: "Leads & Sales",
       items: [
         { id: "callbacks", icon: "📞", label: "Callback Requests", badge: badgeCount(kpis.callbackRequestsUnread) },
+        { id: "sales-enquiries", icon: "💬", label: "Sales Enquiries", badge: badgeCount(kpis.salesEnquiriesNew) },
         { id: "packages", icon: "💼", label: "Package Purchases", badge: badgeCount(kpis.packagePurchases), badgeColor: "bg-amber-500" },
         { id: "requests", icon: "📋", label: "Service Pipeline" },
       ],
@@ -550,6 +570,9 @@ export function AdminView({
           {/* CALLBACKS */}
           {activePage === 'callbacks' && <CallbacksPanel initialRows={initialCallbacks} />}
 
+          {/* SALES ENQUIRIES */}
+          {activePage === 'sales-enquiries' && <SalesEnquiriesPanel initialRows={salesEnquiries} />}
+
           {/* PACKAGES */}
           {activePage === 'packages' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -561,12 +584,26 @@ export function AdminView({
               <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                 <TcHead title="💼 ₹9,999 Package Purchases" acts={<><input className="h-8 px-3 border-2 border-border rounded-lg text-[13px] bg-background w-[180px]" placeholder="Search name…" /><TcActionBtn>⬇️ Export</TcActionBtn></>} />
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-muted/50 border-b border-border"><Th>Client</Th><Th>Property of Interest</Th><Th>Package</Th><Th>Txn ID</Th><Th>Pipeline Status</Th><Th>Actions</Th></tr></thead>
+                  <thead><tr className="bg-muted/50 border-b border-border"><Th>Client</Th><Th>Property of Interest</Th><Th>Package</Th><Th>Purchased</Th><Th>Pipeline Status</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <EmptyRow cols={6}>
-                      No package purchases yet. Packages are sold by the team, so a row appears here once a
-                      sales enquiry is converted — there is no self-serve checkout.
-                    </EmptyRow>
+                    {packages.length === 0 ? (
+                      <EmptyRow cols={6}>
+                        No package purchases yet. Packages are sold by the team — a row appears here when a sales
+                        enquiry is granted a Full Service package. There is no self-serve checkout.
+                      </EmptyRow>
+                    ) : packages.map((pkg) => (
+                      <tr key={pkg.id} className="border-b border-border hover:bg-muted/30">
+                        <Td>
+                          <div className="font-bold text-foreground">{pkg.user?.fullName?.trim() || pkg.user?.email || '""" + DASH + """'}</div>
+                          <div className="text-[11px]">{pkg.user?.email}</div>
+                        </Td>
+                        <Td>{pkg.listing ? `${pkg.listing.title}, ${pkg.listing.city}` : 'Not yet assigned'}</Td>
+                        <Td><Pill type="blue">{inr(pkg.amountPaid)} + {pkg.successFeePct}%</Pill></Td>
+                        <Td>{shortDate(pkg.createdAt)}</Td>
+                        <Td><Pill type={PACKAGE_STATUS_PILL[pkg.status]}>{pkg.status}</Pill></Td>
+                        <Td><RaBtn>View Pipeline</RaBtn></Td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table></div>
               </div>
@@ -586,10 +623,21 @@ export function AdminView({
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>Date</Th><Th>Client</Th><Th>Type</Th><Th>Txn ID</Th><Th>Amount</Th><Th>Status</Th></tr></thead>
                   <tbody>
-                    <EmptyRow cols={6}>
-                      No transactions yet. Online payment is not connected, so nothing writes to this table —
-                      entitlements granted by an admin will show here once that path exists.
-                    </EmptyRow>
+                    {payments.length === 0 ? (
+                      <EmptyRow cols={6}>
+                        No transactions yet. Online payment is not connected — a row appears here when an admin
+                        grants an entitlement after taking payment directly.
+                      </EmptyRow>
+                    ) : payments.map((pay) => (
+                      <tr key={pay.id} className="border-b border-border hover:bg-muted/30">
+                        <Td>{shortDate(pay.createdAt)}</Td>
+                        <Td className="font-bold text-foreground">{pay.user?.fullName?.trim() || pay.user?.email || '""" + DASH + """'}</Td>
+                        <Td>{pay.type === 'subscription' ? 'Annual membership' : 'Full Service package'}</Td>
+                        <Td className="font-mono text-xs">{pay.razorpayPaymentId ?? 'Collected directly'}</Td>
+                        <Td className="font-bold text-foreground">{inr(pay.amount)}</Td>
+                        <Td><Pill type={pay.status === 'paid' ? 'green' : pay.status === 'refunded' ? 'gray' : 'red'}>{pay.status}</Pill></Td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table></div>
               </div>
@@ -651,10 +699,25 @@ export function AdminView({
                 <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
                   <thead><tr className="bg-muted/50 border-b border-border"><Th>Client</Th><Th>Service</Th><Th>City</Th><Th>Property</Th><Th>Stage</Th><Th>Status</Th><Th>Actions</Th></tr></thead>
                   <tbody>
-                    <EmptyRow cols={7}>
-                      Nothing in the pipeline yet. A job appears here when a client buys a service package,
-                      which today happens through a sales enquiry rather than a checkout.
-                    </EmptyRow>
+                    {packages.length === 0 ? (
+                      <EmptyRow cols={7}>
+                        Nothing in the pipeline yet. A job appears here when a client is granted a service
+                        package, which today happens through a sales enquiry rather than a checkout.
+                      </EmptyRow>
+                    ) : packages.map((pkg) => (
+                      <tr key={pkg.id} className="border-b border-border hover:bg-muted/30">
+                        <Td>
+                          <div className="font-bold text-foreground">{pkg.user?.fullName?.trim() || pkg.user?.email || '""" + DASH + """'}</div>
+                          <div className="text-[11px]">📞 {pkg.user?.phone || '""" + DASH + """'}</div>
+                        </Td>
+                        <Td>Full Service</Td>
+                        <Td>{pkg.listing?.city ?? '""" + DASH + """'}</Td>
+                        <Td>{pkg.listing?.title ?? 'Not yet assigned'}</Td>
+                        <Td>{pkg.status === 'pending' ? 'Not started' : '""" + DASH + """'}</Td>
+                        <Td><Pill type={PACKAGE_STATUS_PILL[pkg.status]}>{pkg.status}</Pill></Td>
+                        <Td><RaBtn>View</RaBtn></Td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table></div>
               </div>
