@@ -62,6 +62,134 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
   }
 }
 
+export type AdminActivityKind = "callback" | "listing" | "payment"
+
+export interface AdminActivityEvent {
+  id: string
+  kind: AdminActivityKind
+  /** The person the event is about, where it has one. Read from the DB, never invented. */
+  actor: string | null
+  detail: string
+  /** Relative time, e.g. "3 days ago". See the note on formatting below. */
+  when: string
+}
+
+/**
+ * Every `createdAt` in this schema is `timestamp without time zone` holding
+ * UTC — `now()` on the database returns `+00`. PostgREST hands them back bare
+ * ("2026-08-29T09:18:44.455"), and `new Date()` reads a bare timestamp as
+ * *local* time, which puts every event 5h30m out on an IST machine. Stamping
+ * the Z is what makes them mean what they say.
+ */
+function utcDate(value: string): Date {
+  return new Date(value.endsWith("Z") ? value : `${value.replace(" ", "T")}Z`)
+}
+
+/**
+ * Formatted here, on the server, rather than in the client component that
+ * renders it. `/admin` is server-rendered, so a relative time computed during
+ * render would be computed twice — once on each side — and the two would
+ * disagree, which React reports as a hydration mismatch. One value, computed
+ * once, avoids that.
+ */
+function timeAgo(date: Date, now: Date): string {
+  const ago = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"} ago`
+  const seconds = Math.max(0, Math.round((now.getTime() - date.getTime()) / 1000))
+
+  if (seconds < 60) return "just now"
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return ago(minutes, "minute")
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return ago(hours, "hour")
+  const days = Math.floor(hours / 24)
+  if (days < 30) return ago(days, "day")
+  const months = Math.floor(days / 30)
+  if (months < 12) return ago(months, "month")
+  return ago(Math.floor(months / 12), "year")
+}
+
+/**
+ * The Dashboard's Recent Activity feed: the newest real events across the
+ * three tables that record one. Returns an empty array when nothing has
+ * happened, which the caller renders as an empty state — the previous version
+ * of this feed was five hardcoded events naming invented people.
+ */
+export async function getRecentActivity(limit = 6): Promise<AdminActivityEvent[]> {
+  const admin = createAdminClient()
+
+  const [callbacks, listings, payments] = await Promise.all([
+    admin
+      .from("callback_requests")
+      .select("id, name, createdAt, listing:listings(title)")
+      .order("createdAt", { ascending: false })
+      .limit(limit),
+    admin
+      .from("listings")
+      .select("id, title, city, createdAt")
+      .order("createdAt", { ascending: false })
+      .limit(limit),
+    admin
+      .from("payments")
+      .select("id, amount, type, createdAt, user:profiles(fullName)")
+      .eq("status", "paid")
+      .order("createdAt", { ascending: false })
+      .limit(limit),
+  ])
+
+  const now = new Date()
+
+  const callbackRows = (callbacks.data ?? []) as unknown as {
+    id: string
+    name: string
+    createdAt: string
+    listing: { title: string } | null
+  }[]
+  const listingRows = (listings.data ?? []) as unknown as {
+    id: string
+    title: string
+    city: string
+    createdAt: string
+  }[]
+  const paymentRows = (payments.data ?? []) as unknown as {
+    id: string
+    amount: number
+    type: string
+    createdAt: string
+    user: { fullName: string | null } | null
+  }[]
+
+  const events = [
+    ...callbackRows.map((r) => ({
+      id: `callback-${r.id}`,
+      kind: "callback" as const,
+      actor: r.name,
+      detail: r.listing?.title ? `requested a callback — ${r.listing.title}` : "requested a callback",
+      at: utcDate(r.createdAt),
+    })),
+    ...listingRows.map((r) => ({
+      id: `listing-${r.id}`,
+      kind: "listing" as const,
+      actor: null,
+      detail: `New listing added — ${r.title}, ${r.city}`,
+      at: utcDate(r.createdAt),
+    })),
+    ...paymentRows.map((r) => ({
+      id: `payment-${r.id}`,
+      kind: "payment" as const,
+      actor: r.user?.fullName ?? null,
+      detail: `paid ₹${Number(r.amount).toLocaleString("en-IN")} for ${
+        r.type === "subscription" ? "an annual membership" : "a service package"
+      }`,
+      at: utcDate(r.createdAt),
+    })),
+  ]
+
+  return events
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, limit)
+    .map(({ at, ...event }) => ({ ...event, when: timeAgo(at, now) }))
+}
+
 export interface AdminListingRow {
   id: string
   slug: string

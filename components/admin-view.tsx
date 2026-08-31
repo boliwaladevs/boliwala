@@ -9,7 +9,7 @@ import { ListingFormPanel } from "./admin/listing-form-panel"
 import { BulkUploadPanel } from "./admin/bulk-upload-panel"
 import { CallbacksPanel } from "./admin/callbacks-panel"
 import { SettingsPanel } from "./admin/settings-panel"
-import type { DashboardKpis, AdminListingRow, AdminCallbackRow } from "@/lib/data/admin"
+import type { DashboardKpis, AdminListingRow, AdminCallbackRow, AdminActivityEvent } from "@/lib/data/admin"
 import type { PricingSettings } from "@/lib/access/types"
 
 const pageMap: Record<string, { title: string; crumb: string }> = {
@@ -57,6 +57,13 @@ interface NavGroupDef {
  */
 const NAV_COLLAPSED_KEY = "bw_admin_nav_collapsed"
 
+/** Icon and tint per activity kind. The text itself comes from the database. */
+const ACTIVITY_STYLE: Record<AdminActivityEvent["kind"], { icon: string; bg: string }> = {
+  callback: { icon: "📞", bg: "bg-red-100 dark:bg-red-500/20" },
+  listing: { icon: "🏠", bg: "bg-blue-100 dark:bg-blue-500/20" },
+  payment: { icon: "💰", bg: "bg-emerald-100 dark:bg-emerald-500/20" },
+}
+
 export function AdminView({
   adminName,
   kpis,
@@ -64,6 +71,7 @@ export function AdminView({
   banks,
   initialCallbacks,
   pricingSettings,
+  activity,
 }: {
   adminName: string
   kpis: DashboardKpis
@@ -71,6 +79,7 @@ export function AdminView({
   banks: { id: string; name: string }[]
   initialCallbacks: AdminCallbackRow[]
   pricingSettings: PricingSettings
+  activity: AdminActivityEvent[]
 }) {
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -391,18 +400,25 @@ export function AdminView({
                 <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
                   <div className="px-5 py-3.5 border-b border-border"><h3 className="font-display text-[15px] font-bold text-foreground flex items-center gap-2">⚡ Recent Activity</h3></div>
                   <div className="px-5 py-1">
-                    {[
-                      { icon: "📞", bg: "bg-red-100 dark:bg-red-500/20", text: <><strong className="font-semibold text-foreground">Priya Mehta</strong> requested a callback — Flat 303 Airoli, interested in full package</>, time: "4 minutes ago" },
-                      { icon: "💼", bg: "bg-emerald-100 dark:bg-emerald-500/20", text: <><strong className="font-semibold text-foreground">Rajesh Kumar</strong> purchased ₹9,999 package</>, time: "18 minutes ago" },
-                      { icon: "🏠", bg: "bg-blue-100 dark:bg-blue-500/20", text: <>New listing added — <strong className="font-semibold text-foreground">Flat 303, Vithai Apt</strong></>, time: "1 hour ago" },
-                      { icon: "🏆", bg: "bg-emerald-100 dark:bg-emerald-500/20", text: <><strong className="font-semibold text-foreground">Amit Sharma</strong> won auction — ₹82,00,000.</>, time: "3 hours ago" },
-                      { icon: "🔔", bg: "bg-amber-100 dark:bg-amber-500/20", text: <><strong className="font-semibold text-foreground">47 alert emails</strong> sent</>, time: "6 hours ago" },
-                    ].map((item, i) => (
-                      <div key={i} className={`flex items-start gap-3 py-3 ${i !== 4 ? 'border-b border-border' : ''}`}>
-                        <div className={`w-7.5 h-7.5 rounded-full flex items-center justify-center text-[13px] shrink-0 ${item.bg}`}>{item.icon}</div>
-                        <div><div className="text-[13px] text-muted-foreground leading-relaxed">{item.text}</div><div className="text-[11px] text-muted-foreground mt-0.5">{item.time}</div></div>
+                    {activity.length === 0 ? (
+                      <div className="py-8 text-center text-[13px] text-muted-foreground">
+                        No activity yet. Callbacks, new listings and payments will appear here as they happen.
                       </div>
-                    ))}
+                    ) : activity.map((item, i) => {
+                      const style = ACTIVITY_STYLE[item.kind]
+                      return (
+                        <div key={item.id} className={`flex items-start gap-3 py-3 ${i !== activity.length - 1 ? 'border-b border-border' : ''}`}>
+                          <div className={`w-7.5 h-7.5 rounded-full flex items-center justify-center text-[13px] shrink-0 ${style.bg}`}>{style.icon}</div>
+                          <div>
+                            <div className="text-[13px] text-muted-foreground leading-relaxed">
+                              {item.actor && <strong className="font-semibold text-foreground">{item.actor}</strong>}
+                              {item.actor ? ` ${item.detail}` : item.detail}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5">{item.when}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
                 <div className="space-y-4">
