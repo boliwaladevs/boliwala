@@ -99,6 +99,11 @@ export function AdminView({
     )
   }
 
+  // A badge is a notification count, so zero means no chip rather than a "0"
+  // chip on every row. That is not hiding the number — the Dashboard StatCards
+  // below state each of these figures outright, zero included.
+  const badgeCount = (n: number) => (n > 0 ? String(n) : undefined)
+
   // The sidebar as data rather than markup, so each group can carry its own
   // disclosure state and roll its children's badges up onto a collapsed header.
   const navGroups: NavGroupDef[] = [
@@ -106,7 +111,7 @@ export function AdminView({
       label: "Listings",
       items: [
         { id: "dashboard", icon: "📊", label: "Dashboard" },
-        { id: "listings", icon: "🏠", label: "All Listings", badge: String(kpis.activeListings), badgeColor: "bg-amber-500" },
+        { id: "listings", icon: "🏠", label: "All Listings", badge: badgeCount(kpis.activeListings), badgeColor: "bg-amber-500" },
         { id: "add-listing", icon: "➕", label: "Add Listing" },
         { id: "bulk-upload", icon: "📂", label: "Bulk Upload Excel" },
       ],
@@ -114,8 +119,8 @@ export function AdminView({
     {
       label: "Leads & Sales",
       items: [
-        { id: "callbacks", icon: "📞", label: "Callback Requests", badge: String(kpis.callbackRequestsUnread) },
-        { id: "packages", icon: "💼", label: "Package Purchases", badge: "9", badgeColor: "bg-amber-500" },
+        { id: "callbacks", icon: "📞", label: "Callback Requests", badge: badgeCount(kpis.callbackRequestsUnread) },
+        { id: "packages", icon: "💼", label: "Package Purchases", badge: badgeCount(kpis.packagePurchases), badgeColor: "bg-amber-500" },
         { id: "requests", icon: "📋", label: "Service Pipeline" },
       ],
     },
@@ -123,14 +128,14 @@ export function AdminView({
       label: "Finance",
       items: [
         { id: "payments", icon: "💰", label: "Payments" },
-        { id: "success-fees", icon: "🏆", label: "Success Fees", badge: "4" },
+        { id: "success-fees", icon: "🏆", label: "Success Fees", badge: badgeCount(kpis.successFeesPending) },
       ],
     },
     {
       label: "Users & Partners",
       items: [
         { id: "users", icon: "👥", label: "All Users" },
-        { id: "partners", icon: "🤝", label: "Channel Partners", badge: "6", badgeColor: "bg-amber-500" },
+        { id: "partners", icon: "🤝", label: "Channel Partners", badge: badgeCount(kpis.pendingPartnerApplications), badgeColor: "bg-amber-500" },
       ],
     },
     {
