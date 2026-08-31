@@ -1,10 +1,13 @@
 # BOLIWALA.COM — PROJECT MEMORY & HANDOFF
 
-> **▶ START HERE (2026-08-31): read §36 first — the live handoff.** It carries
-> the current state, one missing Cloudflare build variable that is breaking every
-> canonical URL and sitemap entry on the live site (§36.1), a correction to what
-> Google sign-in actually needs (§36.3), and the ordered pick-up list (§36.5).
-> §35 is the Item 1a GO verdict; §34 is the overnight loop record.
+> **▶ START HERE (2026-08-31, afternoon): read §37 — the LIVE LOOP BRIEF.** It is
+> written for a fresh agent with no context and is self-contained: the rules
+> (§37.1), the three-item queue the user chose (§37.2), the grounding facts to
+> read before coding (§37.3), and the verification bar (§37.5).
+> **§36.1 is CLOSED** — `NEXT_PUBLIC_SITE_URL` is set and verified on the live
+> Worker (see §37.0); do not re-open it. §36.3 still holds the correction to what
+> Google sign-in actually needs. §35 is the Item 1a GO verdict; §34 is the
+> overnight loop record.
 
 > **🔄 UPDATE RULE (MANDATORY):** On every code change and commit, the following files
 > MUST be updated to reflect the current state:
@@ -4014,7 +4017,14 @@ loop (§34) and the Item 1a verdict (§35) are both closed and pushed. This
 section records what was found **after** the loop, in conversation with the
 user, and none of it is written down anywhere else.
 
-### 36.1 ⚠️ `NEXT_PUBLIC_SITE_URL` IS NOT SET ON CLOUDFLARE — highest-value fix
+### 36.1 ✅ CLOSED 2026-08-31 — `NEXT_PUBLIC_SITE_URL` was not set on Cloudflare
+
+> **RESOLVED. Do not act on this section.** The build variable was set and the
+> fix is verified against the live Worker — canonical, `og:url`, `robots.txt`
+> and all 20 sitemap entries now emit
+> `https://boliwala.boliwaladevs.workers.dev`, and `grep -c localhost` returns 0.
+> See **§37.0** for the verification table and the two CI gotchas found on the
+> way. The original diagnosis is kept below for the record.
 
 Found by reading the deployed Worker's own output, not by inspecting config:
 
@@ -4162,3 +4172,297 @@ level only; nothing has been looked at.
   stay on that `XLSX.read` call.
 - `wrangler tail` takes the worker as a **positional**, not `--name`, on
   wrangler 4.127.1 (§34.8).
+
+---
+
+## 37. ▶▶ LIVE LOOP BRIEF — 2-hour unattended window (2026-08-31, afternoon)
+
+**Written for a fresh agent with no prior context.** The user booted a loop and
+stepped away for ~2 hours. Everything needed to work is in this section; read
+§37.3 before touching any file, because it records what is already real and what
+is fake, and getting that backwards wastes the whole window.
+
+### 37.0 What just closed, immediately before this brief
+
+**§36.1 is FIXED and VERIFIED.** `NEXT_PUBLIC_SITE_URL` was set as a Workers
+Builds **build variable** (dashboard, user's action), an empty commit `a152bcf`
+was pushed to trigger a rebuild, and the deployed Worker now emits:
+
+| Surface | Value |
+|---|---|
+| `rel="canonical"` | `https://boliwala.boliwaladevs.workers.dev` |
+| `og:url` | same |
+| `robots.txt` → Sitemap | same |
+| `sitemap.xml` | 20 entries, all correct |
+| `/listing/villa-bopal-ahmedabad-idbi` | 200, correct self-referential canonical |
+
+`grep -c localhost` against both the homepage and the sitemap returns **0**.
+Do not re-open this. When **D2** (the real domain) lands, the same build
+variable takes the new value and needs one more rebuild — that is ROADMAP 1d.
+
+**Two environment gotchas learned in the process — both cost time, both are new:**
+
+1. **Cloudflare CI resolves its own pnpm, and `packageManager` is what fixes
+   it.** A build failed with `ERROR packages field missing or empty` because CI
+   used **pnpm 10.11.1** while `pnpm-workspace.yaml` contains only
+   `allowBuilds:` — a **pnpm 11** key — and no `packages:` field. pnpm 10 sees a
+   workspace file with no `packages` and hard-errors. Commit `9c5fd41` pinned
+   `"packageManager": "pnpm@11.1.3"` in `package.json:4`, which is what makes CI
+   select pnpm 11. **If a build ever fails at the install step with that
+   message, the pin was lost — do not "fix" `pnpm-workspace.yaml` by adding a
+   `packages:` field, that breaks `allowBuilds` for esbuild/sharp/workerd.**
+2. **"Retry build" in the Cloudflare dashboard re-runs the SAME COMMIT**, not
+   `main`. A stale red build from before a fix will fail again on retry and look
+   like the fix did not work. To build current `main`, push a commit
+   (`git commit --allow-empty` is fine).
+
+**Tree at handoff:** `main`, clean, in sync with `origin/main`, HEAD =
+`a152bcf`. Note `main` on GitHub carries a "changes must be made through a pull
+request" rule that direct pushes bypass with a warning — the user is aware and
+pushes directly anyway.
+
+### 37.1 THE RULES — these override anything in the queue below
+
+1. **Work only on the three queue items in §37.2, in order.** They came
+   directly from the user. Do not substitute your own priorities from
+   `ROADMAP.md`; the user reviewed the roadmap and chose these.
+2. **No dashboard actions.** Anything requiring the Cloudflare, Supabase,
+   Google Cloud or GitHub *web UI* is the user's action. Write it down, do not
+   attempt it. (Supabase **SQL** via MCP is fine — that is not the dashboard.)
+3. **No destructive DB work.** Read freely. For schema changes, write the
+   migration SQL into `scripts/` and record it here for the user to apply —
+   do not `apply_migration` against production unattended. There are only **5
+   real profiles** in the DB and one is the user's own superadmin account;
+   losing them is unrecoverable.
+4. **Commit per item, not one giant commit.** Each queue item lands as its own
+   commit with the verification output pasted into this file. Push each one.
+5. **The verification bar in §37.5 is mandatory** before any item is called
+   done. "It compiles" is not verification.
+6. **If an item is blocked, say so in this file and move to the next.** Do not
+   burn the window on a blocker. Do not invent scope to fill time.
+7. **Update this file as you go**, per the standing UPDATE RULE at the top.
+   Append a §37.x record per item. The user will read this on return.
+
+### 37.2 THE QUEUE, in order
+
+---
+
+#### ITEM A — One email, one role: gate the login surfaces
+
+**What the user said:** *"a single email ID can only have one role. if
+boliwaladevs has a google login or a password login, they can only login as
+admin. A partner with the same email ID can only login as partner. A user can
+only login as user."*
+
+**What is already true, and must not be re-solved (see §37.3):** the data model
+already enforces one role per email. `profiles.id` is a FK to `auth.users(id)`,
+Supabase keys `auth.users` on email, and `profiles.role` is a single column.
+There is no way to hold two roles on one email today. **The requirement is
+already structurally satisfied at the data layer.**
+
+**The actual gap is the login surfaces.** There are two:
+
+- `/login` (`app/login/…` → `components/auth-view.tsx`)
+- `/partner/login` (`app/partner/login/page.tsx`, same component via a
+  `variant` prop — added in Item 5, commit `e0b0f43`)
+
+Both authenticate **any** role. A `channel_partner` can sign in at `/login`; a
+`superadmin` can sign in at `/partner/login`. Post-login routing is decided by
+`landingPathForRole()` in `lib/auth/landing.ts`, which only distinguishes
+admin-vs-everyone and sends both `user` and `channel_partner` to `/profile`.
+
+**Build:**
+
+1. Extend `lib/auth/landing.ts` with the full mapping. The live role vocabulary
+   is exactly four values — `user`, `channel_partner`, `admin`, `superadmin`
+   (§37.3) — and `channel_partner` must land on `/partner/dashboard`, which
+   today it does not.
+2. Gate each login surface to its own role set: `/partner/login` admits only
+   `channel_partner`; `/login` admits `user`, `admin`, `superadmin`. On a
+   mismatch, **sign the session back out** and show a plain message naming the
+   right door ("This is the channel-partner login. Sign in at /login.").
+   Signing out matters — leaving a valid session behind while showing an error
+   is a half-open door.
+3. Apply the same rule to the **Google OAuth callback**, not just the password
+   form. `landing.ts` is deliberately client-safe and shared by both paths —
+   keep it that way, put the rule in that one file, and call it from both.
+4. `channel_partner` is a real role with **1 live account** — the stale comment
+   at `app/partner/dashboard/page.tsx:25` claiming "no account holds it" is
+   wrong; fix it while you are there.
+
+**Do NOT** build a role-switching UI, an invite flow, or an admin role-editor.
+Not asked for.
+
+**Verify:** extend `scripts/access-matrix-test.mjs` with the four-role × two-
+login-surface matrix (8 cases). Every wrong-door case must end signed out. Paste
+the run output into §37 when done.
+
+---
+
+#### ITEM B — Collapsible admin sidebar sections
+
+**What the user said:** *"the admin dashboard sidebar must have collapsible
+fields (Listings, Engagement and all must be collapsible)"*
+
+**Where:** `components/admin-view.tsx`, lines ~180–206. The sidebar renders six
+groups via a `SectionLabel` component with flat `NavItem`s under each:
+
+`Listings` (4 items) · `Leads & Sales` (3) · `Finance` (2) ·
+`Users & Partners` (2) · `Engagement` (6) · `Tools` (2)
+
+**Build:** make each group a collapsible disclosure — click the `SectionLabel`
+to toggle its items. Notes:
+
+- `components/ui/accordion.tsx` and `components/ui/collapsible.tsx` already
+  exist in the project. Use one rather than hand-rolling; match how the rest of
+  the codebase uses Radix primitives.
+- **The group containing the active item must stay open on load**, otherwise a
+  page refresh hides where you are.
+- Keep the group's badge counts visible on the collapsed header if a child has a
+  badge — a collapsed "Leads & Sales" that hides an unread-callback count is a
+  regression, not a feature.
+- Persisting open/closed state to `localStorage` is a reasonable touch and is in
+  scope; do not add a settings screen for it.
+
+**Verify:** run the app, open `/admin` as the superadmin, screenshot the sidebar
+collapsed and expanded, confirm the active group auto-opens after a refresh on a
+non-default tab.
+
+---
+
+#### ITEM C — Purge demo data from the admin dashboard, wire the real DB
+
+**What the user said:** *"On the sidebar show real figures from the database,
+wire up real data, if it's 0 let it be 0 … we need to wire real data onto the
+sidebar, the pages (no demo data), clear out the demo data from admin dashboard
+and wire it up with the real data."*
+
+**"If it's 0 let it be 0" is the governing instruction.** Do not fabricate,
+do not seed, do not hide a card because its value is zero. An honest zero is the
+deliverable. The DB currently holds **5 profiles** total (§37.3) — a truthful
+admin panel will look very empty, and that is correct.
+
+**This is the largest item. Do it in the order below and commit after each
+stage, so a partial window still lands value.**
+
+**Stage C1 — the three hardcoded sidebar badges (smallest, highest visibility).**
+`components/admin-view.tsx`:
+- line ~188 `badge="9"` on Package Purchases → `kpis.packagePurchases`
+- line ~192 `badge="4"` on Success Fees → `kpis.successFeesPending`
+- line ~195 `badge="6"` on Channel Partners → **`kpis.pendingPartnerApplications`,
+  which `getDashboardKpis()` already computes and no one consumes.** The real
+  query is already written and returning a real number; the sidebar just ignores
+  it in favour of a literal `6`.
+
+**Stage C2 — the dashboard activity feed.** Lines ~270–274 are five hardcoded
+fake events naming invented people — "Priya Mehta requested a callback",
+"Rajesh Kumar purchased ₹9,999 package", "Amit Sharma won auction ₹82,00,000".
+**Fabricated personal names in a client demo are the worst of the demo data —
+prioritise removing them.** Replace with a real feed (most recent rows across
+`callback_requests`, `listings`, `payments`, ordered by `createdAt`) or, if that
+query is more than the window allows, an honest empty state. Never leave the
+invented names.
+
+**Stage C3 — the per-section StatCards.** All hardcoded, all in
+`components/admin-view.tsx`:
+- ~341–343 Packages: `47`, `₹4,69,953`, `9`, `₹89,991`, `18.4%`
+- ~366–368 Payments: `₹21,44,000`, `214`, `₹3,84,000`, `38`, `₹1,12,400`
+- ~393–396 Users: `1,842`, `47`, `1,795`, `18`
+- ~495–497 Alerts: `4,291`, `3,840`, `1,204`
+
+Add the queries to `lib/data/admin.ts` alongside `getDashboardKpis()`, following
+its existing shape (`createAdminClient()`, `count: "exact", head: true`,
+`?? 0`). Note `successFeesPending` is currently **hardcoded `0` inside the real
+KPI function** — if there is no table behind it, leave the zero and add a
+one-line comment saying why, rather than inventing one.
+
+**Watch for:** `public.profiles` uses **quoted camelCase columns**
+(`fullName`, `creditsBalance`, `createdAt`) — snake_case queries fail silently
+against it. And Supabase `list_tables` row counts are **planner estimates and
+have been wrong on this project**; always `count(*)`.
+
+**Verify:** every number rendered in `/admin` traces to a query. Run
+`grep -nE '"[0-9,]{2,}"|₹[0-9,]+' components/admin-view.tsx` and confirm no
+numeric literal survives outside styling. Cross-check three figures against
+direct SQL.
+
+### 37.3 Grounding facts established this session — read before coding
+
+Verified by reading code and querying the live DB, not assumed:
+
+**Roles.** Live distribution in `public.profiles`: `user` ×3,
+`channel_partner` ×1, `superadmin` ×1 — **5 rows total.** The vocabulary is
+`user | channel_partner | admin | superadmin`. `ADMIN_ROLES` in
+`lib/auth/landing.ts` is `["admin","superadmin"]`.
+
+**There is NO `CHECK` constraint on `profiles.role`.** The only constraints on
+the table are `profiles_pkey`, `profiles_id_fkey` (→ `auth.users(id)` ON DELETE
+CASCADE), `profiles_pan_format` and `profiles_aadhaar_format`. Any string can be
+written to `role` today. Adding a CHECK is a *sensible* companion to Item A —
+write the migration into `scripts/`, do **not** apply it unattended (rule 3).
+
+**What is already real in the admin panel.** `getDashboardKpis()` in
+`lib/data/admin.ts` returns **nine genuinely queried values** —
+`activeListings`, `revenueThisMonth`, `callbackRequestsUnread`,
+`packagePurchases`, `registeredUsers`, `auctionsClosed`, `alertSubscribers`,
+`pendingPartnerApplications`, plus `successFeesPending` which is a hardcoded
+`0`. `app/admin/page.tsx` already fetches KPIs, listings, banks, callbacks and
+pricing settings server-side and passes them down. **The plumbing exists.** The
+top-row StatCards on the Dashboard tab (~244–253) already consume it correctly.
+The demo data is everything *else*. This is why Item C is mostly deletion and
+wiring, not new infrastructure.
+
+**Admin auth is sound.** `requireAdmin()` in `lib/auth/admin.ts` checks the
+caller's own session (not the service-role client) against `isAdminRole()`, and
+`/partner/dashboard` is hard-gated at `app/partner/dashboard/page.tsx:46`
+(`if (profile?.role !== "channel_partner") redirect("/profile")`). ROADMAP 5c is
+genuinely done. Item A is about the *login doors*, not these guards.
+
+**File sizes:** `components/admin-view.tsx` is 697 lines and is where nearly all
+the demo data lives; `app/admin/page.tsx` is 35 lines and is already clean.
+
+### 37.4 Explicitly OUT of scope this window
+
+- The Cloudflare domain items (1b/1d) — blocked on **D2**, the domain, which
+  does not exist yet. Nothing to do.
+- Razorpay / payments (ROADMAP 12) — deferred by decision, `MEMORY.md` §25.
+- The money screens' *semantics* (Payments, Subscriptions, Success-Fee).
+  ROADMAP 8 explicitly says these reflect only manual Contact-Sales grants until
+  Item 12. Wire them to real queries per Item C, but do not design a billing
+  model.
+- R2 / bulk ingest / semantic search (S1–S8) — large, launch-blocking, and not
+  what the user asked for in this window.
+- Any dashboard-side action (rule 2).
+
+### 37.5 The standing verification bar — all of it, every item
+
+```
+pnpm run lint
+pnpm run typecheck          # or: npx tsc --noEmit
+pnpm run build              # NOTE: a deployable bundle cannot be built on this
+                            # Windows machine (§5 gotcha #10) — a local `next
+                            # build` is still a valid type/compile check, but
+                            # the real bundle always goes through CI
+node scripts/leak-test.mjs
+node scripts/access-matrix-test.mjs
+```
+
+The leak test and access matrix are the ones that matter for Item A. Baselines
+to beat: **leak 12/12, access matrix 49/49.** A regression in either blocks the
+commit. Paste real output into this file — not a summary of it.
+
+### 37.6 What the user needs waiting for them on return
+
+Append a `§37.7 ☀️ RETURN SUMMARY` with, in this order:
+
+1. Which of A / B / C landed, with commit hashes.
+2. For Item C specifically: **which numbers on the admin panel are now real and
+   which are still hardcoded.** The user's core worry is showing a client
+   fabricated figures — an honest partial answer is worth more than a claim of
+   completion.
+3. Anything that needs *their* hands (dashboard actions, the `role` CHECK
+   migration awaiting approval).
+4. Anything you found and did **not** touch, with the reason.
+
+Do not report an item as done unless its verification block in §37.5 actually
+ran and passed. If the window ends mid-item, say exactly where it stopped.
