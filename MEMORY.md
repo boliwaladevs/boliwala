@@ -4469,7 +4469,7 @@ ran and passed. If the window ends mid-item, say exactly where it stopped.
 
 ### 37.8 ITEM A — one email, one role, enforced at both login doors ✅ LANDED
 
-**Commit:** `8b79172`
+**Commit:** `efb32d8`
 
 **What was already true and was not re-solved:** the data model. `profiles.id`
 is a FK to `auth.users(id)`, Supabase keys `auth.users` on email, `profiles.role`
