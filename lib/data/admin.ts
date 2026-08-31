@@ -62,6 +62,117 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
   }
 }
 
+/**
+ * The per-section StatCard figures on the admin panel — Packages, Payments,
+ * Users and Alerts. Everything here is queried; nothing is a placeholder.
+ *
+ * Several will read 0 against the live database because the tables behind them
+ * are genuinely empty (`payments`, `service_packages`, `alert_subscriptions`).
+ * A zero is the correct answer and is rendered as one.
+ *
+ * Money is summed in JS from the fetched rows rather than by a Postgres
+ * aggregate, matching how `getDashboardKpis()` already computes
+ * `revenueThisMonth`. That is fine at this size and keeps one idiom in the
+ * file; it is the thing to revisit first if these tables ever get large.
+ */
+export interface AdminSectionStats {
+  packages: {
+    totalSold: number
+    totalRevenue: number
+    thisMonthSold: number
+    thisMonthRevenue: number
+    /** Share of registered users who have bought a package. null when there are no users to divide by. */
+    conversionPct: number | null
+  }
+  payments: {
+    allTimeRevenue: number
+    allTimeCount: number
+    thisMonthRevenue: number
+    thisMonthCount: number
+    outstandingSuccessFees: number
+  }
+  users: {
+    total: number
+    paidPackage: number
+    free: number
+    requestedCallback: number
+  }
+  alerts: {
+    total: number
+    email: number
+    whatsapp: number
+  }
+}
+
+export async function getAdminSectionStats(): Promise<AdminSectionStats> {
+  const admin = createAdminClient()
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+  const monthStart = startOfMonth.getTime()
+
+  const [packageRows, paymentRows, totalUsers, callbackCount, alertsTotal, alertsEmail, alertsWhatsapp] =
+    await Promise.all([
+      admin.from("service_packages").select("userId, amountPaid, createdAt"),
+      admin.from("payments").select("amount, createdAt").eq("status", "paid"),
+      admin.from("profiles").select("id", { count: "exact", head: true }),
+      admin.from("callback_requests").select("id", { count: "exact", head: true }),
+      admin.from("alert_subscriptions").select("id", { count: "exact", head: true }).eq("isActive", true),
+      admin.from("alert_subscriptions").select("id", { count: "exact", head: true }).eq("isActive", true).not("email", "is", null),
+      admin.from("alert_subscriptions").select("id", { count: "exact", head: true }).eq("isActive", true).not("whatsapp", "is", null),
+    ])
+
+  const packages = (packageRows.data ?? []) as { userId: string; amountPaid: number | null; createdAt: string }[]
+  const payments = (paymentRows.data ?? []) as { amount: number | null; createdAt: string }[]
+
+  // Parsed through utcDate for the reason given on that function: these
+  // timestamps come back without a zone marker and would otherwise be read as
+  // local time.
+  const since = (row: { createdAt: string }) => utcDate(row.createdAt).getTime() >= monthStart
+  const thisMonthPackages = packages.filter(since)
+  const thisMonthPayments = payments.filter(since)
+
+  const sumPaid = (rows: { amountPaid: number | null }[]) =>
+    rows.reduce((total, r) => total + Number(r.amountPaid ?? 0), 0)
+  const sumAmount = (rows: { amount: number | null }[]) =>
+    rows.reduce((total, r) => total + Number(r.amount ?? 0), 0)
+
+  const users = totalUsers.count ?? 0
+  const paidPackageUsers = new Set(packages.map((r) => r.userId)).size
+
+  return {
+    packages: {
+      totalSold: packages.length,
+      totalRevenue: sumPaid(packages),
+      thisMonthSold: thisMonthPackages.length,
+      thisMonthRevenue: sumPaid(thisMonthPackages),
+      conversionPct: users === 0 ? null : (paidPackageUsers / users) * 100,
+    },
+    payments: {
+      allTimeRevenue: sumAmount(payments),
+      allTimeCount: payments.length,
+      thisMonthRevenue: sumAmount(thisMonthPayments),
+      thisMonthCount: thisMonthPayments.length,
+      // No table records a success fee as owed. `service_packages.successFeePct`
+      // is a rate, not a debt, and nothing records an auction being won. Left at
+      // zero deliberately rather than derived from something that does not mean
+      // it — same reason getDashboardKpis().successFeesPending is 0.
+      outstandingSuccessFees: 0,
+    },
+    users: {
+      total: users,
+      paidPackage: paidPackageUsers,
+      free: Math.max(0, users - paidPackageUsers),
+      requestedCallback: callbackCount.count ?? 0,
+    },
+    alerts: {
+      total: alertsTotal.count ?? 0,
+      email: alertsEmail.count ?? 0,
+      whatsapp: alertsWhatsapp.count ?? 0,
+    },
+  }
+}
+
 export type AdminActivityKind = "callback" | "listing" | "payment"
 
 export interface AdminActivityEvent {

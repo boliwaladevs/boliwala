@@ -9,7 +9,13 @@ import { ListingFormPanel } from "./admin/listing-form-panel"
 import { BulkUploadPanel } from "./admin/bulk-upload-panel"
 import { CallbacksPanel } from "./admin/callbacks-panel"
 import { SettingsPanel } from "./admin/settings-panel"
-import type { DashboardKpis, AdminListingRow, AdminCallbackRow, AdminActivityEvent } from "@/lib/data/admin"
+import type {
+  DashboardKpis,
+  AdminListingRow,
+  AdminCallbackRow,
+  AdminActivityEvent,
+  AdminSectionStats,
+} from "@/lib/data/admin"
 import type { PricingSettings } from "@/lib/access/types"
 
 const pageMap: Record<string, { title: string; crumb: string }> = {
@@ -72,6 +78,7 @@ export function AdminView({
   initialCallbacks,
   pricingSettings,
   activity,
+  sectionStats,
 }: {
   adminName: string
   kpis: DashboardKpis
@@ -80,6 +87,7 @@ export function AdminView({
   initialCallbacks: AdminCallbackRow[]
   pricingSettings: PricingSettings
   activity: AdminActivityEvent[]
+  sectionStats: AdminSectionStats
 }) {
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -87,6 +95,9 @@ export function AdminView({
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([])
 
   const currentPage = pageMap[activePage] || pageMap['dashboard']
+
+  /** Indian-format rupees. Whole rupees only — no fractional paise on a KPI card. */
+  const inr = (amount: number) => `₹${Math.round(amount).toLocaleString('en-IN')}`
 
   const goToAddListing = () => { setEditingListingId(null); setActivePage('add-listing') }
   const goToEditListing = (id: string) => { setEditingListingId(id); setActivePage('listing-detail') }
@@ -479,9 +490,9 @@ export function AdminView({
           {activePage === 'packages' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard label="Total Packages Sold" value="47" trend="All time · ₹4,69,953 revenue" trendFlat iconBg="bg-blue-100" />
-                <StatCard label="This Month" value="9" trend="₹89,991 · Jun 2026" trendFlat iconBg="bg-blue-100" />
-                <StatCard label="Conversion Rate" value="18.4%" trend="Signups → Package" trendFlat iconBg="bg-blue-100" />
+                <StatCard label="Total Packages Sold" value={sectionStats.packages.totalSold} trend={`All time · ${inr(sectionStats.packages.totalRevenue)} revenue`} trendFlat iconBg="bg-blue-100" />
+                <StatCard label="This Month" value={sectionStats.packages.thisMonthSold} trend={inr(sectionStats.packages.thisMonthRevenue)} trendFlat iconBg="bg-blue-100" />
+                <StatCard label="Conversion Rate" value={sectionStats.packages.conversionPct === null ? '—' : `${sectionStats.packages.conversionPct.toFixed(1)}%`} trend="Signups → Package" trendFlat iconBg="bg-blue-100" />
               </div>
               <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                 <TcHead title="💼 ₹9,999 Package Purchases" acts={<><input className="h-8 px-3 border-2 border-border rounded-lg text-[13px] bg-background w-[180px]" placeholder="Search name…" /><TcActionBtn>⬇️ Export</TcActionBtn></>} />
@@ -504,9 +515,9 @@ export function AdminView({
           {activePage === 'payments' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard label="Total Revenue All Time" value="₹21,44,000" trend="214 transactions" trendFlat />
-                <StatCard label="This Month (Jun 2026)" value="₹3,84,000" trend="38 transactions" trendFlat />
-                <StatCard label="Outstanding Success Fees" value={<span className="text-red-600">₹1,12,400</span>} trend="4 auctions won" trendFlat />
+                <StatCard label="Total Revenue All Time" value={inr(sectionStats.payments.allTimeRevenue)} trend={`${sectionStats.payments.allTimeCount} transaction${sectionStats.payments.allTimeCount === 1 ? '' : 's'}`} trendFlat />
+                <StatCard label="This Month" value={inr(sectionStats.payments.thisMonthRevenue)} trend={`${sectionStats.payments.thisMonthCount} transaction${sectionStats.payments.thisMonthCount === 1 ? '' : 's'}`} trendFlat />
+                <StatCard label="Outstanding Success Fees" value={inr(sectionStats.payments.outstandingSuccessFees)} trend="Not yet tracked — no table records a fee as owed" trendFlat />
               </div>
               <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                 <TcHead title="💰 All Transactions" acts={<><TcActionSelect options={['All Types', '₹9,999 Package', '1% Success Fee']} /><TcActionBtn>⬇️ Export CSV</TcActionBtn></>} />
@@ -531,10 +542,10 @@ export function AdminView({
           {activePage === 'users' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon="👥" iconBg="bg-blue-100" trend="↑ 34%" value="1,842" label="Total Users" />
-                <StatCard icon="💼" iconBg="bg-emerald-100" trend="↑ 9" value="47" label="Paid Package Users" />
-                <StatCard icon="👤" iconBg="bg-purple-100" value="1,795" label="Free Users" />
-                <StatCard icon="📞" iconBg="bg-amber-100" trend="↑ 18" value="18" label="Requested Callback" />
+                <StatCard icon="👥" iconBg="bg-blue-100" value={sectionStats.users.total.toLocaleString('en-IN')} label="Total Users" />
+                <StatCard icon="💼" iconBg="bg-emerald-100" value={sectionStats.users.paidPackage.toLocaleString('en-IN')} label="Paid Package Users" />
+                <StatCard icon="👤" iconBg="bg-purple-100" value={sectionStats.users.free.toLocaleString('en-IN')} label="Free Users" />
+                <StatCard icon="📞" iconBg="bg-amber-100" value={sectionStats.users.requestedCallback.toLocaleString('en-IN')} label="Requested Callback" />
               </div>
               <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                 <TcHead title="👥 All Users" acts={<><input className="h-8 px-3 border-2 border-border rounded-lg text-[13px] bg-background w-[180px]" placeholder="Search name, email…" /><TcActionBtn>⬇️ Export CSV</TcActionBtn></>} />
@@ -633,9 +644,9 @@ export function AdminView({
           {activePage === 'alerts' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard icon="🔔" iconBg="bg-blue-100" value="4,291" label="Total Subscribers" />
-                <StatCard icon="📧" iconBg="bg-emerald-100" value="3,840" label="Email" />
-                <StatCard icon="💬" iconBg="bg-amber-100" value="1,204" label="WhatsApp" />
+                <StatCard icon="🔔" iconBg="bg-blue-100" value={sectionStats.alerts.total.toLocaleString('en-IN')} label="Total Subscribers" />
+                <StatCard icon="📧" iconBg="bg-emerald-100" value={sectionStats.alerts.email.toLocaleString('en-IN')} label="Email" />
+                <StatCard icon="💬" iconBg="bg-amber-100" value={sectionStats.alerts.whatsapp.toLocaleString('en-IN')} label="WhatsApp" />
               </div>
               <FormSection title="📣 Send Manual Alert Broadcast" foot={<><button className="h-9 px-3.5 bg-background border-2 border-border text-muted-foreground text-[13px] rounded-lg">Preview</button><button className="h-9 px-5 bg-primary text-primary-foreground font-semibold text-[13px] rounded-lg">🔔 Send Now</button></>}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
