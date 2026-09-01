@@ -1,7 +1,9 @@
 # BOLIWALA.COM — PROJECT MEMORY & HANDOFF
 
-> **▶▶ START HERE: read §39 — THE EXECUTION LOG (live, updated per workstream).**
-> §38 is the brief it works from; read it second.
+> **▶▶ START HERE: read §40 — THE RETURN SUMMARY (2026-09-01).** The pre-launch
+> queue `immediate_plan.md` is **complete**: W0–W8 landed except **W5, which is
+> blocked on enabling R2 on the Cloudflare account**. §39 is the per-workstream
+> execution log behind it; §38 is the brief they worked from.
 >
 > **▶▶ (2026-08-31, evening): §38 — THE LIVE EXECUTION BRIEF.**
 > Then open **`immediate_plan.md`** and execute it top to bottom. It is a nine-
@@ -5916,3 +5918,114 @@ access-matrix-test.mjs                              49/49 + 23/23 + 15/15 ✅
 grants-test.mjs                                     27/27 PASS           ✅
 bulk-sample-selfcheck.mjs                           PASS                 ✅
 ```
+
+---
+
+## 40. ☀️ RETURN SUMMARY — the pre-launch queue is complete (2026-09-01)
+
+> **Read this first. Then §39 for per-workstream detail, then `immediate_plan.md`
+> for what sits below the STOP.**
+
+### 40.1 What landed
+
+Nine commits, all pushed to `main`, each with the standing bar green:
+
+| | Workstream | Commit |
+|---|---|---|
+| W0 | Plus Jakarta Sans replaces the Satoshi files that were never fonts | `a124b61` |
+| W1 | The fabricated admin tables query the DB or say they are empty | `cda2de8` |
+| W2 | Contact Sales: table, action, CTAs, form | `7cb1d3c`, `56daff8` |
+| W2 | Sales Enquiries in admin + the manual entitlement grant | `0ecc190` |
+| W3 | Grants narrowed to match the RLS policies | `ac54d09` |
+| W4 | banks → lenders, and the lender-type facet | `5644827`, `c0b8433` |
+| W6 | The channel partner portal, on real referrals and commissions | `0c71ed4` |
+| W7 | Legal routes, real contact wiring | `9374b23` |
+| W8 | Lint runs, the three §36.5 defects, one dishonest banner | `df9fd84` |
+
+**Five database migrations applied to the live database:** `0014` contact sales
+enquiries · `0015` manual payments (nullable `razorpayOrderId`) · `0016` grants matching
+policies · `0017` lenders · `0018` partner commissions.
+
+### 40.2 What did NOT land, and why
+
+**W5 — R2 storage and PDF documents. ⛔ Blocked, not skipped.**
+`wrangler r2 bucket list` returns *"Please enable R2 through the Cloudflare Dashboard
+[code: 10042]"*. Enabling it needs a payment method, which is a client conversation. The
+user parked it deliberately and confirmed **R2 only** — Supabase Storage was offered as a
+no-card alternative and declined.
+
+**Nothing was half-built against it**, and in particular no `wrangler.toml` bindings: a
+binding naming a bucket that does not exist breaks the CI deploy, which would turn a
+blocked workstream into a broken deployment. Detail and the resume order: **§39.6**.
+
+**The Worker bundle re-measure (a W8 item).** Cannot be done on this machine —
+`opennextjs-cloudflare build` dies on pnpm symlinks with "Access is denied" (§5 gotcha
+#10). Read it from the Workers Builds log instead: **last known 2.74 MiB gzip against a
+3 MB free-tier cap, and that predates W2, W4, W6 and W7.** Worth a real look.
+
+### 40.3 The standing bar, and what changed in it
+
+```
+npx tsc --noEmit                          clean, exit 0
+pnpm run build                            green — 27/27 static pages   (was 25/25; W7 added two)
+pnpm run lint                             0 errors, 287 warnings       (NEW — never ran before W8)
+node scripts/leak-test.mjs <url>          12/12 PASS
+node scripts/access-matrix-test.mjs       49/49 gating + 23/23 doors + 15/15 partner isolation  (NEW third tally)
+node scripts/grants-test.mjs              27/27 PASS                   (NEW in W3)
+node scripts/bulk-sample-selfcheck.mjs    PASS + 4 header spellings
+```
+
+**Keep the three access-matrix tallies separate.** 49, 23 and 15 are independent
+baselines; folding them together makes every future comparison meaningless.
+
+### 40.4 Things found and deliberately NOT touched
+
+1. **`font-mono` is broken exactly the way Satoshi was** — `--font-mono` asks for the
+   literal `"Geist Mono"` while `next/font` emits a hashed family name, and `_geistMono`
+   in `app/layout.tsx:10` is assigned and never used. One line from W0's fix; out of its
+   scope. §39.1.
+2. **~220 `react-hooks/static-components` warnings** whose real fix is deleting
+   `admin-view.tsx`'s inline helpers in favour of the identical ones already in
+   `components/admin/ui.tsx`. A real simplification, touching every admin table — not for
+   the end of a queue with no browser. §39.9.
+3. **`listings."bankContact"` keeps its name.** Not a foreign key; renaming means another
+   migration plus `redact.ts` and access-type changes for no functional gain. Its label
+   now reads "Lender Contact". §39.5.
+4. **No admin UI for lenders** — no create, no edit, no way to set a type, so the new
+   NBFC/ARC/HFC facet stays empty until W-INGEST creates lenders from the real file. The
+   user checked the URD and confirmed it was never scoped; **skip stands**. §39.5.
+
+### 40.5 What needs the user's hands
+
+1. **Enable R2** → then W5 is a clean run.
+2. **Read the bundle size** off the next Workers Builds log.
+3. **Check `annual_price`.** The live settings row is **₹2,999**, not the ₹999 in the
+   spec — so a 10% partner commission earns ₹300, as the end-to-end run demonstrated.
+   Change it in admin → Settings if ₹999 is intended; it also drives the pricing page.
+4. **Browser checks** (nothing here can hold a signed-in session): the Sales Enquiries
+   grant buttons ✅ *already confirmed by the user*, plus **approve a partner → use their
+   link in a private window → sign up → grant that account a membership → watch the
+   commission appear**.
+5. **Tier thresholds**, when decided — they are stored as `null` today and admins assign
+   tiers by hand, which is what the URD describes anyway.
+6. **Legal copy, contact numbers, brand assets** — expected the week of 2026-09-08. All
+   three are a paste or a config change now, not a build.
+
+### 40.6 🛑 THE STOP
+
+**`immediate_plan.md`'s `=== STOP: CSV REQUIRED ===` has been reached and respected.**
+W-INGEST, W-SEO and W-DNS were not started.
+
+> **The inventory CSV is now the only thing between here and launch.** The two standing
+> client asks:
+>
+> 1. **One sample CSV/Excel file** — not the dataset, one file. W-INGEST's deduplication
+>    key cannot be designed without the real column names, and a dedup key designed
+>    against imagined ones is worse than none because it looks finished. W4 already put
+>    `bank`, `bankname` and `financialinstitution` into the importer's header synonyms,
+>    so a real file's own spelling should map on arrival.
+> 2. **Commission rates ✅ answered** (10% / 15%) — **tier thresholds still open**.
+>
+> The other two things below the STOP are not CSV-blocked: **W-SEO** needs only the
+> lender model, which W4 landed, and the client's willingness to pull it forward;
+> **W-DNS** needs the domain connected.

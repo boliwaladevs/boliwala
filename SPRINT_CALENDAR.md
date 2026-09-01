@@ -548,7 +548,9 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
       cannot run on this Windows machine (§5 gotcha #10), so the number must be read from
       the Workers Builds log. Last known: 2.74 MiB gzip against a 3 MB free cap, and that
       predates W2/W4/W6/W7.
-- [ ] **Then STOP** — the inventory CSV gates everything after W8.
+- [x] **STOP reached and respected (2026-09-01).** W-INGEST, W-SEO and W-DNS were not
+      started. The queue is complete apart from W5, which is blocked on enabling R2.
+      Return summary: `MEMORY.md` §40.
 
 - [ ] **`font-mono` is broken the same way Satoshi was** — `--font-mono` asks for the
       literal `"Geist Mono"` but `next/font` emits a hashed family name, and
