@@ -10,8 +10,11 @@
 > **⛔ 31 AUG 2026 — `immediate_plan.md` IS NOW THE EXECUTION QUEUE.**
 >
 > `ROADMAP.md` remains the strategic ordering, but the **active work queue** is
-> **`immediate_plan.md`** — nine workstreams (W0–W8), all unblocked, ending at a hard
-> `=== STOP: CSV REQUIRED ===` marker. The operating brief is **`MEMORY.md` §38**.
+> **`immediate_plan.md`** — nine workstreams (W0–W8), ending at a hard
+> `=== STOP: CSV REQUIRED ===` marker. **✅ Executed 1 September 2026: eight landed, W5
+> was blocked on R2 and is now below the STOP as §0.** What the client owes is
+> **`client_requirement.md`**; the return summary is **`MEMORY.md` §40**, the bundle
+> measurement §41, and this session §42.
 > Rationale and priority tiers: **`REALITY_CHECK.md`**. Post-launch: **`deferred_plan.md`**.
 >
 > Mark W0–W8 complete here as they land, alongside the sprint task detail below.
@@ -514,7 +517,9 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
 - [ ] **Decision needed: there is no admin UI for lenders** — no way to create one or
       set its type, so the NBFC/ARC/HFC facet stays empty until W-INGEST creates lenders
       from the real file. Pre-existing gap, newly visible. `MEMORY.md` §39.5.
-- [ ] **W5 — R2 storage and PDF documents ⛔ BLOCKED.** R2 is not enabled on the
+- [x] **W5 — R2 storage and PDF documents ⛔ BLOCKED — moved below the STOP (1 Sep, PM).**
+      It is now `immediate_plan.md` **§0**, alongside §A (CSV-blocked) and §B
+      (client-blocked). It was the only workstream left above the STOP. R2 is not enabled on the
       Cloudflare account (`wrangler` returns code 10042) and enabling it needs a card,
       so it is a client conversation. Deliberately nothing was half-built — in
       particular no `wrangler.toml` bindings, which would break the CI deploy by naming

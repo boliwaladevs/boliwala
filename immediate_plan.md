@@ -2,7 +2,20 @@
 
 **Created:** 31 August 2026
 **Revised:** 31 August 2026 (evening) — rebuilt as an executable queue with a hard STOP
-**Companion:** `deferred_plan.md` (post-launch) · `REALITY_CHECK.md` (why this order) · `MEMORY.md` §38 (the operating brief)
+**Executed:** 1 September 2026 — **W0–W8 complete except W5.** See `MEMORY.md` §40 (return summary) and §39 (per-workstream log).
+**Companion:** `client_requirement.md` (**what the client owes — the whole critical path now**) · `deferred_plan.md` (post-launch) · `REALITY_CHECK.md` (why this order) · `MEMORY.md` §38 (the operating brief)
+
+> [!IMPORTANT]
+> ## ✅ THIS QUEUE HAS BEEN EXECUTED AND THE STOP WAS REACHED.
+>
+> **W0, W1, W2, W3, W4, W6, W7 and W8 are done, committed and deployed.**
+> **W5 was blocked on R2 and has been moved below the STOP, into §0.**
+>
+> Everything that remains in this document is **below the STOP and blocked on the
+> client**. There is no unblocked engineering work left in this file. Do not start
+> anything below the STOP without checking `client_requirement.md` first — the
+> blocker is a credential, a file or a decision, and it has not silently resolved
+> itself.
 
 ---
 
@@ -14,7 +27,8 @@ from the client.
 
 **Rules:**
 
-1. **Work one workstream at a time, in order.** W0 → W1 → W2 → W3 → W4 → W5 → W6 → W7 → W8.
+1. **Work one workstream at a time, in order.** W0 → W1 → W2 → W3 → W4 → W6 → W7 → W8.
+   *(W5 was in this chain; it is blocked on R2 and now lives below the STOP as §0.)*
    W0 first — it is one hour. Genuine parallelism is noted at the end.
 2. **Run the standing verification bar at the end of every workstream** (below).
    A workstream is not done until its own "Done when" gate *and* the bar pass.
@@ -37,31 +51,45 @@ from the client.
 Run all of these at the end of every workstream. These are the current baselines —
 **they must not regress.**
 
+**Updated 1 September 2026** — these are the baselines as they stand after W8.
+
 ```bash
 npx tsc --noEmit
 # expect: clean, exit 0
 
 pnpm run build
-# expect: green, 25/25 static pages (the count rises as routes are added — note it)
+# expect: green, 27/27 static pages          (was 25/25; W7 added /privacy and /terms)
+
+pnpm run lint
+# expect: 0 errors, 287 warnings             (NEW in W8 — this never ran before)
 
 node scripts/leak-test.mjs http://localhost:3000
 # expect: 12/12 PASS   (needs a local `next start` production server)
 
 node --experimental-strip-types --import ./scripts/ts-resolve-hook.mjs scripts/access-matrix-test.mjs
-# expect: 49/49 gating PASS  +  23/23 login doors PASS
+# expect: 49/49 gating  +  23/23 login doors  +  15/15 partner isolation   (NEW third tally)
+
+node scripts/grants-test.mjs
+# expect: 27/27 PASS                         (NEW in W3)
+
+node scripts/bulk-sample-selfcheck.mjs
+# expect: PASS + 4 header spellings
 ```
 
-> [!NOTE]
-> `pnpm run lint` **cannot run** — `package.json:9` defines `"lint": "eslint ."`
-> but eslint is in neither `dependencies` nor `devDependencies`. This is
-> pre-existing, not a regression. **W8 fixes it and adds it to this bar.**
-> Until then, `tsc --noEmit` and a full `next build` carry the static checking.
+> [!IMPORTANT]
+> **Keep the three access-matrix tallies separate.** 49, 23 and 15 are independent
+> baselines. Folding them into one number makes every future comparison meaningless.
 
 ---
 
 ## GROUND TRUTH (verified against the code, 31 Aug 2026)
 
-Do not re-derive these. They were checked directly against the files.
+> [!WARNING]
+> **This table is the *pre-execution* snapshot and is kept only as a record of what
+> the queue was aimed at.** Every ❌ in it was fixed on 1 September 2026 — the fonts,
+> the fabricated admin tables, the hardcoded partner dashboard, the missing legal
+> routes, `banks` → `lenders`. **For current state read `MEMORY.md` §40, not this.**
+> The two rows still true: email and Razorpay remain unbuilt, both by decision.
 
 | Claim | Verified state |
 |---|---|
@@ -80,35 +108,48 @@ Do not re-derive these. They were checked directly against the files.
 
 ---
 
-## CLIENT STATUS (31 Aug 2026)
+## CLIENT STATUS (updated 1 September 2026)
+
+**The full list, with what each item costs the client and why it matters, is
+`client_requirement.md`. This table is the index.**
 
 | Item | Status | Gates |
 |---|---|---|
-| **Domain `boliwala.com`** | ✅ Purchased, connecting soon | W-DNS (below the STOP) |
-| **Inventory data (Excel/CSV)** | 🟡 Being prepared | **Everything below the STOP** |
-| **Legal copy** | 🟡 Being prepared | W7.1 content — routes ship now, empty |
-| **Real contact details** | 🟡 Adding tonight | W7.2 |
-| **Brand assets** | 🟡 ~1 week | W7.3 |
-| **Channel Partner** | ✅ Must be live at launch | W6 |
-| **SEO landing pages** | 🟡 Client wants just-before-launch | Held below the STOP, §B |
-| **Font** | ✅ Switch to Plus Jakarta Sans | W0 |
-| **Commission rates + tiers** | ❌ **UNDECIDED — ASK NOW** | W6 ships configurable; **cannot go live with placeholder percentages** |
+| **Inventory data (Excel/CSV)** | 🔴 **Still outstanding — the #1 blocker** | §A W-INGEST. One sample file, not the dataset |
+| **R2 / a card on the Cloudflare account** | 🔴 **Outstanding** | **§0 W5** — images and PDFs |
+| **Workers paid upgrade ($5/mo)** | 🔴 **Outstanding** | Deploy headroom above the 3 MB free cap |
+| **Domain `boliwala.com`** | 🟡 Purchased, not connected | §B W-DNS |
+| **Legal copy** | 🟡 Expected w/c 8 Sep | §B W-LEGAL-COPY — routes are live and empty |
+| **Real contact details** | 🟡 Env vars still empty in production | Footer, contact page — a config change, not a build |
+| **Brand assets / logo** | 🟡 Expected w/c 8 Sep | §B W-BRAND |
+| **Commission rates** | ✅ **ANSWERED — 10% / 15%** | W6, live |
+| **Partner tier thresholds** | 🟡 Undecided; stored `null`, assigned by hand | Not blocking |
+| **Annual membership price** | ⚠️ **Live settings say ₹2,999; the spec says ₹999** | Pricing page **and** partner commissions |
+| **SEO landing pages** | 🟡 Client wants just-before-launch | §B W-SEO — **not CSV-blocked, can be pulled forward today** |
+| **Font** | ✅ Plus Jakarta Sans | W0, done |
 
 > [!IMPORTANT]
-> **Two asks for the client, today, both five minutes of their time:**
+> **The two asks that unblock the most, as of 1 September 2026:**
 >
 > 1. **One sample CSV/Excel file** from the inventory set. Not the whole dataset —
 >    one file. W-INGEST's deduplication key cannot be designed without seeing the
->    real column names. This is the highest-leverage unblock available.
-> 2. **Commission rates and the Associate / Silver / Gold tier thresholds.** W6
->    builds the schema configurable either way, but the portal cannot go live at
->    launch with placeholder percentages in it.
+>    real column names. Still the highest-leverage unblock available.
+> 2. **Thirty minutes with the company card and the domain registrar login** —
+>    it enables R2 (§0 W5), buys the Workers headroom, and connects the domain
+>    (§B W-DNS) in one sitting.
+>
+> *Commission rates are answered — 10% and 15%, live in the product.*
 
 ---
 
-# ═══ WORKSTREAMS — ALL UNBLOCKED TODAY ═══
+# ═══ WORKSTREAMS — ALL COMPLETE (1 September 2026) ═══
+
+*Kept as the record of what each workstream was asked to do, and what it committed.
+W5 was the ninth and is no longer here — it is below the STOP, as §0.*
 
 ## W0 — Font switch to Plus Jakarta Sans
+
+> ✅ **DONE — 1 September 2026.** Commit `a124b61`.
 
 **Status:** Unblocked · **Blocked by:** Nothing · **Effort:** ~1 hour · **Do first.**
 
@@ -134,6 +175,8 @@ Standing bar passes.
 ---
 
 ## W1 — Purge the six fabricated admin tables (Item C6)
+
+> ✅ **DONE — 1 September 2026.** Commit `cda2de8` — **nine** table bodies, not the six this heading assumes.
 
 **Status:** Unblocked · **Blocked by:** Nothing · **Effort:** ~1 day
 
@@ -190,6 +233,8 @@ invented person appears anywhere.** Standing bar passes.
 ---
 
 ## W2 — "Contact Sales" enquiry flow
+
+> ✅ **DONE — 1 September 2026.** Commit `7cb1d3c`, `56daff8`, `0ecc190`.
 
 **Status:** Unblocked · **Blocked by:** Nothing · **Effort:** ~2 days
 **Unblocks:** W6 — this is the only revenue event a commission can attach to pre-Razorpay
@@ -257,6 +302,8 @@ matrix**, because granting entitlement touches access.
 
 ## W3 — Security housekeeping
 
+> ✅ **DONE — 1 September 2026.** Commit `ac54d09`.
+
 **Status:** Unblocked · **Owner:** shared — the password rotation is a dashboard action
 **Effort:** ~half a day · **Can run in parallel with W0 and W1.**
 
@@ -305,6 +352,8 @@ matrix**, because granting entitlement touches access.
 ---
 
 ## W4 — Lender model (banks → lenders)
+
+> ✅ **DONE — 1 September 2026.** Commit `5644827`, `c0b8433`.
 
 **Status:** Unblocked · **Blocked by:** Nothing · **Effort:** ~2 days
 **Must complete BEFORE:** W-INGEST, below the STOP
@@ -359,50 +408,9 @@ bisectable history.
 
 ---
 
-## W5 — R2 storage and PDF documents
-
-**Status:** Unblocked · **Effort:** ~2 days
-**Blocked by:** Nothing. Use the `*.r2.dev` public URL now and swap to
-`cdn.boliwala.com` at DNS cutover. **Do not wait for the domain.**
-
-### W5.1 — Buckets and bindings
-- [ ] Create R2 buckets `boliwala-images` and `boliwala-docs` (public)
-- [ ] Add the bindings to `wrangler.toml` — it is currently 215 bytes and minimal, so extend carefully
-- [ ] Record the `*.r2.dev` base URL in `MEMORY.md`, and put it behind a single
-      `R2_PUBLIC_BASE` env var so the DNS cutover is a one-line change
-
-### W5.2 — Image pipeline
-- [ ] `supabase/migrations/0016_listing_images.sql` — `listing_images`: `id`,
-      `listingId`, `r2Key`, `width`, `height`, `sizeBytes`, `sortOrder`
-- [ ] Renditions: thumb 200px / card 600px / full 1200px, WebP, content-hashed filenames
-- [ ] **Renditions are generated in a Node job with `sharp`, never on the Worker.**
-      Put the helper in `scripts/` so W-INGEST reuses it verbatim later.
-- [ ] Admin single-image upload → store the original, generate renditions, write rows
-
-### W5.3 — PDF documents
-- [ ] `listing_documents`: `id`, `listingId`, `r2Key`, `filename`, `label`,
-      `visibility` (default `'public'`), `sizeBytes`, `createdAt`
-- [ ] Admin: upload, label and delete a PDF against a listing
-- [ ] Listing page: a "Documents" section with download links
-- [ ] **PDFs are freely public** — client decision, confirmed. They are **not** behind
-      the credit gate. Make sure the leak test still reflects that intent rather than
-      silently passing for the wrong reason.
-
-### W5.4 — Migrate the existing 12
-- [ ] Move the 12 current listing images to R2, write `listing_images` rows, update
-      references, remove the old paths
-- [ ] `0008_listing_images_storage_bucket.sql` created the old Supabase bucket —
-      leave that migration alone, but note in `MEMORY.md` that the bucket is now unused
-
-**Done when:** All 12 listings serve images from R2 with three renditions. A PDF
-uploads from admin and downloads from the listing page. Standing bar passes —
-**leak test 12/12 specifically, since listing rendering changed.**
-
-**Commit as:** `W5.1`…`W5.4`.
-
----
-
 ## W6 — Channel Partner portal (must be live at launch)
+
+> ✅ **DONE — 1 September 2026.** Commit `0c71ed4`.
 
 **Status:** Unblocked once W2 lands · **Depends on:** **W2** · **Effort:** ~4 days
 
@@ -482,6 +490,8 @@ dashboard. The new isolation assertions pass. Standing bar passes.
 
 ## W7 — Legal, contact and brand scaffolding
 
+> ✅ **DONE — 1 September 2026.** Commit `9374b23` — W7.3 brand assets skipped, still awaiting the client.
+
 **Status:** Routes ship now; content lands when the client delivers · **Effort:** ~half a day
 
 The point of doing this now is that **the routes and the wiring are the engineering
@@ -519,6 +529,8 @@ placeholder phone number anywhere. Standing bar passes — the page count in
 ---
 
 ## W8 — Housekeeping and the known open defects
+
+> ✅ **DONE — 1 September 2026.** Commit `df9fd84` — **all but the bundle re-measure**, which is now `MEMORY.md` §41.
 
 **Status:** Unblocked · **Effort:** ~half a day · **Do last, immediately before the STOP.**
 
@@ -574,10 +586,78 @@ is not happening. Standing bar passes, now including lint.
 
 # ═══ AFTER THE STOP — DO NOT START ═══
 
+> Ordered by what unblocks them: **§0 needs a credit card, §A needs a file, §B needs
+> the client's word or their copy.** Each item names its blocker in
+> `client_requirement.md`.
+
+## §0 — Blocked on the Cloudflare account
+
+### W5 — R2 storage and PDF documents
+
+> [!CAUTION]
+> **⛔ HARD BLOCKED — moved here from above the STOP on 1 September 2026.**
+>
+> `wrangler r2 bucket list` returns *"Please enable R2 through the Cloudflare
+> Dashboard [code: 10042]"*. Enabling R2 needs a payment method on the Cloudflare
+> account, which is a client conversation — `client_requirement.md` §1.2(a).
+>
+> **Nothing was half-built against it, and that was deliberate.** In particular
+> **no `wrangler.toml` R2 bindings were added**: a binding naming a bucket that
+> does not exist breaks the CI deploy, which turns a blocked workstream into a
+> broken deployment.
+>
+> **Supabase Storage was offered as a no-card alternative and declined. R2 only.**
+
+**Status:** ⛔ Blocked on the client · **Effort once unblocked:** ~2 days
+**Unblocked by:** a card on the Cloudflare account. Nothing else.
+**Then:** use the `*.r2.dev` public URL immediately and swap to `cdn.boliwala.com`
+at DNS cutover. **Do not wait for the domain.**
+
+> **Migration numbers have moved on.** W5.2 below says `0016_listing_images.sql`;
+> `0016`, `0017` and `0018` are taken (grants, lenders, partner commissions).
+> **The next free number is `0019`.**
+
+#### W5.1 — Buckets and bindings
+- [ ] Create R2 buckets `boliwala-images` and `boliwala-docs` (public)
+- [ ] Add the bindings to `wrangler.toml` — it is currently 215 bytes and minimal, so extend carefully
+- [ ] Record the `*.r2.dev` base URL in `MEMORY.md`, and put it behind a single
+      `R2_PUBLIC_BASE` env var so the DNS cutover is a one-line change
+
+#### W5.2 — Image pipeline
+- [ ] `supabase/migrations/0016_listing_images.sql` — `listing_images`: `id`,
+      `listingId`, `r2Key`, `width`, `height`, `sizeBytes`, `sortOrder`
+- [ ] Renditions: thumb 200px / card 600px / full 1200px, WebP, content-hashed filenames
+- [ ] **Renditions are generated in a Node job with `sharp`, never on the Worker.**
+      Put the helper in `scripts/` so W-INGEST reuses it verbatim later.
+- [ ] Admin single-image upload → store the original, generate renditions, write rows
+
+#### W5.3 — PDF documents
+- [ ] `listing_documents`: `id`, `listingId`, `r2Key`, `filename`, `label`,
+      `visibility` (default `'public'`), `sizeBytes`, `createdAt`
+- [ ] Admin: upload, label and delete a PDF against a listing
+- [ ] Listing page: a "Documents" section with download links
+- [ ] **PDFs are freely public** — client decision, confirmed. They are **not** behind
+      the credit gate. Make sure the leak test still reflects that intent rather than
+      silently passing for the wrong reason.
+
+#### W5.4 — Migrate the existing 12
+- [ ] Move the 12 current listing images to R2, write `listing_images` rows, update
+      references, remove the old paths
+- [ ] `0008_listing_images_storage_bucket.sql` created the old Supabase bucket —
+      leave that migration alone, but note in `MEMORY.md` that the bucket is now unused
+
+**Done when:** All 12 listings serve images from R2 with three renditions. A PDF
+uploads from admin and downloads from the listing page. Standing bar passes —
+**leak test 12/12 specifically, since listing rendering changed.**
+
+**Commit as:** `W5.1`…`W5.4`.
+
+---
+
 ## §A — Blocked on the inventory CSV
 
 ### W-INGEST — Bulk ingest pipeline (S4)
-**Hard blocked on:** the client sharing the data files · **Depends on:** W4 and W5
+**Hard blocked on:** the client sharing the data files · **Depends on:** W4 ✅ and **W5 ⛔ (§0 — needs R2)**
 
 A Node.js job — it needs `sharp`, so not Workers. Reads CSV/Excel, auto-detects columns
 using the same approach as the admin bulk-upload panel, batched upserts of 100,
@@ -616,33 +696,38 @@ OAuth, then remove `boliwala.boliwaladevs.workers.dev` from the Supabase redirec
 ## EXECUTION ORDER
 
 ```
-W0  Font ─────────────────┐
-W1  Admin tables ─────────┤  parallel-safe
-W3  Security ─────────────┘
+✅ W0  Font ──────────────┐
+✅ W1  Admin tables ──────┤  parallel-safe
+✅ W3  Security ──────────┘
                     │
-W2  Contact Sales ──┼──────────────────────► W6  Channel Partner
+✅ W2  Contact Sales ┼─────────────────────► ✅ W6  Channel Partner
                     │                           (needs W2's grant events)
-W4  Lender model ───┼──┐
-W5  R2 + PDF ───────┘  │
-                       │
-W7  Legal/contact ─────┤
-W8  Housekeeping ──────┘
-                       │
-                       ▼
-            🛑 STOP: CSV REQUIRED
-                       │
-        ┌──────────────┴──────────────┐
-        ▼                             ▼
-  §A W-INGEST                  §B W-SEO / W-DNS
-  (needs the CSV)              (needs client, not CSV)
+✅ W4  Lender model ─┤
+✅ W7  Legal/contact ┤
+✅ W8  Housekeeping ─┘
+                    │
+                    ▼
+         🛑 STOP: CSV REQUIRED   ← reached and respected, 1 Sep 2026
+                    │
+     ┌──────────────┼──────────────┬──────────────┐
+     ▼              ▼              ▼              ▼
+ §0 W5 R2      §A W-INGEST     §B W-SEO      §B W-DNS
+ (needs a      (needs the      (needs only   (needs the
+  card)         CSV — and       the client's  domain
+                W4 ✅ + W5)     go-ahead)     connected)
 ```
 
-**Genuine parallelism:** W0, W1 and W3 are independent of each other. W4 and W5 are
-independent of each other. W7 is independent of everything.
-**W6 must follow W2. W-INGEST must follow W4 and W5.**
+**Genuine parallelism:** W0, W1 and W3 were independent of each other. W7 was
+independent of everything. **W6 had to follow W2. W-INGEST must follow W4 ✅ and W5 ⛔.**
+
+**The one dependency that still binds:** W-INGEST ingests images and PDFs into R2, so
+it needs **W5**, which needs the card. The CSV and the card are therefore *both* on
+W-INGEST's critical path — the CSV is simply the one that also blocks the design work,
+which is why it is named first.
 
 ---
 
-*Last updated: 31 August 2026, evening. Vector/semantic search was moved to
-`deferred_plan.md` D7 — it is a Tier 4 differentiator per `REALITY_CHECK.md` §7 and does
-not belong in a pre-launch queue.*
+*Last updated: 1 September 2026 — the queue was executed, W5 was re-filed below the
+STOP as §0, and the client-side asks moved into `client_requirement.md`. Vector/semantic
+search was moved to `deferred_plan.md` D7 on 31 August — it is a Tier 4 differentiator
+per `REALITY_CHECK.md` §7 and does not belong in a pre-launch queue.*
