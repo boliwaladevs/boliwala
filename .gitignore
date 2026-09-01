@@ -31,3 +31,6 @@ next-env.d.ts
 .wrangler/
 cloudflare-env.d.ts
 .dev.vars
+
+# Ad-hoc bulk-upload test files made while trying the importer by hand.
+test-bulk-upload*.csv
