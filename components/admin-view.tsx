@@ -816,7 +816,7 @@ export function AdminView({
           {/* ALERT ENGINE */}
           {activePage === 'alert-engine' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <AlertStrip type="info" icon="⚡" title="Real-time matching is ON" subtitle="Every new or edited listing is instantly checked against all active alert rules. Matches fire email immediately." />
+              <AlertStrip type="warning" icon="⚡" title="Matching is designed, not running" subtitle="Nothing checks a new listing against alert rules yet, and there is no email or WhatsApp integration to deliver a match. Subscribers are being collected; delivery is not built." />
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon="⚡" iconBg="bg-blue-100" value={sectionStats.alerts.total.toLocaleString('en-IN')} label="Active Alert Rules" />
                 <StatCard icon="📧" iconBg="bg-emerald-100" value={NOT_TRACKED} trend="No send log yet" trendFlat label="Emails Sent Today" />

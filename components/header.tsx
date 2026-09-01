@@ -9,6 +9,7 @@ import Image from "next/image"
 import { Logo } from "@/components/logo"
 import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { currentPath, withNext } from "@/lib/auth/next-param"
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
@@ -18,6 +19,11 @@ export function Header() {
   // so the cluster stays empty until we know which state to show.
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
   const pathname = usePathname()
+
+  // Where a Log In click should come back to. Only computed once the session
+  // state is known, which is also the only time the link is rendered — before
+  // that there is no browser location to read on the server pass.
+  const loginHref = signedIn === false ? withNext("/login", currentPath()) : "/login"
 
   const isHome = pathname === "/"
   const isDarkBg = isHome || scrolled || mobileMenuOpen
@@ -116,7 +122,7 @@ export function Header() {
           ) : (
             <>
               <Link
-                href="/login"
+                href={loginHref}
                 className="inline-flex items-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
               >
                 Log In
@@ -200,7 +206,7 @@ export function Header() {
             ) : (
               <>
                 <Link
-                  href="/login"
+                  href={loginHref}
                   className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
                   onClick={closeMobileMenu}
                 >

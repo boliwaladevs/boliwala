@@ -538,7 +538,16 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
       and a fake wa.me link; it reads the configured number and says so when there is
       none. `NEXT_PUBLIC_CONTACT_EMAIL` added as a key to both env files.
       **W7.3 brand assets skipped** — not yet delivered, nothing blocked. `MEMORY.md` §39.8.
-- [ ] W8 — eslint plus the three §36.5 defects
+- [x] **W8 — lint runs, and the §36.5 defects are fixed.** `pnpm run lint` executes for
+      the first time ever (eslint was never a dependency): 0 errors, 287 warnings, now
+      part of the standing bar — the warning classes are recorded as debt in
+      `MEMORY.md` §39.9 rather than hidden. The header Log In link preserves `?next=`;
+      `bulkCommitListings` reports every row the database rejected instead of dropping it
+      silently; the Alert Engine panel no longer claims real-time matching that does not
+      exist. **Not done: the Worker bundle re-measure** — `opennextjs-cloudflare build`
+      cannot run on this Windows machine (§5 gotcha #10), so the number must be read from
+      the Workers Builds log. Last known: 2.74 MiB gzip against a 3 MB free cap, and that
+      predates W2/W4/W6/W7.
 - [ ] **Then STOP** — the inventory CSV gates everything after W8.
 
 - [ ] **`font-mono` is broken the same way Satoshi was** — `--font-mono` asks for the

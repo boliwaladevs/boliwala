@@ -191,26 +191,61 @@ export interface BulkRow {
   errors: string[]
 }
 
-export async function bulkCommitListings(rows: ListingInput[]): Promise<{ committed: number }> {
+export interface BulkCommitRejection {
+  /** 1-based position in the batch handed to this function. */
+  row: number
+  title: string
+  reason: string
+}
+
+/**
+ * Commits validated rows as drafts, and **reports what it could not commit**.
+ *
+ * This used to return only a count, incrementing it on success and discarding
+ * the error otherwise — so a 40-row upload that inserted 12 reported "12
+ * listings created" and said nothing about the other 28. An import that loses
+ * rows quietly is worse than one that fails outright, because nobody goes
+ * looking. With real inventory arriving that becomes a data-integrity problem
+ * rather than an annoyance.
+ *
+ * Still best-effort per row rather than all-or-nothing: one bad row in a large
+ * file should not throw away the good ones. The difference is that the caller
+ * now knows exactly which rows did not make it, and why.
+ */
+export async function bulkCommitListings(
+  rows: ListingInput[],
+): Promise<{ committed: number; rejected: BulkCommitRejection[] }> {
   await requireAdmin()
   const admin = createAdminClient()
   const now = new Date().toISOString()
 
   let committed = 0
-  for (const input of rows) {
-    const slug = await generateUniqueSlug(input)
-    const { error } = await admin.from("listings").insert({
-      id: randomUUID(),
-      slug,
-      ...input,
-      status: "draft",
-      viewCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    })
-    if (!error) committed += 1
+  const rejected: BulkCommitRejection[] = []
+
+  for (const [index, input] of rows.entries()) {
+    try {
+      const slug = await generateUniqueSlug(input)
+      const { error } = await admin.from("listings").insert({
+        id: randomUUID(),
+        slug,
+        ...input,
+        status: "draft",
+        viewCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      })
+      if (error) {
+        rejected.push({ row: index + 1, title: input.title, reason: error.message })
+      } else {
+        committed += 1
+      }
+    } catch (err) {
+      // generateUniqueSlug hits the database too, and a failure there dropped
+      // the row just as silently.
+      rejected.push({ row: index + 1, title: input.title, reason: err instanceof Error ? err.message : "Unknown error" })
+    }
   }
 
   revalidatePath("/admin")
-  return { committed }
+  return { committed, rejected }
 }

@@ -31,6 +31,7 @@ const isoInDays = eval("(" + src.match(/const isoInDays = (\(days: number\) => [
 // Pulled out verbatim too: guessColumn closes over it, and a synonym list that
 // drifted from the component would let this check pass against code that does
 // not exist.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- guessColumn is eval'd below and closes over this.
 const HEADER_SYNONYMS = eval("({" + between(/const HEADER_SYNONYMS: Record<string, string\[\]> = \{/, "\n}") + "})")
 const guessColumn = eval("(" + src.match(/function guessColumn[\s\S]*?\n\}/)[0]
   .replace(/headers: string\[\], fieldKey: string, fieldLabel: string\): string/, "headers, fieldKey, fieldLabel)")

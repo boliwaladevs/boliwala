@@ -3,7 +3,7 @@
 import { useState } from "react"
 import * as XLSX from "xlsx"
 import { FormSection, AlertStrip, TcActionSelect, Th, Td } from "./ui"
-import { bulkCommitListings, type ListingInput } from "@/app/actions/admin-listings"
+import { bulkCommitListings, type ListingInput, type BulkCommitRejection } from "@/app/actions/admin-listings"
 import { useToast } from "@/hooks/use-toast"
 
 const TARGET_FIELDS: { key: keyof ListingInput; label: string; required: boolean }[] = [
@@ -86,7 +86,7 @@ export function BulkUploadPanel({ lenders }: { lenders: { id: string; name: stri
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [parsed, setParsed] = useState<ParsedRow[]>([])
   const [committing, setCommitting] = useState(false)
-  const [result, setResult] = useState<{ committed: number } | null>(null)
+  const [result, setResult] = useState<{ committed: number; rejected: BulkCommitRejection[] } | null>(null)
   const { toast } = useToast()
 
   const handleFile = async (file: File) => {
@@ -217,7 +217,15 @@ export function BulkUploadPanel({ lenders }: { lenders: { id: string; name: stri
     try {
       const result = await bulkCommitListings(validRows.map((r) => r.input))
       setResult(result)
-      toast({ title: `${result.committed} listing(s) created as drafts` })
+      if (result.rejected.length > 0) {
+        toast({
+          variant: "destructive",
+          title: `${result.rejected.length} row(s) were rejected`,
+          description: `${result.committed} committed. See the list below for why the rest did not.`,
+        })
+      } else {
+        toast({ title: `${result.committed} listing(s) created as drafts` })
+      }
       setParsed([])
       setRawRows([])
     } catch {
@@ -268,6 +276,20 @@ export function BulkUploadPanel({ lenders }: { lenders: { id: string; name: stri
         {result && (
           <div className="mt-4 p-3.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-sm text-emerald-700 dark:text-emerald-400">
             ✅ {result.committed} listing(s) committed as drafts. Review them in the Listings tab.
+            {result.rejected.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <div className="font-semibold text-destructive mb-1.5">
+                  {result.rejected.length} row(s) were rejected by the database and were NOT imported:
+                </div>
+                <ul className="space-y-1">
+                  {result.rejected.map((r) => (
+                    <li key={r.row} className="text-[12px]">
+                      Row {r.row} — <span className="font-medium">{r.title || "(untitled)"}</span>: {r.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </FormSection>

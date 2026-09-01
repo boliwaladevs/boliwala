@@ -5242,7 +5242,7 @@ check. Instruction was explicit — **do not stop execution waiting for any of t
 | W5 | R2 + PDF documents | ⛔ **BLOCKED** | R2 not enabled on the account — see §39.6 |
 | W6 | Channel Partner portal | ✅ **LANDED** | see §39.7 |
 | W7 | Legal routes + contact wiring | ✅ **LANDED** | see §39.8 |
-| W8 | eslint + the three §36.5 defects | ⬜ | |
+| W8 | eslint + the three §36.5 defects | ✅ **LANDED** | see §39.9 |
 
 ### 39.1 W0 — Plus Jakarta Sans ✅ LANDED
 
@@ -5824,3 +5824,95 @@ this; swap them when the files arrive.
 
 **Standing bar:** tsc 0 · build green **27/27** · leak 12/12 · matrix 49/49 + 23/23 +
 15/15 · grants 27/27. ✅
+
+### 39.9 W8 — lint, the §36.5 defects, and one dishonest banner ✅ LANDED
+
+**`pnpm run lint` runs for the first time in this project's life.** The script has been in
+`package.json` since it was scaffolded; eslint was in neither `dependencies` nor
+`devDependencies`, so it had never executed once. Added `eslint@9`,
+`eslint-config-next@16.0.10` and a flat `eslint.config.mjs`.
+
+> **Gotcha, cost ~10 minutes:** `eslint-config-next@16` ships **native flat config**.
+> Wrapping it in `FlatCompat`, which every `.eslintrc` recipe online still shows, throws
+> `TypeError: Converting circular structure to JSON`. Import
+> `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript` and spread them.
+
+**The first run reported 11,998 problems. 11,710 of them were one file** —
+`.wrangler/tmp/.../worker.js`, a generated dev bundle. Ignoring `.wrangler/**` leaves the
+actual project.
+
+**Four rules demoted to warnings, each for a stated reason** (the reasons are in
+`eslint.config.mjs`, not just here):
+
+| Rule | Count | Why a warning |
+|---|---|---|
+| `react-hooks/static-components` | ~220 | Presentational helpers declared inside `admin-view.tsx`. The real fix is to delete them and import the **identical components that already exist in `components/admin/ui.tsx`** — a genuine simplification, and one that touches every table in the admin panel. Not something to do at the end of the queue with no browser to check it. **Recorded as debt.** |
+| `react/no-unescaped-entities` | 31 | Apostrophes in body copy. React renders them fine. |
+| `react-hooks/set-state-in-effect` | 7 | Mostly a false positive: the flagged effects read `localStorage`/`window` and set state from it, which is exactly right in an SSR app — a `useState` initialiser would break hydration. |
+| `@typescript-eslint/no-explicit-any` | 14 | `any` props on the same pre-existing admin helpers. |
+
+`components/ui/**` (vendored shadcn) additionally relaxes `purity`, `refs` and
+`rules-of-hooks`: it is generated upstream source, and editing it means diverging from
+upstream for warnings nobody will action.
+
+**Result: `pnpm run lint` → 0 errors, 287 warnings, exit 0.** It is now part of the
+standing bar. **"0 errors" is not "nothing left to do"** — the table above is the debt.
+
+**The linter immediately earned its place** by catching something real in W4's own code:
+`HEADER_SYNONYMS` in `scripts/bulk-sample-selfcheck.mjs` is used only inside an `eval`'d
+string, so it reads as unused. Annotated with the reason rather than silenced.
+
+**The three §36.5 defects:**
+
+1. **The header's Log In link dropped context.** Every other route into `/login` preserves
+   where the visitor was — the unlock button, the save-property button, the partner login
+   link — but the header sent them to `/profile` instead of back to the page they were
+   reading. Both the desktop and mobile links now use `withNext("/login", currentPath())`.
+   Computed only once the session state is known, which is the only time the link renders,
+   so there is no server pass to disagree with and no `useSearchParams()` forcing pages
+   out of static rendering.
+
+2. **`bulkCommitListings` silently dropped rejected rows.** It incremented a counter on
+   success and discarded the error otherwise, so a 40-row upload that inserted 12
+   reported *"12 listings created"* and said nothing about the other 28. It now returns
+   `rejected: { row, title, reason }[]`, the panel lists every rejection with the
+   database's own message, and the toast turns destructive when anything was refused.
+   Still best-effort per row rather than all-or-nothing — one bad row should not throw
+   away the good ones — but nothing disappears quietly now. **This matters far more once
+   the client's real inventory arrives, which is why it was done before the STOP.**
+
+3. **"Real-time matching is ON" was a lie.** The Alert Engine panel announced that every
+   new listing is instantly checked against alert rules and "matches fire email
+   immediately". Nothing checks anything, and there is no email or WhatsApp integration to
+   deliver a match with. It now reads **"Matching is designed, not running"** and says
+   subscribers are being collected while delivery is not built.
+
+**⚠️ The fourth item — re-measure the Worker bundle — is NOT done, and cannot be done
+from this machine.**
+
+`npx opennextjs-cloudflare build` fails here with
+`Cannot read directory ... node_modules/.pnpm/next@16.0.10.../react: Access is denied`
+— the Windows/pnpm symlink limitation already recorded as §5 gotcha #10. `wrangler
+versions list` does not report size. So the number cannot be obtained locally.
+
+**How to get it:** the Workers Builds log prints `Total Upload: … KiB / gzip: … KiB` on
+every CI build. **The last baseline was 2.74 MiB gzip against a 3 MB free-tier cap — 92%
+— and that predates W2, W4, W6 and W7.** This is worth an actual look rather than an
+assumption; if the account is still on Workers Free, a deploy will be *rejected*, not
+merely slow, when it crosses.
+
+**Confirmed while checking:** Workers Builds **auto-deploys on push to `main`**. The live
+worker at `boliwala.boliwaladevs.workers.dev` already serves W0–W6 (the Plus Jakarta font
+and `/contact?plan=annual` are live; `/privacy` still 404s because W7 had not been pushed
+at the time of checking).
+
+**Standing bar — now including lint:**
+```
+npx tsc --noEmit                                    clean, exit 0        ✅
+pnpm run build                                      green, 27/27         ✅
+pnpm run lint                                       0 errors, exit 0     ✅  (NEW)
+leak-test.mjs                                       12/12 PASS           ✅
+access-matrix-test.mjs                              49/49 + 23/23 + 15/15 ✅
+grants-test.mjs                                     27/27 PASS           ✅
+bulk-sample-selfcheck.mjs                           PASS                 ✅
+```
