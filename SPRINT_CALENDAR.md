@@ -514,8 +514,22 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
 - [ ] **Decision needed: there is no admin UI for lenders** — no way to create one or
       set its type, so the NBFC/ARC/HFC facet stays empty until W-INGEST creates lenders
       from the real file. Pre-existing gap, newly visible. `MEMORY.md` §39.5.
-- [ ] W5 — R2 storage and PDF documents
-- [ ] W6 — Channel Partner portal (must follow W2)
+- [ ] **W5 — R2 storage and PDF documents ⛔ BLOCKED.** R2 is not enabled on the
+      Cloudflare account (`wrangler` returns code 10042) and enabling it needs a card,
+      so it is a client conversation. Deliberately nothing was half-built — in
+      particular no `wrangler.toml` bindings, which would break the CI deploy by naming
+      buckets that do not exist. Supabase Storage was offered as a no-card alternative
+      and declined: **R2 only**. `MEMORY.md` §39.6.
+- [x] **W6 — Channel Partner portal.** Referral capture (`?ref=` → cookie → attributed
+      at signup, both doors), commission accrual on the W2 grants at the client's
+      confirmed 10% / 15%, a two-stage approve-then-pay flow, an admin panel for
+      applications, tiers, commissions and payouts, and the 583-line invented-earnings
+      mockup replaced with the partner's real data. Tier thresholds are stored as
+      **null** until the client decides them — no invented numbers. Verified by a new
+      15-assertion partner-isolation tally (kept separate from the 49 and the 23) and a
+      10/10 live end-to-end run of the whole lifecycle. `MEMORY.md` §39.7.
+- [ ] **Check `annual_price`:** the live setting is **₹2,999**, not the ₹999 in the spec
+      — so a 10% commission earns ₹300. Fix in admin → Settings if ₹999 is intended.
 - [ ] W7 — legal routes and real contact wiring
 - [ ] W8 — eslint plus the three §36.5 defects
 - [ ] **Then STOP** — the inventory CSV gates everything after W8.

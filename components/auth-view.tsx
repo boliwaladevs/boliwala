@@ -16,6 +16,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { attributeReferral } from "@/app/actions/referral"
 
 interface AuthViewProps {
   defaultTab?: "login" | "signup"
@@ -70,6 +71,13 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
         toast({ variant: "destructive", title: "Couldn't create account", description: error.message })
         return
       }
+      // A referral is attributed here, on the account that has just been
+      // created, because the cookie that carries it is httpOnly and only the
+      // server can read it. Deliberately not awaited for its result: it never
+      // reports failure, and a partner attribution must not delay or block
+      // somebody getting into their new account.
+      await attributeReferral()
+
       toast({ title: "Welcome to Boliwala!", description: "5 free credits added to your account." })
       router.push(nextPath ?? "/profile")
       router.refresh()

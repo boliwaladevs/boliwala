@@ -273,4 +273,151 @@ console.log(
     : `RESULT: FAIL — ${doorFailures} door case(s) wrong`,
 )
 
-process.exit(failures === 0 && doorFailures === 0 ? 0 : 1)
+
+// ---------------------------------------------------------------------------
+// 3. PARTNER DATA ISOLATION — W6.7
+//
+// Commission money is a new leak surface, and a worse one than the listing gate:
+// a partner seeing another partner's earnings is a breach of both parties'
+// commercial confidence. The listing matrix above tests pure functions; this
+// tests the database, because that is what actually stands between two
+// partners.
+//
+// Every row here is created inside a transaction and rolled back. Nothing
+// written by this file survives it.
+//
+// This is a SEPARATE tally on purpose — do not fold it into the 49 or the 23.
+// ---------------------------------------------------------------------------
+
+const { Client } = await import("pg")
+const pg = new Client({ connectionString: process.env.DIRECT_URL })
+await pg.connect()
+
+let partnerAssertions = 0
+let partnerFailures = 0
+const partnerOk = (cond, msg, detail = "") => {
+  partnerAssertions++
+  if (cond) {
+    console.log("PASS  " + msg)
+  } else {
+    partnerFailures++
+    console.log("FAIL  " + msg + (detail ? "  <- " + detail : ""))
+  }
+}
+
+console.log("\n=== PARTNER DATA ISOLATION ===")
+
+const people = (await pg.query('select id from public.profiles order by "createdAt" limit 2')).rows
+const [A, B] = [people[0].id, people[1].id]
+
+await pg.query("begin")
+try {
+  // Two partners, each with a referral, a commission and a payout.
+  const ids = {}
+  for (const [name, owner] of [["a", A], ["b", B]]) {
+    ids[name] = { referral: crypto.randomUUID(), commission: crypto.randomUUID(), payout: crypto.randomUUID() }
+    await pg.query(
+      'insert into public.partner_referrals (id, "partnerId", "refCode", "referredProfileId", "landedAt") values ($1,$2,$3,$4, now())',
+      [ids[name].referral, owner, "TEST" + name.toUpperCase(), owner === A ? B : A],
+    )
+    await pg.query(
+      'insert into public.partner_commissions (id, "partnerId", "referralId", "sourceType", "grossAmount", "ratePct", "commissionAmount") values ($1,$2,$3,\'annual_subscription\',1000,10,100)',
+      [ids[name].commission, owner, ids[name].referral],
+    )
+    await pg.query(
+      'insert into public.partner_payouts (id, "partnerId", "periodStart", "periodEnd", "totalAmount") values ($1,$2, now(), now(), 100)',
+      [ids[name].payout, owner],
+    )
+  }
+
+  // Read as partner A, exactly as PostgREST would.
+  const asPartner = async (userId, sql) => {
+    await pg.query("savepoint role_probe")
+    try {
+      await pg.query("set local role authenticated")
+      await pg.query(`set local request.jwt.claims = '${JSON.stringify({ sub: userId, role: "authenticated" })}'`)
+      const res = await pg.query(sql)
+      await pg.query("set local role postgres")
+      await pg.query("rollback to savepoint role_probe")
+      return { rows: res.rows }
+    } catch (err) {
+      await pg.query("rollback to savepoint role_probe")
+      return { error: err.message }
+    }
+  }
+
+  for (const table of ["partner_referrals", "partner_commissions", "partner_payouts"]) {
+    const own = await asPartner(A, `select "partnerId" from public.${table}`)
+    const rows = own.rows ?? []
+    partnerOk(!own.error && rows.length > 0, `partner A can read their own ${table}`, own.error)
+    partnerOk(
+      rows.every((r) => r.partnerId === A),
+      `partner A sees NOTHING belonging to partner B in ${table}`,
+      own.error ?? `saw ${rows.filter((r) => r.partnerId !== A).length} foreign row(s)`,
+    )
+  }
+
+  // A partner must not be able to write their own money.
+  const forgeCommission = await asPartner(
+    A,
+    `insert into public.partner_commissions (id, "partnerId", "sourceType", "grossAmount", "ratePct", "commissionAmount") values ('${crypto.randomUUID()}', '${A}', 'annual_subscription', 100000, 50, 50000)`,
+  )
+  partnerOk(!!forgeCommission.error, "partner A CANNOT write themselves a commission", "the insert succeeded")
+
+  const approveOwn = await asPartner(A, `update public.partner_commissions set status = 'approved'`)
+  partnerOk(!!approveOwn.error, "partner A CANNOT approve their own commission")
+
+  const forgePayout = await asPartner(
+    A,
+    `insert into public.partner_payouts (id, "partnerId", "periodStart", "periodEnd", "totalAmount") values ('${crypto.randomUUID()}', '${A}', now(), now(), 99999)`,
+  )
+  partnerOk(!!forgePayout.error, "partner A CANNOT invent a payout")
+
+  const claimReferral = await asPartner(A, `update public.partner_referrals set "partnerId" = '${A}'`)
+  partnerOk(!!claimReferral.error, "partner A CANNOT reassign someone else's referral to themselves")
+
+  // Anonymous visitors have no business here at all.
+  const asAnon = async (sql) => {
+    await pg.query("savepoint anon_probe")
+    try {
+      await pg.query("set local role anon")
+      const res = await pg.query(sql)
+      await pg.query("set local role postgres")
+      await pg.query("rollback to savepoint anon_probe")
+      return { rows: res.rows }
+    } catch (err) {
+      await pg.query("rollback to savepoint anon_probe")
+      return { error: err.message }
+    }
+  }
+  for (const table of ["partner_referrals", "partner_commissions", "partner_payouts"]) {
+    const res = await asAnon(`select * from public.${table} limit 1`)
+    partnerOk(!!res.error, `anon CANNOT read ${table}`)
+  }
+} finally {
+  await pg.query("rollback")
+  await pg.end()
+}
+
+// A commission that never accrues is the same as no commission model at all,
+// and the accrual is a side effect of the two grant actions rather than
+// anything a pure function can be asked about. Assert it at the call sites.
+for (const fn of ["grantSubscription", "grantServicePackage"]) {
+  const src = readFileSync("app/actions/admin-sales.ts", "utf8")
+  const at = src.indexOf(`export async function ${fn}(`)
+  const body = at === -1 ? "" : src.slice(at, at + 3000)
+  partnerOk(
+    body.includes("accrueCommissionForPurchase("),
+    `${fn}() accrues a partner commission`,
+    "the grant does not call accrueCommissionForPurchase",
+  )
+}
+
+console.log(`\n${partnerAssertions} assertions across partner data isolation`)
+console.log(
+  partnerFailures === 0
+    ? "RESULT: PASS — partner data is isolated"
+    : `RESULT: FAIL — ${partnerFailures} isolation case(s) wrong`,
+)
+
+process.exit(failures === 0 && doorFailures === 0 && partnerFailures === 0 ? 0 : 1)

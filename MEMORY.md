@@ -5239,8 +5239,8 @@ check. Instruction was explicit — **do not stop execution waiting for any of t
 | W2 | Contact Sales flow | ✅ **LANDED** | see §39.3 |
 | W3 | Security housekeeping | ✅ **LANDED** (rotation still yours) | see §39.4 |
 | W4 | Lender model (banks→lenders) | ✅ **LANDED** | see §39.5 |
-| W5 | R2 + PDF documents | ⬜ | |
-| W6 | Channel Partner portal | ⬜ | |
+| W5 | R2 + PDF documents | ⛔ **BLOCKED** | R2 not enabled on the account — see §39.6 |
+| W6 | Channel Partner portal | ✅ **LANDED** | see §39.7 |
 | W7 | Legal routes + contact wiring | ⬜ | |
 | W8 | eslint + the three §36.5 defects | ⬜ | |
 
@@ -5647,3 +5647,135 @@ access types for no functional gain; its *label* now reads "Lender Contact".
 **Standing bar:** tsc 0 · build green 25/25 · leak 12/12 · matrix 49/49 + 23/23 ·
 grants 27/27 (its `banks` case updated to `lenders`) · bulk self-check PASS + 4 header
 spellings. ✅
+
+### 39.6 W5 — R2 storage ⛔ BLOCKED, and nothing was half-built
+
+`npx wrangler r2 bucket list` against the account (`boliwaladevs@gmail.com`,
+`dd735b278158c0a26949c1d5d6b6ebc3`) returns:
+
+```
+Please enable R2 through the Cloudflare Dashboard. [code: 10042]
+```
+
+**R2 is not enabled, and enabling it needs a card on the dashboard** — a client
+conversation, not an engineering step. The user has parked it deliberately (2026-09-01)
+and confirmed **R2 only** — Supabase Storage was offered as a no-card alternative and
+declined, so `0008`'s unused bucket stays unused.
+
+**Nothing was built against it.** No schema, no upload code, and specifically **no
+bindings in `wrangler.toml`** — a binding naming a bucket that does not exist breaks the
+CI deploy, which would have turned a blocked workstream into a broken one. The plan's
+rule 6 says finish everything else in a blocked workstream; here *everything* in W5 sits
+behind the bucket, so the honest total is zero.
+
+**To resume, in order:** enable R2 → `wrangler r2 bucket create boliwala-images` and
+`boliwala-docs` → enable each bucket's public `r2.dev` URL → add both bindings plus a
+single `R2_PUBLIC_BASE` env var (so the `cdn.boliwala.com` cutover stays one line) →
+then W5.2–W5.4. **W-INGEST also depends on this**, though it is CSV-blocked anyway.
+
+### 39.7 W6 — the channel partner portal ✅ LANDED
+
+**Client answers that made this real (2026-09-01):** commission is **10% of an annual
+membership** and **15% of a service package**. Tier thresholds are still being decided.
+Contact-Sales notification stays admin-panel-only. There is to be no lender admin UI —
+and the product spec agrees: §5 lists the entire admin panel and contains no lender
+management at all.
+
+**`supabase/migrations/0018_partner_commissions.sql`.** `partner_referrals`,
+`partner_commissions`, `partner_payouts`, four enums, plus `profiles."referralCode"`
+(unique) and `profiles."partnerTier"`. RLS: a partner reads only their own rows; grants
+narrowed by hand in the W3 style, because `ALTER DEFAULT PRIVILEGES` only strips the
+three dangerous privileges and a new table still arrives with SELECT/INSERT/UPDATE/DELETE
+for `anon`.
+
+**Design decisions worth keeping:**
+
+1. **A click is not a referral.** `middleware.ts` captures `?ref=` into an httpOnly
+   cookie and writes nothing; `attributeReferral()` turns it into a row only when an
+   account is actually created. The table is therefore a record of signups, and a partner
+   cannot inflate it by hitting their own link. `unique (referredProfileId)` means a
+   second partner can never claim someone already referred — **verified**.
+2. **The cookie's 30 days is a ceiling, not the rule.** Middleware runs on every request
+   and has no business querying Supabase, so the window is enforced server-side at
+   signup from `referral_attribution_days`. Shortening it in settings takes effect
+   immediately, including for cookies already handed out.
+3. **`ratePct`, `grossAmount` and `commissionAmount` are stored on the commission row.**
+   Product spec §5.10: a rate change applies to new commissions only. **Verified by
+   moving the rate to 99% and confirming an earned commission did not re-price.**
+4. **Two-stage money.** A commission accrues automatically, then a human approves it
+   before it can be paid — a refunded or disputed sale gets caught before money leaves.
+5. **Tiers are assigned, not computed.** The thresholds are undecided, so the settings
+   hold **null** rather than an invented number, and the admin panel shows an empty box
+   labelled "not decided yet". A `0` would have read as "everyone qualifies for Gold".
+6. **The payout is built from the commissions it covers**, never typed in, so the two
+   cannot disagree about the amount. It records a transfer made outside Boliwala; it does
+   not pretend to move money.
+7. **`accrueCommissionForPurchase()` never throws.** It runs after the customer's
+   entitlement already exists — a bookkeeping failure must not undo something paid for.
+
+**The 583-line mockup is gone.** `components/partner-dashboard-view.tsx` was ₹31,297 in
+invented earnings, 45 invented referrals, a Gold tier and a partner named Rahul Mehta,
+served to anyone holding the role. It now renders the signed-in partner's real data, and
+a new partner correctly sees **zeros and empty tables**. Two sections say plainly what
+does not exist rather than faking it:
+
+- **Invite People** cannot send anything — there is no email or WhatsApp integration. It
+  gives the partner their link, share buttons that open the partner's *own* WhatsApp or
+  mail client, and an **Invitation status** table of what happened to the people who used
+  the link. That closes the §31.1 gap in the only honest form available.
+- **Marketing Creatives** needs admin-uploaded templates (spec §5.11) and image storage —
+  neither exists — so it is an empty state that says so.
+
+**Admin (`components/admin/partners-panel.tsx`)** replaces W1's read-only table:
+applications with Approve (choosing a tier) / Reject, live partners with their code,
+tier, referral and conversion counts and lifetime earnings, and a commission queue with
+Approve and Record-payout. Approving flips the role, issues a code — **a re-approval
+reuses the existing code**, since links are already in circulation — and writes to
+`admin_audit_log`, as do tier changes, approvals and payouts.
+
+**Verification.**
+
+*A third tally in `scripts/access-matrix-test.mjs`, kept separate from the 49 and the 23
+exactly as the plan requires:*
+```
+15 assertions across partner data isolation      PASS
+  partner A reads their own referrals / commissions / payouts
+  partner A sees NOTHING of partner B's, in all three tables
+  partner A cannot write a commission, approve one, invent a payout,
+    or reassign someone else's referral
+  anon cannot read any of the three
+  grantSubscription() and grantServicePackage() both call accrueCommissionForPurchase()
+```
+Every row it creates is made inside a transaction and rolled back — confirmed 0 rows
+afterwards in all three tables.
+
+*A live end-to-end run of the whole lifecycle (10/10), then deleted and the profiles
+restored:*
+```
+approval -> channel_partner with a code and a tier
+referral recorded; a second partner cannot claim the same person
+commission = 10% of the real annual price, stored as accrued
+a rate change does NOT re-price a commission already earned
+approve -> approved; pay out -> paid, settled against a payout record
+dashboard lifetime earnings read the right number
+```
+
+*The middleware, over HTTP against a production build:* `?ref=TESTCODE1` sets an
+httpOnly, 30-day, SameSite=lax cookie; `?ref=../../etc/passwd` sets nothing; no `?ref=`
+sets nothing.
+
+> **⚠️ Worth a five-minute check when convenient, and worth reading now:** the
+> end-to-end run earned **₹300, not ₹100** — because `annual_price` in the live settings
+> table is **₹2,999**, not the ₹999 the spec and the brief both say. The commission is a
+> percentage of whatever the price actually is, so this is arithmetic doing what it was
+> told. **If ₹999 is the intended launch price, it needs changing in admin → Settings**,
+> where it also drives the pricing page.
+
+**What is NOT verified:** the admin buttons calling these actions, and a real partner
+signing in to see their own dashboard. Both need browser sessions. Add to the same pass
+as the other checks: approve an application, use the partner's link in a private window,
+sign up, then grant that account a membership from Sales Enquiries and watch the
+commission appear.
+
+**Standing bar:** tsc 0 · build green 25/25 (+ middleware) · leak 12/12 ·
+matrix 49/49 + 23/23 + **15/15 partner isolation** · grants 27/27 · bulk self-check PASS.

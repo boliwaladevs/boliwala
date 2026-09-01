@@ -14,7 +14,8 @@ import {
   getAdminPayments,
   getAdminPackages,
 } from "@/lib/data/admin"
-import { getPricingSettings } from "@/lib/access/settings"
+import { getPricingSettings, getCommissionSettings } from "@/lib/access/settings"
+import { getAdminPartners, getAdminCommissions } from "@/lib/data/partners"
 import { pageMetadata } from "@/lib/seo"
 
 export const metadata = pageMetadata({
@@ -41,6 +42,9 @@ export default async function AdminPage() {
     salesEnquiries,
     payments,
     packages,
+    partners,
+    commissions,
+    commissionSettings,
   ] = await Promise.all([
     getDashboardKpis(),
     getAdminListings({}),
@@ -55,6 +59,9 @@ export default async function AdminPage() {
     getSalesEnquiries({}),
     getAdminPayments(),
     getAdminPackages(),
+    getAdminPartners(),
+    getAdminCommissions(),
+    getCommissionSettings(),
   ])
 
   return (
@@ -73,6 +80,9 @@ export default async function AdminPage() {
       salesEnquiries={salesEnquiries}
       payments={payments}
       packages={packages}
+      partners={partners}
+      commissions={commissions}
+      commissionSettings={commissionSettings}
     />
   )
 }

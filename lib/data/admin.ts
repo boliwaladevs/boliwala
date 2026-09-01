@@ -676,6 +676,68 @@ const SETTINGS_KEY_MAP: Record<keyof EditablePricingSettings, string> = {
   successFeePct: "success_fee_pct",
 }
 
+export interface EditableCommissionSettings {
+  subscriptionPct: number
+  packagePct: number
+  successFeePct: number
+  silverMinConversions: number | null
+  goldMinConversions: number | null
+  attributionDays: number
+}
+
+const COMMISSION_KEY_MAP: Record<keyof EditableCommissionSettings, string> = {
+  subscriptionPct: "commission_rate_subscription",
+  packagePct: "commission_rate_package",
+  successFeePct: "commission_rate_success_fee",
+  silverMinConversions: "partner_tier_silver_min",
+  goldMinConversions: "partner_tier_gold_min",
+  attributionDays: "referral_attribution_days",
+}
+
+/**
+ * Saves the commission configuration and records what changed.
+ *
+ * Product spec 5.10 requires the change to be audit-logged with a timestamp,
+ * and rates are the one setting where "who moved this, and when" is a question
+ * somebody will eventually ask about money already paid out. Existing
+ * commissions are untouched by design: `partner_commissions` stores the rate it
+ * was accrued at.
+ */
+export async function updateCommissionSettings(
+  values: EditableCommissionSettings,
+  adminId: string,
+): Promise<void> {
+  const admin = createAdminClient()
+  const now = new Date().toISOString()
+
+  const { data: before } = await admin
+    .from("settings")
+    .select("key, value")
+    .in("key", Object.values(COMMISSION_KEY_MAP))
+
+  for (const [field, key] of Object.entries(COMMISSION_KEY_MAP) as [keyof EditableCommissionSettings, string][]) {
+    const { error } = await admin
+      .from("settings")
+      .update({ value: values[field], updatedAt: now, updatedBy: adminId })
+      .eq("key", key)
+    if (error) throw error
+  }
+
+  await admin.from("admin_audit_log").insert({
+    id: crypto.randomUUID(),
+    adminId,
+    action: "update_commission_settings",
+    entity: "settings",
+    entityId: null,
+    before: Object.fromEntries((before ?? []).map((r) => [r.key, r.value])),
+    after: Object.fromEntries(
+      (Object.entries(COMMISSION_KEY_MAP) as [keyof EditableCommissionSettings, string][]).map(
+        ([field, key]) => [key, values[field]],
+      ),
+    ),
+  })
+}
+
 export async function updatePricingSettings(values: EditablePricingSettings, adminId: string): Promise<void> {
   const admin = createAdminClient()
   const now = new Date().toISOString()

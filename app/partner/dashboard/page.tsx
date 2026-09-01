@@ -2,7 +2,9 @@ import { redirect } from "next/navigation"
 
 import { PartnerDashboardView } from "@/components/partner-dashboard-view"
 import { createClient } from "@/lib/supabase/server"
-import { pageMetadata } from "@/lib/seo"
+import { getPartnerDashboard } from "@/lib/data/partners"
+import { getCommissionSettings } from "@/lib/access/settings"
+import { pageMetadata, SITE_URL } from "@/lib/seo"
 
 export const metadata = pageMetadata({
   title: "Partner Dashboard",
@@ -15,22 +17,15 @@ export const metadata = pageMetadata({
  * Until Sprint 2, this page rendered to anyone — a mockup full of fabricated
  * partner earnings, served to the open internet. noindex and a robots
  * disallow keep it out of search results, which is not the same as keeping
- * people out.
+ * people out. It is now gated on the role itself (ROADMAP.md Item 5c), and
+ * `channel_partner` reaches it by signing in at /partner/login, which admits no
+ * other role (lib/auth/landing.ts).
  *
- * The guard used to be only "is signed in", matching /profile, on the
- * reasoning that no partner role was wired up yet. That left every ordinary
- * customer one URL away from invented commission figures, so it is now gated
- * on the role itself (ROADMAP.md Item 5c).
- *
- * `channel_partner` is a live role: one account held it as of 2026-08-31, and
- * that account now reaches this page by signing in at /partner/login, which
- * admits no other role (lib/auth/landing.ts). It is a value of the Postgres
- * enum `public."Role"`, so the four-role vocabulary is enforced by the
- * database and not only by this code.
- *
- * The portal itself is still a mockup — show.md lists /partner/dashboard as
- * "do not open" during a client demo. The approval flow and commission logic
- * remain Item 10, gated on D8.
+ * As of W6 the figures are real. `getPartnerDashboard` is called with the id
+ * from the *session*, never from anything the browser supplies, which is what
+ * keeps one partner out of another's earnings — the RLS policies in 0018 are
+ * the second lock behind it, asserted by the partner isolation cases in
+ * scripts/access-matrix-test.mjs.
  */
 export default async function PartnerDashboardPage() {
   const supabase = await createClient()
@@ -42,11 +37,20 @@ export default async function PartnerDashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, fullName, email")
     .eq("id", user.id)
     .single()
 
   if (profile?.role !== "channel_partner") redirect("/profile")
 
-  return <PartnerDashboardView />
+  const [data, commission] = await Promise.all([getPartnerDashboard(user.id), getCommissionSettings()])
+
+  return (
+    <PartnerDashboardView
+      partner={{ name: profile.fullName?.trim() || profile.email, email: profile.email }}
+      data={data}
+      commission={commission}
+      siteUrl={SITE_URL}
+    />
+  )
 }

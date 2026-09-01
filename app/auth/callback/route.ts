@@ -10,6 +10,7 @@ import {
   roleAllowedAtDoor,
 } from "@/lib/auth/landing"
 import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-param"
+import { attributeReferral } from "@/app/actions/referral"
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -48,6 +49,12 @@ export async function GET(request: NextRequest) {
         denied.cookies.delete(DOOR_COOKIE)
         return denied
       }
+
+      // Same referral attribution the password signup does. It runs on every
+      // Google sign-in, not only the first: the insert is a no-op for an
+      // account that already has a referral row (unique on referredProfileId),
+      // and there is no cookie to act on unless one was captured.
+      await attributeReferral()
 
       // Where the user was headed before the Google round trip, if anywhere.
       // Re-validated here rather than trusted: the cookie is attacker-writable

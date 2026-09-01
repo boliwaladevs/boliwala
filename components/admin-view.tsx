@@ -10,6 +10,7 @@ import { ListingFormPanel } from "./admin/listing-form-panel"
 import { BulkUploadPanel } from "./admin/bulk-upload-panel"
 import { CallbacksPanel } from "./admin/callbacks-panel"
 import { SalesEnquiriesPanel } from "./admin/sales-enquiries-panel"
+import { PartnersPanel } from "./admin/partners-panel"
 import { SettingsPanel } from "./admin/settings-panel"
 import type {
   DashboardKpis,
@@ -24,7 +25,8 @@ import type {
   AdminPaymentRow,
   AdminPackageRow,
 } from "@/lib/data/admin"
-import type { PricingSettings } from "@/lib/access/types"
+import type { PricingSettings, CommissionSettings } from "@/lib/access/types"
+import type { AdminPartnerRow, AdminCommissionRow } from "@/lib/data/partners"
 
 const pageMap: Record<string, { title: string; crumb: string }> = {
   'dashboard': { title: 'Dashboard', crumb: 'Boliwala Admin › Overview' },
@@ -125,6 +127,9 @@ export function AdminView({
   salesEnquiries,
   payments,
   packages,
+  partners,
+  commissions,
+  commissionSettings,
 }: {
   adminName: string
   kpis: DashboardKpis
@@ -140,6 +145,9 @@ export function AdminView({
   salesEnquiries: AdminSalesEnquiryRow[]
   payments: AdminPaymentRow[]
   packages: AdminPackageRow[]
+  partners: AdminPartnerRow[]
+  commissions: AdminCommissionRow[]
+  commissionSettings: CommissionSettings
 }) {
   const [activePage, setActivePage] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -684,7 +692,7 @@ export function AdminView({
           )}
 
           {/* SETTINGS */}
-          {activePage === 'settings' && <SettingsPanel initialSettings={pricingSettings} />}
+          {activePage === 'settings' && <SettingsPanel initialSettings={pricingSettings} initialCommission={commissionSettings} />}
 
           {/* REQUESTS */}
           {activePage === 'requests' && (
@@ -748,45 +756,7 @@ export function AdminView({
 
           {/* PARTNERS */}
           {activePage === 'partners' && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                <TcHead title={<>🤝 Channel Partners <span className="text-xs font-normal text-muted-foreground">{partnerCounts.approved} approved · {partnerCounts.pending} pending</span></>} acts={<><TcActionSelect options={['All Tiers', 'Associate', 'Silver', 'Gold']} /><TcActionSelect options={['All Status', 'Pending', 'Active']} /><TcActionBtn>⬇️ Export</TcActionBtn></>} />
-                <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-muted/50 border-b border-border"><Th>Partner</Th><Th>City / Localities</Th><Th>Tier</Th><Th>Referrals</Th><Th>Converted</Th><Th>Commission</Th><Th>Status</Th><Th>Actions</Th></tr></thead>
-                  <tbody>
-                    {partnerApplications.length === 0 ? (
-                      <EmptyRow cols={8}>
-                        No channel partner applications yet. The application form at <code className="text-xs">/partner</code> writes
-                        here, so a real submission appears the moment it arrives.
-                      </EmptyRow>
-                    ) : partnerApplications.map((p) => {
-                      const awaiting = p.status === 'new' || p.status === 'contacted'
-                      return (
-                        <tr key={p.id} className={`border-b border-border ${awaiting ? 'bg-amber-50/50 dark:bg-amber-500/5' : 'hover:bg-muted/30'}`}>
-                          <Td>
-                            <div className="font-bold text-foreground">{p.name}</div>
-                            <div className="text-[11px]">{p.phone} · {p.email}</div>
-                          </Td>
-                          <Td>{p.city}, {p.state}</Td>
-                          <Td>{NOT_TRACKED}</Td>
-                          <Td>{NOT_TRACKED}</Td>
-                          <Td>{NOT_TRACKED}</Td>
-                          <Td>{NOT_TRACKED}</Td>
-                          <Td><Pill type={PARTNER_STATUS_PILL[p.status]}>{p.status}</Pill></Td>
-                          <Td>
-                            <div className="flex gap-1.5">
-                              {awaiting
-                                ? <><RaBtn primary>✅ Approve</RaBtn><RaBtn danger>✕ Reject</RaBtn></>
-                                : <RaBtn>View</RaBtn>}
-                            </div>
-                          </Td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table></div>
-              </div>
-            </div>
+            <PartnersPanel applications={partnerApplications} partners={partners} commissions={commissions} />
           )}
 
           {/* ALERTS */}

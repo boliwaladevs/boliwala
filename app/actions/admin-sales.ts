@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/auth/admin"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getPricingSettings } from "@/lib/access/settings"
+import { accrueCommissionForPurchase } from "@/lib/data/partners"
 import {
   getSalesEnquiries,
   type AdminSalesEnquiryRow,
@@ -108,8 +109,9 @@ export async function grantSubscription(enquiryId: string, email: string): Promi
   const expiresAt = new Date(startedAt)
   expiresAt.setFullYear(expiresAt.getFullYear() + 1)
 
+  const subscriptionId = randomUUID()
   const { error: subError } = await admin.from("subscriptions").insert({
-    id: randomUUID(),
+    id: subscriptionId,
     userId: profile.id,
     plan: "annual",
     status: "active",
@@ -125,6 +127,16 @@ export async function grantSubscription(enquiryId: string, email: string): Promi
     type: "subscription",
     amount: settings.annualPrice,
     status: "paid",
+  })
+
+  // If this buyer arrived through a channel partner's link, that partner has
+  // just earned. This is the revenue event W6 hangs off — there is no other one
+  // before Razorpay exists.
+  await accrueCommissionForPurchase({
+    buyerProfileId: profile.id,
+    sourceType: "annual_subscription",
+    sourceId: subscriptionId,
+    grossAmount: settings.annualPrice,
   })
 
   await recordAudit(admin, actor.userId, "grant_subscription", profile.id, {
@@ -153,8 +165,9 @@ export async function grantServicePackage(enquiryId: string, email: string): Pro
 
   const settings = await getPricingSettings()
 
+  const packageId = randomUUID()
   const { error: pkgError } = await admin.from("service_packages").insert({
-    id: randomUUID(),
+    id: packageId,
     userId: profile.id,
     status: "pending",
     amountPaid: settings.servicePackagePrice,
@@ -168,6 +181,13 @@ export async function grantServicePackage(enquiryId: string, email: string): Pro
     type: "service_package",
     amount: settings.servicePackagePrice,
     status: "paid",
+  })
+
+  await accrueCommissionForPurchase({
+    buyerProfileId: profile.id,
+    sourceType: "service_package",
+    sourceId: packageId,
+    grossAmount: settings.servicePackagePrice,
   })
 
   await recordAudit(admin, actor.userId, "grant_service_package", profile.id, {

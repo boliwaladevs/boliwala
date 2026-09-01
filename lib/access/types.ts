@@ -46,6 +46,26 @@ export interface PricingSettings {
   creditCost: Record<FieldGroup, number>;
 }
 
+/**
+ * Channel partner commission configuration (product spec 5.10).
+ *
+ * The two live rates are the client's confirmed numbers. `successFeePct` is
+ * configurable but inert: nothing records a success fee, so nothing can accrue
+ * against it.
+ *
+ * The tier minimums are `null` until the client decides them. Null means "not
+ * set", which the admin panel says out loud rather than showing a 0 that would
+ * read as a decision nobody made.
+ */
+export interface CommissionSettings {
+  subscriptionPct: number;
+  packagePct: number;
+  successFeePct: number;
+  silverMinConversions: number | null;
+  goldMinConversions: number | null;
+  attributionDays: number;
+}
+
 /** The signed-in viewer, resolved against one specific listing. */
 export interface Viewer {
   userId: string;
