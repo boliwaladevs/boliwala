@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ChevronDown } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { describeAlertFilters } from "@/lib/alerts"
+import { CONTACT } from "@/lib/contact"
 import { ListingsPanel } from "./admin/listings-panel"
 import { ListingFormPanel } from "./admin/listing-form-panel"
 import { BulkUploadPanel } from "./admin/bulk-upload-panel"
@@ -161,6 +162,15 @@ export function AdminView({
    * Counted from the rows instead — an application is pending until someone
    * decides on it, and `contacted` is still undecided.
    */
+  // The click-to-chat generator used to display a hardcoded +91 98765 43210 and
+  // a wa.me link to match — a fake number in an admin tool is still a fake
+  // number. It now starts from the configured contact number, which is empty
+  // until the client supplies one, and says so rather than inventing one.
+  const [chatNumber, setChatNumber] = useState(CONTACT.whatsappHref?.replace("https://wa.me/", "") ?? "")
+  const [chatMessage, setChatMessage] = useState("Hi, I'm interested in this property")
+  const chatDigits = chatNumber.replace(/\D/g, "")
+  const chatLink = chatDigits ? `https://wa.me/${chatDigits}?text=${encodeURIComponent(chatMessage)}` : null
+
   /** Resolves bank ids in saved alert filters to names, so chips read "SBI", not a UUID. */
   const lenderNames = new Map(lenders.map((b) => [b.id, b.name]))
 
@@ -880,13 +890,26 @@ export function AdminView({
               </div>
               <FormSection title="🔗 Click-to-Chat Link Generator">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><Flbl>Boliwala WhatsApp Number</Flbl><Finp defaultValue="+91 98765 43210" /></div>
-                  <div><Flbl>Pre-filled Message</Flbl><Finp defaultValue="Hi, I'm interested in Flat 303..." /></div>
+                  <div>
+                    <Flbl>Boliwala WhatsApp Number</Flbl>
+                    <Finp value={chatNumber} onChange={setChatNumber} placeholder="set NEXT_PUBLIC_WHATSAPP_NUMBER" />
+                  </div>
+                  <div>
+                    <Flbl>Pre-filled Message</Flbl>
+                    <Finp value={chatMessage} onChange={setChatMessage} />
+                  </div>
                 </div>
-                <div className="mt-4 p-3.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex flex-wrap items-center gap-2.5">
-                  <span className="font-mono text-xs text-foreground flex-1 min-w-[200px]">https://wa.me/919876543210?text=Hi%2C%20I'm...</span>
-                  <RaBtn primary>📋 Copy Link</RaBtn>
-                </div>
+                {chatLink ? (
+                  <div className="mt-4 p-3.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex flex-wrap items-center gap-2.5">
+                    <span className="font-mono text-xs text-foreground flex-1 min-w-[200px] break-all">{chatLink}</span>
+                    <RaBtn primary onClick={() => navigator.clipboard.writeText(chatLink)}>📋 Copy Link</RaBtn>
+                  </div>
+                ) : (
+                  <div className="mt-4 p-3.5 bg-muted/50 border border-border rounded-lg text-xs text-muted-foreground leading-relaxed">
+                    No WhatsApp number configured. Set <code>NEXT_PUBLIC_WHATSAPP_NUMBER</code>, or type one above to
+                    generate a link.
+                  </div>
+                )}
               </FormSection>
               <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                 <TcHead title="📋 Manual WhatsApp Queue" acts={<TcActionBtn>Mark All Sent</TcActionBtn>} />

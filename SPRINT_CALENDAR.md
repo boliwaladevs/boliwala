@@ -530,7 +530,14 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
       10/10 live end-to-end run of the whole lifecycle. `MEMORY.md` §39.7.
 - [ ] **Check `annual_price`:** the live setting is **₹2,999**, not the ₹999 in the spec
       — so a 10% commission earns ₹300. Fix in admin → Settings if ₹999 is intended.
-- [ ] W7 — legal routes and real contact wiring
+- [x] **W7 — legal routes and contact wiring.** `/privacy` and `/terms` are live routes,
+      linked from the footer (previously `href="#"`) and in the sitemap; build baseline
+      is now **27/27** static pages. They carry no invented legalese — a wrong privacy
+      policy is a liability, not a placeholder — so the client's copy pastes straight in.
+      The Click-to-Chat generator in admin no longer shows a hardcoded `+91 98765 43210`
+      and a fake wa.me link; it reads the configured number and says so when there is
+      none. `NEXT_PUBLIC_CONTACT_EMAIL` added as a key to both env files.
+      **W7.3 brand assets skipped** — not yet delivered, nothing blocked. `MEMORY.md` §39.8.
 - [ ] W8 — eslint plus the three §36.5 defects
 - [ ] **Then STOP** — the inventory CSV gates everything after W8.
 

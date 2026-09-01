@@ -5241,7 +5241,7 @@ check. Instruction was explicit — **do not stop execution waiting for any of t
 | W4 | Lender model (banks→lenders) | ✅ **LANDED** | see §39.5 |
 | W5 | R2 + PDF documents | ⛔ **BLOCKED** | R2 not enabled on the account — see §39.6 |
 | W6 | Channel Partner portal | ✅ **LANDED** | see §39.7 |
-| W7 | Legal routes + contact wiring | ⬜ | |
+| W7 | Legal routes + contact wiring | ✅ **LANDED** | see §39.8 |
 | W8 | eslint + the three §36.5 defects | ⬜ | |
 
 ### 39.1 W0 — Plus Jakarta Sans ✅ LANDED
@@ -5779,3 +5779,48 @@ commission appear.
 
 **Standing bar:** tsc 0 · build green 25/25 (+ middleware) · leak 12/12 ·
 matrix 49/49 + 23/23 + **15/15 partner isolation** · grants 27/27 · bulk self-check PASS.
+
+### 39.8 W7 — legal routes, contact wiring, brand assets ✅ LANDED
+
+**W7.1 — the routes exist, the copy does not, and that is the point.**
+`/privacy` and `/terms` are real routes with correct metadata, both linked from the
+footer (which pointed at `href="#"`) and both in `app/sitemap.ts`. They share
+`components/legal-page.tsx`.
+
+> **They deliberately contain no invented legalese.** A placeholder privacy policy is
+> still a public statement about how personal data is handled, and a wrong one is a
+> liability, not a placeholder. Each page says the policy is being finalised and gives a
+> real email to ask in the meantime. **When the client's text arrives it is a paste into
+> `LegalPage`'s children, not a build.**
+
+**Build baseline moved: 25/25 → 27/27 static pages.** Expected, and exactly the +2 the
+plan predicted. Verified live: both routes 200, both in `/sitemap.xml`, both linked from
+the footer.
+
+**W7.2 — contact details.** The engineering was already done in an earlier sprint:
+`lib/contact.ts` reads `NEXT_PUBLIC_CONTACT_PHONE`, `NEXT_PUBLIC_WHATSAPP_NUMBER` and
+`NEXT_PUBLIC_CONTACT_EMAIL`, and **renders nothing rather than a placeholder when a
+value is empty**. The gate passes: `grep -rn "234) 567\|+1 (234)" app components` → **0**.
+(The one remaining hit anywhere is a sentence inside `lib/contact.ts`'s own docblock
+explaining why the helper exists — documentation, not output.)
+
+What W7.2 actually had left to fix was **one admin tool that still had a fake number in
+it**: the Click-to-Chat Link Generator hardcoded `+91 98765 43210` and displayed a
+`wa.me/919876543210` link to match. It now starts from the configured number, generates
+a real link as you type, copies it, and when nothing is configured says
+*"No WhatsApp number configured — set `NEXT_PUBLIC_WHATSAPP_NUMBER`"* instead of showing
+a link to a stranger's phone.
+
+`NEXT_PUBLIC_CONTACT_EMAIL` was missing as a key from `.env.local` and `.dev.vars`
+entirely — added, empty, so all three sit together and filling them is one line each when
+the client sends the numbers (expected the week of 2026-09-08). **They are not set yet,
+so the footer and contact page currently render those slots as nothing, which is
+correct.** `NEXT_PUBLIC_CONTACT_EMAIL` falls back to `hello@boliwala.com`.
+
+**W7.3 — brand assets: SKIPPED, as the plan instructs.** The client's assets are ~a week
+out. `app/icon.tsx`, `app/apple-icon.tsx` and `app/opengraph-image.tsx` still generate the
+amber mark at build time, and `components/logo.tsx` is unchanged. Nothing is blocked by
+this; swap them when the files arrive.
+
+**Standing bar:** tsc 0 · build green **27/27** · leak 12/12 · matrix 49/49 + 23/23 +
+15/15 · grants 27/27. ✅
