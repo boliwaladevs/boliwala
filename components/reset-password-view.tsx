@@ -18,41 +18,70 @@ export function ResetPasswordView() {
   const supabase = createClient()
 
   /**
-   * Confirm a recovery session actually exists before offering the form.
+   * Establish the recovery session from the link, and refuse the form without
+   * one.
    *
-   * Supabase's browser client picks the recovery token out of the URL fragment
-   * asynchronously, so there is a window where getSession() is legitimately
-   * empty on a perfectly good link — hence listening for the auth event as well
-   * as reading the session, and only concluding "expired" once both have had
-   * their turn. Without this the page rendered a live-looking form to anyone
-   * who opened /reset-password directly, and only revealed the problem after
-   * they had chosen and typed a new password.
+   * This client runs the PKCE flow, so a reset link arrives as `?code=<uuid>` in
+   * the query string — not as a token in the URL fragment — and that code has to
+   * be exchanged for a session before anything can be changed. Two bugs lived
+   * here:
+   *
+   * 1. Nothing exchanged the code. The page waited on a fixed 2s timer for a
+   *    session to appear by itself and called the link expired when it had not.
+   *    That is a race, not a check: the same valid link failed on a slow load
+   *    and worked on a fast one, which is exactly how it behaved in testing.
+   *
+   * 2. *Any* session was accepted as proof of recovery. Someone already signed
+   *    in who opened this page — with a stale link, or no link at all — got a
+   *    working form that silently changed the password of whatever account the
+   *    browser happened to be holding, rather than the one the link was issued
+   *    for. A live session is not a recovery grant and must not be read as one.
+   *
+   * So: exchange the code, and treat only a successful exchange (or an explicit
+   * PASSWORD_RECOVERY event, which is how the older fragment-style links land)
+   * as authorisation. No timer.
    */
   useEffect(() => {
-    let settled = false
+    let active = true
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || session) {
-        settled = true
-        setHasRecoverySession(true)
-      }
+    // Fires for the legacy fragment-style link, where the client parses the
+    // token itself. Harmless to keep alongside the exchange below.
+    const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY" && active) setHasRecoverySession(true)
     })
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        settled = true
-        setHasRecoverySession(true)
-      }
-    })
+    const establish = async () => {
+      const code = new URLSearchParams(window.location.search).get("code")
 
-    // The fragment is parsed on load; if nothing has arrived shortly after,
-    // there was no usable token in the link.
-    const timer = setTimeout(() => {
-      if (!settled) setHasRecoverySession(false)
-    }, 2000)
+      if (!code) {
+        // No code, no recovery. Deliberately does not fall back to an existing
+        // session — see (2) above.
+        const hash = window.location.hash
+        if (!hash.includes("type=recovery")) {
+          if (active) setHasRecoverySession(false)
+        }
+        return
+      }
+
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      if (!active) return
+
+      if (!error) {
+        setHasRecoverySession(true)
+        return
+      }
+
+      // `detectSessionInUrl` may have consumed the code microseconds earlier, in
+      // which case our exchange fails on an already-spent verifier while the
+      // session it produced is perfectly good. Only that case may pass.
+      const { data } = await supabase.auth.getSession()
+      if (active) setHasRecoverySession(!!data.session)
+    }
+
+    void establish()
 
     return () => {
-      clearTimeout(timer)
+      active = false
       subscription.subscription.unsubscribe()
     }
   }, [supabase])
