@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { AccountHeader } from "@/components/account-header"
 import { ProfileView } from "@/components/profile-view"
 import { createClient } from "@/lib/supabase/server"
+import { landingPathForRole } from "@/lib/auth/landing"
 import { getShortlistedListings } from "@/lib/data/listings"
 import { getAlertSubscriptions } from "@/lib/data/alerts"
 import { pageMetadata } from "@/lib/seo"
@@ -26,12 +27,20 @@ export default async function ProfilePage() {
   const [{ data: profile }, shortlisted, alerts] = await Promise.all([
     supabase
       .from("profiles")
-      .select('fullName, email, phone, creditsBalance, createdAt, city, "panNumber", "aadhaarNumber"')
+      .select('role, fullName, email, phone, creditsBalance, createdAt, city, "panNumber", "aadhaarNumber"')
       .eq("id", user.id)
       .single(),
     getShortlistedListings(user.id),
     getAlertSubscriptions(user.id),
   ])
+
+  // One email, one role: this is the customer account page, and staff and
+  // channel partners have their own. Without this, "My Account" or a bookmark
+  // would drop an admin here — a page whose every panel (shortlists, credits,
+  // alerts) belongs to a role they do not have.
+  if (profile?.role && profile.role !== "user") {
+    redirect(landingPathForRole(profile.role))
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground flex flex-col">

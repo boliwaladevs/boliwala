@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto"
 import { revalidatePath } from "next/cache"
 import { requireAdmin } from "@/lib/auth/admin"
+import { isAdminRole } from "@/lib/auth/landing"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { PartnerTier } from "@/lib/data/partners"
 
@@ -86,6 +87,17 @@ export async function approvePartnerApplication(
   }
 
   const existing = profile as { id: string; email: string; role: string; referralCode: string | null }
+
+  // One email, one role. Approving here would overwrite an admin or superadmin
+  // with 'channel_partner' and quietly cost them the admin panel — this is the
+  // only place in the codebase that writes a role, so it is the only place the
+  // rule can be enforced.
+  if (isAdminRole(existing.role)) {
+    return {
+      ok: false,
+      error: `${app.email} is a staff account and cannot also be a channel partner.`,
+    }
+  }
 
   // Re-approving must not hand out a second code — links already in circulation
   // carry the first one.

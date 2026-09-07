@@ -23,7 +23,22 @@ await client.connect()
 // A real signed-in user, and someone else's id to prove isolation.
 const { rows: people } = await client.query(`select id, email from public.profiles order by "createdAt" limit 2`)
 const ME = people[0].id
-const OTHER = people[1].id
+
+// Both OTHER assertions below are negative — "sees nothing", "cannot insert" —
+// so an id belonging to nobody exercises the same RLS predicates when there is
+// no second account to borrow. A real one is still preferred: it proves the
+// policy refuses a row that genuinely exists, where a synthetic id could in
+// principle be refused by a foreign key instead. Announced either way, because
+// a quietly weaker test is worse than a loudly weaker one.
+const OTHER = people[1]?.id ?? randomUUID()
+if (!people[1]) {
+  console.log(
+    "NOTE  only one profile exists, so isolation is checked against a synthetic id.",
+  )
+  console.log(
+    "      Sign up a second account and re-run for the stronger form of these two checks.",
+  )
+}
 
 let pass = 0, fail = 0
 const ok = (cond, msg, detail = "") => {

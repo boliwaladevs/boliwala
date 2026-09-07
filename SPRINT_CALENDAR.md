@@ -218,13 +218,21 @@ WEEK 5: Sprint 10 (fin) + Sprint 11 + Sprint 12 + Sprint 13 (QA)
 
 | # | Task | URD Ref | Status |
 |---|---|---|---|
-| 4.5.1 | Resend SDK setup + `lib/email/send.ts` | §7 | `[ ]` |
-| 4.5.2 | **Welcome email** (3-part series) | §6.2 | `[ ]` |
+| 4.5.1 | ~~Resend SDK~~ setup + `lib/email/client.ts` | §7 | `[x]` |
+| 4.5.2 | **Welcome email** (3-part series) — part 1 of 3 done | §6.2 | `[~]` |
 | 4.5.3 | **Payment receipt email** (₹999 + ₹9,999) | §6.2 | `[ ]` |
 | 4.5.4 | **Callback acknowledgement email** | §6.2 | `[ ]` |
 | 4.5.5 | Hook emails into signup/payment/callback flows | — | `[ ]` |
 
 **Verify:** Test-mode payment end-to-end · webhook idempotent · subscriber sees all gated fields · emails deliver in Resend dashboard
+
+> **Partly landed early, 2026-09-07 (`MEMORY.md` §43).** 4.5.1 is done, though with a
+> plain `fetch` to `api.resend.com` rather than the SDK — the Worker bundle is at 85% of
+> its cap and one POST does not need a dependency. 4.5.2 has its first message only: the
+> Google-signup welcome. The signup-confirmation and password-reset mails are sent by
+> Supabase Auth over Resend SMTP, so they need **dashboard configuration, not code** —
+> see §43.5, still outstanding. 4.5.3 stays blocked with payments; 4.5.4 is a decision,
+> not a blocker (§39.3).
 
 ---
 
@@ -437,13 +445,13 @@ gap. It should be escalated ahead of everything else in this table.
 
 See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detail.
 
-- [x] **Item A — one email, one role** (`efb32d8`). `/login` and `/partner/login`
-      each admit only their own roles, on the password path and the Google
-      callback alike; a wrong-door sign-in is signed back out rather than left
-      with a live session. `channel_partner` now lands on `/partner/dashboard`.
-      Verified by 23 new assertions across 8 role/door pairs in
-      `scripts/access-matrix-test.mjs`; the existing 49 gating assertions are
-      untouched and still pass.
+- [x] **Item A — one email, one role** (`efb32d8`). ~~`/login` and `/partner/login`
+      each admit only their own roles~~ — **the door half was reversed on
+      2026-09-07 at the client's instruction** ("place of login doesn't matter").
+      Either page now admits any account and the role alone decides the landing.
+      The *rule* — one email, one role — survives and is enforced in more places
+      than before. The 23 door assertions became 17 landing assertions.
+      `MEMORY.md` §43.2.
 - [x] **Item B — collapsible admin sidebar** (`8fc1963`). Six Radix `Collapsible`
       groups, the active group forced open, badges rolled up onto a collapsed
       header, preference stored in `localStorage`.
@@ -463,10 +471,16 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
 - [x] **Demo table ROWS no longer name invented people** — Packages, Payments, Users,
       Partners, Success Fees and Service Pipeline, plus three more the plan had not
       listed. Fixed by W1; see `MEMORY.md` §39.2.
-- [ ] Signing *up* at `/partner/login` still creates an ordinary `user` account.
-      Not a hole, but confusing. `MEMORY.md` §37.8.
-- [ ] `pnpm run lint` cannot run — **eslint is not a dependency of this project**
-      and was not before this window. `MEMORY.md` §37.8.
+- [x] Signing *up* at `/partner/login` creates an ordinary `user` account.
+      **No longer confusing — this is now the defined behaviour** (2026-09-07):
+      the page a person signs up or in on carries no meaning, only their role
+      does. `MEMORY.md` §43.2.
+- [x] `pnpm run lint` cannot run — eslint was not a dependency. **Fixed in W8**
+      (eslint added; baseline 0 errors / 287 warnings). ⚠️ **But it still cannot
+      run on the current machine**, for a different reason: `pnpm` is pinned to
+      11.1.3, which needs Node ≥ 22.13, and this machine has 22.12.0, so five
+      devDependencies are uninstalled. Upgrade Node, then `pnpm install`.
+      `MEMORY.md` §43.7.
 
 ### The pre-launch queue, `immediate_plan.md` W0–W8 (running, `MEMORY.md` §39)
 
@@ -561,3 +575,56 @@ See `MEMORY.md` §37.7 for the return summary and §37.8–§37.12 for the detai
       literal `"Geist Mono"` but `next/font` emits a hashed family name, and
       `_geistMono` in `app/layout.tsx:10` is assigned and never used. Found during W0,
       deliberately not fixed there. `MEMORY.md` §39.1.
+
+### Auth rework, 2026-09-07 — "one email, one role" — see `MEMORY.md` §43
+
+Client instruction, four parts. All code landed; two items outstanding, both listed
+at the bottom and neither of them code.
+
+- [x] **Clear all users except superadmin.** `scripts/clear-users.mjs` (new, dry-run by
+      default). Executed: 5 deleted, 0 failed, 1 survivor. Keep-list read from
+      `settings.superadmin_emails`, never hardcoded. `MEMORY.md` §43.1.
+- [x] **Superadmin cannot also be a user or partner, and always lands on `/admin`.**
+      Enforced in four places now, not one: `postLoginPath`, the header's "My Account",
+      the `/profile` page guard, and `approvePartnerApplication` (which now refuses a
+      staff account). `MEMORY.md` §43.2.
+- [x] **The login door no longer matters.** Either page authenticates any account; the
+      role alone decides the landing, and `?next=` applies to ordinary customers only.
+      The whole door model was deleted — see the note against Item A above, and
+      `MEMORY.md` §43.2 for why this is deliberate and not a regression.
+- [x] **Google ↔ password collisions, both directions.** A password account is refused
+      at Google sign-in (and the auto-created Google identity is unlinked again); a
+      Google account attempting a password gets told so instead of "invalid
+      credentials". Both offer a WhatsApp support button — `wa.me/919819927007`,
+      message pre-filled, not sent. `MEMORY.md` §43.3.
+- [x] **Welcome email on Google signup**, saying in as many words that no verification
+      is needed. Idempotent on `profiles."welcomeEmailSentAt"` (migration `0019`,
+      applied live). `MEMORY.md` §43.3–43.4.
+- [x] **Email signup verification flow.** New `/verify` route takes the 6-digit OTP,
+      then signs out and returns the user to `/login?verified=1`. `attributeReferral()`
+      moved here from the signup handler — with confirmation on there is no session at
+      signup, so leaving it there would have silently cost partners their commission.
+- [x] **Unverified-login message + resend, in two places** — a persistent inline panel
+      (not a toast, which vanishes before its own button can be clicked) and a
+      permanent link under the login tab.
+- [x] **Password recovery completed.** New `/forgot-password` route (it was previously
+      a button inside the login form, so nothing could link to it). `/reset-password`
+      now verifies a recovery session exists before rendering the form, and returns to
+      `/login?reset=1` instead of `/profile`.
+- [x] **Migration `0019_welcome_email_sent.sql`** applied live; column confirmed
+      present. **Next free number is `0020`.**
+- [x] **Tests updated.** 23 door assertions → 17 landing assertions, which also assert
+      the *absence* of the door check so it cannot be reintroduced unnoticed. Gating
+      49/49 and grants 27/27 unchanged. Build 27 → 29 pages.
+
+**Still owed — neither is code:**
+
+- [ ] **Supabase dashboard configuration.** SMTP → Resend, "Confirm email" ON, the two
+      email templates, and `/verify` in the redirect allowlist. **The email-user flow
+      is inert until this is done.** Full checklist at `MEMORY.md` §43.5.
+- [ ] **Upgrade Node to ≥ 22.13 and run `pnpm install`.** `pnpm` is pinned to 11.1.3
+      and refuses to start on 22.12.0, leaving five devDependencies uninstalled, so
+      `pnpm run lint` and `leak-test` could not be run this session. `MEMORY.md` §43.7.
+- [ ] **Sign up a second account and re-run the two degraded tests.** With only the
+      superadmin left, `access-matrix-test`'s partner-isolation block skips entirely
+      and two of `grants-test`'s checks use a synthetic id. Both say so loudly.

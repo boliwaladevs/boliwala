@@ -10,6 +10,7 @@ import { Logo } from "@/components/logo"
 import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { currentPath, withNext } from "@/lib/auth/next-param"
+import { landingPathForRole } from "@/lib/auth/landing"
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
@@ -18,6 +19,13 @@ export function Header() {
   // still resolving would flash "Log In" at someone who is already signed in,
   // so the cluster stays empty until we know which state to show.
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
+  // Where "My Account" goes. One email means one role, so an admin and a
+  // channel partner have no use for the customer profile page — this used to
+  // send every role to /profile regardless. Defaults to /profile so an
+  // unreadable role behaves like an ordinary customer, which is also what
+  // postLoginPath does and what the guards on /admin and /partner/dashboard
+  // assume.
+  const [accountHref, setAccountHref] = useState("/profile")
   const pathname = usePathname()
 
   // Where a Log In click should come back to. Only computed once the session
@@ -40,8 +48,22 @@ export function Header() {
     const supabase = createClient()
     let active = true
 
+    // The role decides where "My Account" points, so it is resolved alongside
+    // the session rather than in a second effect — the link is only rendered
+    // once `signedIn` is known, which gives this the same window to finish in.
+    const resolve = async (userId: string | undefined) => {
+      if (!userId) {
+        if (active) setAccountHref("/profile")
+        return
+      }
+      const { data } = await supabase.from("profiles").select("role").eq("id", userId).single()
+      if (active) setAccountHref(landingPathForRole(data?.role))
+    }
+
     supabase.auth.getUser().then(({ data }) => {
-      if (active) setSignedIn(!!data.user)
+      if (!active) return
+      setSignedIn(!!data.user)
+      void resolve(data.user?.id)
     })
 
     // Keeps the header honest after a sign-in or sign-out that happens on
@@ -49,7 +71,9 @@ export function Header() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) setSignedIn(!!session?.user)
+      if (!active) return
+      setSignedIn(!!session?.user)
+      void resolve(session?.user?.id)
     })
 
     return () => {
@@ -114,7 +138,7 @@ export function Header() {
 
           {signedIn === null ? null : signedIn ? (
             <Link
-              href="/profile"
+              href={accountHref}
               className="inline-flex items-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
             >
               My Account
@@ -197,7 +221,7 @@ export function Header() {
 
             {signedIn === null ? null : signedIn ? (
               <Link
-                href="/profile"
+                href={accountHref}
                 className="inline-flex items-center justify-center gap-2 text-sm px-5 py-2.5 bg-[rgb(251,146,60)] text-white hover:bg-[rgb(234,128,42)] transition-all duration-300"
                 onClick={closeMobileMenu}
               >

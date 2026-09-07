@@ -1,5 +1,5 @@
 /**
- * Where a user lands after signing in, and which login door admits them.
+ * Where a user lands after signing in.
  *
  * Client-safe on purpose — no `server-only` import — because the login form is
  * a client component and the OAuth callback is a route handler, and both need
@@ -18,9 +18,9 @@ export const ADMIN_ROLES = ["admin", "superadmin"] as const
  * CHECK, and concluded the column was unconstrained. Absence of a CHECK is not
  * absence of enforcement when the type itself is an enum. See §37.10.)
  *
- * Everything below still treats an unrecognised role as "not staff, not a
- * partner", because the value also arrives here from a profile row that may
- * be missing entirely.
+ * Everything below still treats an unrecognised role as an ordinary customer,
+ * because the value also arrives here from a profile row that may be missing
+ * entirely.
  */
 export const ROLES = ["user", "channel_partner", "admin", "superadmin"] as const
 export type Role = (typeof ROLES)[number]
@@ -41,67 +41,33 @@ export function landingPathForRole(role: string | null | undefined): string {
 }
 
 /* ------------------------------------------------------------------ *
- * One email, one role: the login doors
+ * One email, one role
  * ------------------------------------------------------------------ */
 
 /**
- * The two login surfaces. `/login` is the customer door, `/partner/login` is
- * the channel-partner door. They render the same component with a different
- * `variant`, but they are not interchangeable: an account may only enter
- * through the door belonging to its role.
+ * Where a completed sign-in lands.
  *
- * The data model already guarantees one role per email — `profiles.id` is a FK
- * to `auth.users(id)`, which Supabase keys on email, and `profiles.role` is a
- * single column. What was missing is that either door authenticated any role,
- * so an admin could sign in at the partner door and vice versa.
- */
-export type LoginDoor = "customer" | "partner"
-
-/** Cookie carrying the attempted door across the Google OAuth round trip.
+ * The page the sign-in started from is irrelevant. `/login` and `/partner/login`
+ * are two front doors onto the same building: either will authenticate any
+ * account, and the account's role alone decides which floor it opens onto. This
+ * replaces the earlier "door" model, which refused an admin at the partner page
+ * and a partner at the customer page — removed deliberately on the client's
+ * instruction (2026-09-07), not lost in a refactor.
  *
- * Same reasoning as `NEXT_COOKIE` in `next-param.ts`: putting the door on the
- * `redirectTo` handed to Supabase would change the callback URL that Supabase
- * matches against its redirect allowlist. A cookie keeps that URL
- * byte-identical to the one already working. Short-lived; the callback clears
- * it. Only ever set for the partner door — its absence means the customer one.
- */
-export const DOOR_COOKIE = "bw_door"
-
-/** Query parameter set on a wrong-door bounce, so the door can explain itself. */
-export const DENIED_PARAM = "denied"
-
-export function loginPathForDoor(door: LoginDoor): string {
-  return door === "partner" ? "/partner/login" : "/login"
-}
-
-export function doorFromCookie(raw: string | null | undefined): LoginDoor {
-  return raw === "partner" ? "partner" : "customer"
-}
-
-/**
- * Whether a role may sign in at a given door.
+ * `?next=` is honoured for ordinary customers only. A partner or a member of
+ * staff always lands in their own account, because "one email, one role" is
+ * about which account a person has, and a `next=` pointing anywhere else is
+ * either a stale deep link or an attempt to steer them out of it. Guests
+ * clicking a listing before signing in are the case `next=` exists for, and
+ * they are all role `user`.
  *
- * The partner door is strict: only an explicit `channel_partner` passes, so a
- * missing or unreadable profile row is a refusal. The customer door is
- * deliberately permissive about unknown roles — it is the default door, a
- * transient profile read failure there would lock real customers out of the
- * site, and the pages that actually matter (`/admin`, `/partner/dashboard`)
- * carry their own server-side role guards regardless. The one role the
- * customer door turns away is `channel_partner`, which has a door of its own.
+ * A null role — a profile row that could not be read — is treated as a customer
+ * rather than refused. A transient read failure must not lock real customers
+ * out of the site, and the pages that actually matter (`/admin`,
+ * `/partner/dashboard`, `/profile`) each carry their own server-side role guard
+ * regardless of what this function returns.
  */
-export function roleAllowedAtDoor(door: LoginDoor, role: string | null | undefined): boolean {
-  if (door === "partner") return role === "channel_partner"
-  return role !== "channel_partner"
-}
-
-/**
- * What to tell someone who reached the wrong door. Names the right one — that
- * is the only useful thing the message can do. Depends on the door alone and
- * not on the role, so it stays correct after the session has been signed out
- * and the role is no longer known.
- */
-export function wrongDoorMessage(door: LoginDoor): string {
-  return door === "partner"
-    ? "This is the channel-partner login. Sign in at /login instead."
-    : "This is the customer login. Channel partners sign in at /partner/login."
+export function postLoginPath(role: string | null | undefined, next: string | null): string {
+  if (role === "user" || role == null) return next ?? "/profile"
+  return landingPathForRole(role)
 }

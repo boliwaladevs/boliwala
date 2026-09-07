@@ -3,41 +3,52 @@
 import { useEffect, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { displayCount, type SiteStats } from "@/lib/stats"
+import { postLoginPath } from "@/lib/auth/landing"
 import {
-  DENIED_PARAM,
-  DOOR_COOKIE,
-  landingPathForRole,
-  roleAllowedAtDoor,
-  wrongDoorMessage,
-  type LoginDoor,
-} from "@/lib/auth/landing"
+  CONFLICT_PARAM,
+  googleAccountSupportMessage,
+  passwordAccountSupportMessage,
+  whatsappSupportUrl,
+} from "@/lib/auth/conflict"
 import { NEXT_COOKIE, nextFromLocation, withNext } from "@/lib/auth/next-param"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { attributeReferral } from "@/app/actions/referral"
+import { authMethodForEmail } from "@/app/actions/auth-methods"
+import { WhatsAppIcon } from "@/components/whatsapp-icon"
 
 interface AuthViewProps {
   defaultTab?: "login" | "signup"
   stats: SiteStats
   /**
-   * "partner" renders the same page for /partner/login. The layout is
-   * deliberately identical — the only differences are where an email/password
-   * login lands and the absence of the self-referential partner link.
+   * "partner" renders the same page for /partner/login. Both pages authenticate
+   * any account — the role decides where it lands, not the page it arrived
+   * through. The variant only changes the copy and drops the self-referential
+   * partner link.
    */
   variant?: "customer" | "partner"
 }
 
+/**
+ * The blocking explanation shown in place of a toast, when the reason a sign-in
+ * failed is something the user has to act on rather than simply read.
+ */
+type Notice =
+  | { kind: "unverified"; email: string }
+  | { kind: "google-account"; email: string }
+  | { kind: "password-account"; email: string }
+  | null
+
 export function AuthView({ defaultTab = "login", stats, variant = "customer" }: AuthViewProps) {
   const isPartner = variant === "partner"
-  const door: LoginDoor = isPartner ? "partner" : "customer"
   const [activeTab, setActiveTab] = useState<"login" | "signup">(defaultTab)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [notice, setNotice] = useState<Notice>(null)
   const router = useRouter()
   const { toast } = useToast()
   const supabase = createClient()
@@ -48,75 +59,120 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
   const [nextPath, setNextPath] = useState<string | null>(null)
   useEffect(() => setNextPath(nextFromLocation()), [])
 
-  // The OAuth callback bounces a wrong-door sign-in back here with ?denied=1,
-  // having already signed the session out. Read the same way as `next` above,
-  // and for the same reason.
+  // Signals bounced back here from elsewhere in the auth flow, read the same
+  // way and for the same reason as `next` above.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get(DENIED_PARAM) !== "1") return
-    toast({ variant: "destructive", title: "Wrong login page", description: wrongDoorMessage(door) })
-  }, [door, toast])
+    const params = new URLSearchParams(window.location.search)
+
+    // The OAuth callback refuses a Google sign-in into an account created with
+    // a password, having already signed the session back out.
+    if (params.get(CONFLICT_PARAM) === "email") {
+      setNotice({ kind: "password-account", email: "" })
+      return
+    }
+    if (params.get("verified") === "1") {
+      toast({ title: "Email verified", description: "You can now log in." })
+      return
+    }
+    if (params.get("reset") === "1") {
+      toast({ title: "Password updated", description: "Log in with your new password." })
+    }
+  }, [toast])
+
+  const resendVerification = async (address: string) => {
+    if (!address) {
+      toast({
+        variant: "destructive",
+        title: "Enter your email first",
+        description: "Type your email above, then use the resend link.",
+      })
+      return
+    }
+    const { error } = await supabase.auth.resend({ type: "signup", email: address })
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't resend", description: error.message })
+      return
+    }
+    toast({ title: "Verification email sent", description: `Check the inbox for ${address}.` })
+  }
 
   const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+    setNotice(null)
 
     if (activeTab === "signup") {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/verify?email=${encodeURIComponent(email)}`,
+        },
       })
       setSubmitting(false)
+
       if (error) {
         toast({ variant: "destructive", title: "Couldn't create account", description: error.message })
         return
       }
-      // A referral is attributed here, on the account that has just been
-      // created, because the cookie that carries it is httpOnly and only the
-      // server can read it. Deliberately not awaited for its result: it never
-      // reports failure, and a partner attribution must not delay or block
-      // somebody getting into their new account.
-      await attributeReferral()
 
-      toast({ title: "Welcome to Boliwala!", description: "5 free credits added to your account." })
+      // With email confirmation on, signUp returns no session — the account
+      // exists but cannot be used until it is verified. The referral that used
+      // to be attributed here has moved to /verify, which is the first point
+      // where a session exists again; attributing it here would silently do
+      // nothing and cost the partner their commission.
+      if (!data.session) {
+        router.push(`/verify?email=${encodeURIComponent(email)}`)
+        return
+      }
+
+      // Confirmation switched off in the Supabase project: the account is
+      // usable immediately, so treat it as a completed sign-in.
       router.push(nextPath ?? "/profile")
       router.refresh()
       return
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
     if (error) {
       setSubmitting(false)
+
+      // Signed up but never verified. Supabase reports this distinctly, and it
+      // is worth catching: the generic message sends people into the password
+      // reset flow, which is not their problem and cannot help them.
+      if (error.code === "email_not_confirmed") {
+        setNotice({ kind: "unverified", email })
+        return
+      }
+
+      // A Google account has no password, so every attempt at one looks like a
+      // wrong password. Ask the server which provider owns the address rather
+      // than repeating an answer that sends them round the reset loop forever.
+      if (error.code === "invalid_credentials") {
+        const method = await authMethodForEmail(email)
+        if (method === "google") {
+          setNotice({ kind: "google-account", email })
+          return
+        }
+      }
+
       toast({ variant: "destructive", title: "Couldn't log in", description: error.message })
       return
     }
 
-    // One email, one role: each door admits only the roles that belong to it.
-    // Checked before ?next= is honoured — otherwise an account could walk
-    // straight past the gate just by arriving with a next= on the URL.
+    // One email, one role. Either login page authenticates any account; the
+    // role alone decides where it lands, and ?next= is honoured for ordinary
+    // customers only. See lib/auth/landing.ts.
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", data.user.id)
       .single()
 
-    if (!roleAllowedAtDoor(door, profile?.role)) {
-      // Sign the session back out. Leaving a valid session behind while showing
-      // an error is a half-open door — the visitor is still logged in, and any
-      // link they follow next lets them straight in.
-      await supabase.auth.signOut()
-      setSubmitting(false)
-      toast({ variant: "destructive", title: "Wrong login page", description: wrongDoorMessage(door) })
-      return
-    }
-
     setSubmitting(false)
-
-    // A ?next= the user actually came from wins over the role's own landing
-    // page — that is the whole point of the parameter. Staff skip the customer
-    // profile page and partners go to their portal; there is no separate admin
-    // login, the account's own role decides where it lands.
-    router.push(nextPath ?? landingPathForRole(profile?.role))
+    router.push(postLoginPath(profile?.role, nextPath))
     router.refresh()
   }
 
@@ -127,12 +183,6 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
     if (nextPath) {
       document.cookie = `${NEXT_COOKIE}=${encodeURIComponent(nextPath)}; Path=/; Max-Age=600; SameSite=Lax`
     }
-    // Same trick for the door, so the callback can apply the one-email-one-role
-    // rule to Google sign-in too. Only set on the partner door; its absence
-    // means the customer one.
-    if (isPartner) {
-      document.cookie = `${DOOR_COOKIE}=partner; Path=/; Max-Age=600; SameSite=Lax`
-    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -142,30 +192,15 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
     }
   }
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      toast({ variant: "destructive", title: "Enter your email first", description: "Type your email above, then click Forgot password?." })
-      return
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    })
-    if (error) {
-      toast({ variant: "destructive", title: "Couldn't send reset email", description: error.message })
-      return
-    }
-    toast({ title: "Check your email", description: `Password reset link sent to ${email}.` })
-  }
-
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-background">
-      
+
       {/* LEFT SIDE - VISUAL (Hidden on smaller screens) */}
       <div className="hidden md:flex md:w-1/2 lg:w-[45%] bg-[#0A0F1C] relative flex-col justify-between p-12 lg:p-20 overflow-hidden">
         {/* Glow effects */}
         <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(27,79,216,0.15)_0%,transparent_70%)] pointer-events-none" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(217,119,6,0.1)_0%,transparent_70%)] pointer-events-none" />
-        
+
         <div className="relative z-10">
           <Link href="/" className="inline-flex items-center gap-2 group mb-16">
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white shrink-0 font-display text-xl">B</div>
@@ -209,7 +244,7 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
 
       {/* RIGHT SIDE - FORM */}
       <div className="w-full md:w-1/2 lg:w-[55%] flex items-center justify-center p-6 sm:p-12 lg:p-20 relative">
-        
+
         {/* Mobile Logo (Only visible on small screens) */}
         <div className="absolute top-6 left-6 md:hidden">
           <Link href="/" className="inline-flex items-center gap-2 group">
@@ -223,14 +258,14 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
         </div>
 
         <div className="w-full max-w-[440px] mt-12 md:mt-0">
-          
+
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-foreground mb-2 font-display">
               {activeTab === "login" ? "Welcome back" : "Create an account"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {activeTab === "login" 
-                ? "Enter your details to access your account." 
+              {activeTab === "login"
+                ? "Enter your details to access your account."
                 : "Sign up to start browsing auction properties."}
             </p>
           </div>
@@ -238,20 +273,20 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
           {/* Custom Tabs */}
           <div className="flex p-1 bg-secondary/50 rounded-xl mb-8">
             <button
-              onClick={() => setActiveTab("login")}
+              onClick={() => { setActiveTab("login"); setNotice(null) }}
               className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === "login" 
-                  ? "bg-background text-foreground shadow-sm" 
+                activeTab === "login"
+                  ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Login
             </button>
             <button
-              onClick={() => setActiveTab("signup")}
+              onClick={() => { setActiveTab("signup"); setNotice(null) }}
               className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === "signup" 
-                  ? "bg-background text-foreground shadow-sm" 
+                activeTab === "signup"
+                  ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -259,8 +294,91 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
             </button>
           </div>
 
+          {/* Why a sign-in was refused, when it is something to act on rather
+              than simply read. Deliberately inline and persistent rather than a
+              toast: a toast disappears before its resend or support button can
+              be reached. */}
+          {notice?.kind === "unverified" && (
+            <div role="alert" className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+              <p className="font-bold text-amber-900 mb-1">Check your email and verify your email first</p>
+              <p className="text-amber-800 leading-relaxed mb-3">
+                {`We sent a verification link and code to ${notice.email}. You can log in once your email is verified.`}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => resendVerification(notice.email)}
+                  className="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors"
+                >
+                  Resend verification email
+                </button>
+                <Link
+                  href={`/verify?email=${encodeURIComponent(notice.email)}`}
+                  className="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-colors"
+                >
+                  Enter my code
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {notice?.kind === "google-account" && (
+            <div role="alert" className="mb-6 rounded-xl border border-blue-300 bg-blue-50 p-4 text-sm">
+              <p className="font-bold text-blue-900 mb-1">This account is registered with Google</p>
+              <p className="text-blue-800 leading-relaxed mb-3">
+                {`${notice.email} was created using Google sign-in, so it has no password. Continue with Google below, or contact support if you need help.`}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors"
+                >
+                  Continue with Google
+                </button>
+                <a
+                  href={whatsappSupportUrl(googleAccountSupportMessage(notice.email))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 justify-center px-3 py-2 rounded-lg bg-[#25D366] hover:bg-[#1eb855] text-white text-xs font-bold transition-colors"
+                >
+                  <WhatsAppIcon className="w-3.5 h-3.5" />
+                  WhatsApp support
+                </a>
+              </div>
+            </div>
+          )}
+
+          {notice?.kind === "password-account" && (
+            <div role="alert" className="mb-6 rounded-xl border border-blue-300 bg-blue-50 p-4 text-sm">
+              <p className="font-bold text-blue-900 mb-1">This email is already registered with a password</p>
+              <p className="text-blue-800 leading-relaxed mb-3">
+                This account was created with an email and password, so Google sign-in
+                can't be used to reach it. Log in with your password below, or reset
+                the password if you've forgotten it.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/forgot-password"
+                  className="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors"
+                >
+                  Reset my password
+                </Link>
+                <a
+                  href={whatsappSupportUrl(passwordAccountSupportMessage(email || "my account"))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 justify-center px-3 py-2 rounded-lg bg-[#25D366] hover:bg-[#1eb855] text-white text-xs font-bold transition-colors"
+                >
+                  <WhatsAppIcon className="w-3.5 h-3.5" />
+                  WhatsApp support
+                </a>
+              </div>
+            </div>
+          )}
+
           <form className="flex flex-col gap-5" onSubmit={handleAuthAction}>
-            
+
             {activeTab === "signup" && (
               <div className="flex flex-col gap-2">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Full Name</label>
@@ -291,7 +409,7 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
               <div className="flex justify-between items-center">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Password</label>
                 {activeTab === "login" && (
-                  <button type="button" onClick={handleForgotPassword} className="text-[11px] font-bold text-blue-600 hover:text-blue-700">Forgot password?</button>
+                  <Link href={withNext("/forgot-password", nextPath)} className="text-[11px] font-bold text-blue-600 hover:text-blue-700">Forgot password?</Link>
                 )}
               </div>
               <div className="relative">
@@ -319,6 +437,22 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
             <button disabled={submitting} className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-12 rounded-xl mt-2 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5">
               {submitting ? "Please wait…" : activeTab === "login" ? "Log In" : "Create Account"}
             </button>
+
+            {/* Always present on the login tab, not only after a failed attempt:
+                someone who dismissed the notice above, or who never received the
+                first email at all, otherwise has nowhere to go. */}
+            {activeTab === "login" && (
+              <p className="text-center text-xs text-muted-foreground">
+                Didn't get the verification email?{" "}
+                <button
+                  type="button"
+                  onClick={() => resendVerification(email)}
+                  className="font-bold text-blue-600 hover:text-blue-700"
+                >
+                  Resend
+                </button>
+              </p>
+            )}
 
             <div className="relative flex items-center py-4">
               <div className="flex-grow border-t border-border"></div>
@@ -350,7 +484,7 @@ export function AuthView({ defaultTab = "login", stats, variant = "customer" }: 
 
         </div>
       </div>
-      
+
     </div>
   )
 }

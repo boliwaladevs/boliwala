@@ -20,12 +20,16 @@ export interface ContactSalesInput {
  * validation, same `{ ok }` return, same anon-insert RLS path — because it is
  * the same kind of operation and there is no reason for a second idiom.
  *
- * **The enquiry lands in the database and nowhere else.** `RESEND_API_KEY` is
- * empty and there is no email code in this repo, so nothing notifies anyone on
- * submit; an admin sees it in the panel's Sales Enquiries section. The success
- * copy the caller shows must not promise more than that, and the admin sidebar
- * badge is what makes it visible. Adding email is a scoped decision for the
- * client, not an assumption to build on (immediate_plan.md W2).
+ * **The enquiry lands in the database and nowhere else.** Nothing notifies
+ * anyone on submit; an admin sees it in the panel's Sales Enquiries section.
+ * The success copy the caller shows must not promise more than that, and the
+ * admin sidebar badge is what makes it visible.
+ *
+ * This used to be because there was no way to send email at all. There is now
+ * (`lib/email/client.ts`, added with the auth rework), so this is a standing
+ * decision rather than a limitation: notifying on submit was never asked for,
+ * and adding it is a scoped change for the client to call
+ * (immediate_plan.md W2).
  */
 export async function submitSalesEnquiry(
   input: ContactSalesInput,

@@ -599,6 +599,42 @@
       emergency.
       <br><br><b>Vector search moved to post-launch</b> (<code>deferred_plan.md</code>
       D7) — it is a Tier 4 differentiator and did not belong in a pre-launch queue.
+      <br><br><b>7 Sep — AUTH REWORK: one email, one role.</b> A direct client
+      instruction, and the first engineering work since the queue closed. Full record in
+      <code>MEMORY.md</code> §43.
+      <b>(1)</b> <b>Every account except the superadmin was deleted</b> — 5 removed, 1
+      left, via a new dry-run-by-default <code>scripts/clear-users.mjs</code> that reads
+      its keep-list from <code>settings.superadmin_emails</code> rather than a hardcoded
+      address.
+      <b>(2)</b> <b>The login-door model was removed on purpose.</b> Since 31 Aug,
+      <code>/login</code> and <code>/partner/login</code> each admitted only their own
+      roles; the client's instruction was that <i>the place of login must not matter</i>.
+      Either page now authenticates any account and the role alone decides where it
+      lands — a superadmin signing in at the partner page still arrives at
+      <code>/admin</code>. The <i>rule</i> — one email, one role — survives and is now
+      enforced in four places rather than one, including the header's "My Account" link
+      and the <code>/profile</code> page, both of which used to send every role to the
+      customer profile. <b>This is deliberate: do not read its absence as a regression.</b>
+      The test suite now asserts the door check is gone.
+      <b>(3)</b> <b>Google and password accounts can no longer collide silently.</b> A
+      password account is refused at Google sign-in and the auto-created Google identity
+      is unlinked again; a Google account attempting a password is told so instead of
+      being handed "invalid credentials" and sent round the reset loop. Both offer a
+      WhatsApp support button that opens the chat with the message typed but not sent.
+      <b>(4)</b> <b>Email signup now verifies.</b> A new <code>/verify</code> route takes
+      the six-digit code from the welcome mail; unverified logins get a persistent panel
+      with a resend button rather than a toast that vanishes before it can be clicked;
+      <code>/forgot-password</code> is a real linkable route at last; and
+      <code>/reset-password</code> now checks the recovery link is valid <i>before</i>
+      asking for a new password instead of after.
+      <br><br><b>⚠️ Two things are still owed, and neither is code.</b> The email flow for
+      password users is <b>inert until the Supabase dashboard is configured</b> — SMTP
+      pointed at Resend, "Confirm email" switched on, and the two templates given both a
+      link and the OTP (checklist at <code>MEMORY.md</code> §43.5). And <b>this machine
+      cannot run <code>pnpm</code></b>: it pins 11.1.3, which needs Node ≥ 22.13 against
+      the 22.12.0 installed, so five devDependencies are missing and the linter could not
+      be run this session (§43.7). No <code>resend</code> dependency was added — sending
+      is one <code>fetch</code>, and the bundle is already at 85% of its cap.
     </div>
   </div>
 </div>
@@ -764,16 +800,16 @@
         <div class="row">
           <div class="row-label">
             <span class="row-name">Sprint 4.5 — Email</span>
-            <span class="row-meta">blocked → B2</span>
+            <span class="row-meta">part-landed 7 Sep</span>
           </div>
           <div style="grid-column: 2 / 3;">
-            <div class="bar blocked">Waiting
-              <small>Resend key</small>
+            <div class="bar shipped">✓ Sender built
+              <small>Resend key arrived; sending is one fetch, no SDK · §43</small>
             </div>
           </div>
           <div style="grid-column: 3 / 4;">
-            <div class="bar scheduled">Resend email
-              <small>Welcome · receipt · callback ack</small>
+            <div class="bar blocked">Needs dashboard
+              <small>Supabase SMTP + templates · then receipt &amp; callback ack</small>
             </div>
           </div>
           <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>

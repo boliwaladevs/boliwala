@@ -16,9 +16,14 @@ the map of what went where and when it is worth opening.
 > 3. **§39 / §40** — what was built on 1 September and the return summary, kept in full
 >    because they describe the code as it is today.
 >
-> **There is no unblocked engineering work in this project right now.** Before starting
-> anything, check `client_requirement.md` — the blocker is a credential, a file, a
-> payment or a decision, and none of them resolve on their own.
+> **Superseded 7 September by §43.** The client gave a direct engineering instruction
+> that day — the auth rework, "one email one role" — and it is built. Read **§43**
+> before anything else in this file: it deleted every account but the superadmin,
+> removed the login-door model on purpose, and left two items outstanding (a set of
+> Supabase dashboard settings, §43.5, and a Node upgrade before lint can run, §43.7).
+>
+> Other than those two, the original note still holds: the remaining blockers are a
+> credential, a file, a payment or a decision. Check `client_requirement.md`.
 
 > **🔄 UPDATE RULE (MANDATORY):** on every code change and commit, these files must be
 > updated to reflect current state:
@@ -47,7 +52,7 @@ Workers Builds auto-deploys on push.
 |---|---|
 | **Pre-launch queue `immediate_plan.md` W0–W8** | ✅ Complete — **except W5**, blocked on R2, re-filed below the STOP as §0 |
 | **The STOP** | 🛑 `=== STOP: CSV REQUIRED ===` reached and respected. W-INGEST, W-SEO, W-DNS not started |
-| **Database** | 5 migrations applied live: `0014` contact-sales · `0015` manual payments · `0016` grants · `0017` lenders · `0018` partner commissions. **Next free number is `0019`** |
+| **Database** | 6 migrations applied live: `0014` contact-sales · `0015` manual payments · `0016` grants · `0017` lenders · `0018` partner commissions · `0019` welcome-email stamp (**§43**). **Next free number is `0020`** |
 | **Worker bundle** | **2599.55 KiB gzip — 85% of the 3 MB free cap.** Measured 1 Sep, first successful local build on this machine. **§41** |
 | **What blocks launch** | The inventory CSV, and a card on the Cloudflare account. Everything else is copy or a decision. **`client_requirement.md`** |
 
@@ -75,10 +80,10 @@ they must not regress.**
 
 ```bash
 npx tsc --noEmit                          # clean, exit 0
-pnpm run build                            # green — 27/27 static pages
+pnpm run build                            # green — 29/29 static pages
 pnpm run lint                             # 0 errors, 287 warnings
 node scripts/leak-test.mjs <url>          # 12/12 PASS  (needs a `next start` server)
-node scripts/access-matrix-test.mjs       # 49/49 gating + 23/23 doors + 15/15 partner isolation
+node scripts/access-matrix-test.mjs       # 49/49 gating + 17/17 landing + 15/15 partner isolation
 node scripts/grants-test.mjs              # 27/27 PASS
 node scripts/bulk-sample-selfcheck.mjs    # PASS + 4 header spellings
 ```
@@ -86,10 +91,20 @@ node scripts/bulk-sample-selfcheck.mjs    # PASS + 4 header spellings
 `access-matrix-test.mjs` runs as
 `node --experimental-strip-types --import ./scripts/ts-resolve-hook.mjs scripts/access-matrix-test.mjs`.
 
-> **Keep the three access-matrix tallies separate.** 49, 23 and 15 are independent
+> **Keep the three access-matrix tallies separate.** 49, 17 and 15 are independent
 > baselines. Folding them into one number makes every future comparison meaningless.
 
-**Last full run: 1 September 2026 — all green.**
+**The 23-door tally is gone, not regressed.** The login-door model was removed on
+7 September (§43) and its 23 assertions were replaced by 17 landing assertions. The page
+count rose 27 → 29 with `/verify` and `/forgot-password`.
+
+**Two scripts need a second profile and currently do not have one.** `clear-users.mjs`
+left only the superadmin, so `access-matrix-test`'s partner-isolation block **skips**
+(loudly — it prints SKIP and says it did not pass), and two of `grants-test`'s 27 fall
+back to a synthetic id. Both announce the degradation. Sign up a second account and
+re-run to restore the strong form.
+
+**Last full run: 7 September 2026 — see §43.6.**
 
 ---
 
@@ -273,8 +288,11 @@ Found, understood, and consciously left alone. Each says why.
 3. **`listings."bankContact"` keeps its name.** Not a foreign key; renaming costs another
    migration plus `redact.ts` and access-type changes for no functional gain. Its label
    already reads "Lender Contact". [§39.5]
-4. **The Alert Engine does not actually fire.** There is no email system. The panel copy
-   now describes the designed state honestly instead of claiming a live behaviour. [W8]
+4. **The Alert Engine does not actually fire.** ~~There is no email system.~~ **Corrected
+   7 September:** there is now — see §43. Resend is wired for the Google welcome mail and
+   Supabase Auth's SMTP goes through Resend for signup confirmation and password reset.
+   The *alert* engine still does not fire: nothing schedules it and no alert template
+   exists. The panel copy still describes the designed state honestly. [W8, §43]
 
 **Still needing a browser and a signed-in session — nothing here can do it:**
 approve a partner → open their link in a private window → sign up → grant that account a
@@ -454,10 +472,16 @@ legitimate form placeholder. ✅
 ### 39.3 W2 — Contact Sales enquiry flow (in progress)
 
 **Notification decision, taken as the plan directed:** admin-panel-only. `RESEND_API_KEY`
-is empty and the repo has no email code, so an enquiry lands in the database and is
+was empty and the repo had no email code, so an enquiry lands in the database and is
 surfaced by the panel plus a sidebar badge. Nothing pretends to send an email. The
 user has this item; if they want email on submit it is a scoped addition, not an
 assumption baked in now.
+
+> **Superseded in part, 7 September (§43).** The key is populated and the repo now has
+> an email sender (`lib/email/client.ts`). The *decision* stands unchanged — Contact
+> Sales is still admin-panel-only, because nobody asked for it to change — but the
+> reason recorded above no longer holds. Sending on submit is now a small addition
+> rather than a blocked one.
 
 **W2.1 — schema ✅** `supabase/migrations/0014_contact_sales_enquiries.sql`, applied to
 the live database with `node scripts/apply-sql.mjs`. Table `contact_sales_enquiries`
@@ -1335,3 +1359,163 @@ Unchanged from §40.5 except where noted:
    up, grant that account a membership, watch the commission appear.
 6. ~~Read the bundle size off the Workers Builds log~~ — **done, §41.** Worth one
    glance at the next CI log to confirm the Linux build agrees.
+
+---
+
+## §43 — AUTH REWORK: ONE EMAIL, ONE ROLE (7 September 2026)
+
+Client instruction, given directly. Four requirements, all delivered in code; one of
+them needs a Supabase dashboard change that only the account owner can make (§43.5).
+
+### 43.1 Every account except the superadmin was deleted
+
+`scripts/clear-users.mjs` — new. Reads the keep-list from `settings.superadmin_emails`
+(the same jsonb array `0013` seeds and `handle_new_user()` checks), never a hardcoded
+address, so the allowlist cannot disagree with itself. Dry-run by default; `--yes`
+commits. Refuses outright if the allowlist is empty, which would otherwise delete the
+only way back into the project.
+
+**Executed 7 Sep: 5 deleted, 0 failed, 1 survivor** (`boliwaladevs@gmail.com`,
+superadmin). Deleted: `collabwinwin@`, `hridaykampani@` (was the only `channel_partner`),
+`hridaycalendar@`, `hkforprojects@`, `ops@nesora.co.in`. The `0003` cascade took every
+profile, credit, shortlist, unlock, alert and `partner_*` row with them — nothing had to
+be cleaned up by hand, which is the first real proof that cascade works.
+
+**Consequence to know about:** two test scripts needed a second profile and no longer
+have one. Both were changed to degrade *loudly* rather than crash — see §B.
+
+### 43.2 The login-door model was removed on purpose
+
+This is the change most likely to be mistaken for a regression later, so: **it was
+deliberate, and the client asked for it in those words** — "place of login doesn't
+matter".
+
+`lib/auth/landing.ts` previously refused an admin at `/partner/login` and a partner at
+`/login`, bouncing them with `?denied=1`. Deleted: `roleAllowedAtDoor`,
+`wrongDoorMessage`, `doorFromCookie`, `loginPathForDoor`, `DOOR_COOKIE`, `DENIED_PARAM`,
+`LoginDoor`. Replaced by one function:
+
+```ts
+postLoginPath(role, next)   // role decides; ?next= honoured for role 'user' only
+```
+
+Either page now authenticates any account and the role alone decides the landing.
+`?next=` is deliberately ignored for staff and partners — "always get into their role
+account only". `access-matrix-test.mjs` asserts the *absence* of the door check in all
+three files, so a revert or a stale branch reintroducing it fails the bar.
+
+**One email, one role is now enforced in four places**, not one:
+
+- `postLoginPath` — where a sign-in lands
+- `components/header.tsx` — "My Account" resolves the role instead of always `/profile`
+- `app/profile/page.tsx` — redirects any non-`user` role to its own home, so a bookmark
+  or a stale link cannot drop an admin on the customer page
+- `app/actions/admin-partners.ts` — approving a partner now refuses a staff account.
+  This is the only place in the codebase that writes a role, so it is the only place the
+  rule can be enforced
+
+### 43.3 Google OAuth: collisions in both directions
+
+`app/auth/callback/route.ts` and `app/actions/auth-methods.ts` (new).
+
+- **Password account tries Google →** refused. The callback inspects
+  `data.user.identities`; an `email` identity means the account was created with a
+  password. Supabase auto-links a Google identity onto a matching verified email, so the
+  freshly-made link is **unlinked** (best effort, in a try/catch) before signing out and
+  bouncing to `/login?conflict=email`. Without the unlink the account would silently
+  accumulate a Google identity it is not allowed to use.
+- **Google account tries a password →** explained. `signInWithPassword` returns
+  `invalid_credentials` for an account that has no password at all, which is
+  indistinguishable from a wrong one. `authMethodForEmail()` resolves it server-side via
+  `profiles` → `auth.admin.getUserById` → identities.
+- Both offer a **WhatsApp support button** to `wa.me/919819927007` with the message
+  pre-filled and **not sent** — the person presses send themselves.
+
+> **Accepted security tradeoff, recorded deliberately.** `authMethodForEmail` is an
+> email-enumeration oracle: it confirms an address has an account and how it signs in.
+> It sits behind an already-failed login and returns a three-value enum and nothing
+> else. That is the unavoidable cost of the message the client asked for. If it needs
+> narrowing the mitigation is a per-IP rate limit, **not** a vaguer return value — a
+> vaguer one leaks the same bit while helping nobody.
+
+- **Welcome email on Google signup.** Supabase never mails an OAuth signup, because
+  there is no address to confirm — so a Google user would hear nothing and could not
+  tell that the missing verification mail was correct. `lib/email/welcome.ts` sends it
+  and says so in as many words. Idempotent on the new column (§43.4).
+
+### 43.4 Email users: verification, resend, recovery
+
+- **`0019_welcome_email_sent.sql`** — applied live. `profiles."welcomeEmailSentAt"
+  timestamptz`. Deliberately outside the `0016` column grant: service-role writes only,
+  so a user cannot clear it and re-trigger sends. **Next free number is `0020`.**
+- **`/verify`** (new) — takes the 6-digit OTP from the welcome mail, `verifyOtp`,
+  then **signs out** and sends the user to `/login?verified=1`. Verification proves an
+  address; it is not a sign-in, and re-entering through the front door is what applies
+  the role landing.
+- **`attributeReferral()` moved.** It used to run straight after `signUp`. With
+  confirmation on there is no session there, so it would have silently done nothing and
+  cost the partner their commission. It now runs on the `/verify` success path, which is
+  the first moment a session exists again. **This is the change most likely to break
+  quietly — test it with a real `?ref=` cookie.**
+- **Unverified login** → `email_not_confirmed` is caught and shown as a persistent inline
+  panel (not a toast — a toast vanishes before its own resend button can be clicked)
+  with a resend button, plus a second always-visible resend link under the login tab.
+- **`/forgot-password`** (new) — a real route. It was a button inside the login form, so
+  nothing could link to it. Returns the same neutral confirmation whether or not the
+  address exists.
+- **`/reset-password`** — two real fixes. It now **checks a recovery session exists**
+  before rendering the form (it used to show a live-looking form to anyone who opened
+  the URL directly, revealing the problem only after they had typed a new password), and
+  it signs out and returns to `/login?reset=1` instead of pushing to `/profile`, which
+  was wrong for every role except `user`.
+
+### 43.5 🔴 NOT DONE — needs the Supabase dashboard
+
+**The email-user flow is inert until these are set.** They are dashboard settings, not
+code, and the account owner has to make them. The app does not break in the meantime:
+`signUp` still returns a session while confirmation is off, and that path is handled.
+
+1. **Auth → Emails → SMTP:** `smtp.resend.com:465`, user `resend`, password =
+   `RESEND_API_KEY`, sender = `RESEND_FROM_EMAIL`.
+2. **Auth → Providers → Email: turn "Confirm email" ON.** This is the switch.
+3. **Template "Confirm signup"** — must carry **both** the link
+   (`{{ .SiteURL }}/verify?email={{ .Email }}`) **and** the OTP (`{{ .Token }}`).
+4. **Template "Reset password"** → `{{ .SiteURL }}/reset-password`.
+5. **URL Configuration → Redirect URLs:** add `/verify`; confirm `/reset-password` and
+   `/auth/callback` for both localhost and production.
+6. **Resend sending domain must be verified** or delivery fails silently.
+
+### 43.6 Verification run (7 September)
+
+```
+npx tsc --noEmit                     clean, except the pre-existing
+                                     open-next.config.ts missing-module error
+next build                           green, 29/29 (+ /verify, /forgot-password)
+access-matrix-test                   49/49 gating + 17/17 landing; partner block SKIPPED
+grants-test                          27/27 (2 against a synthetic id — see §B)
+migration 0019                       applied live, column confirmed present
+clear-users --yes                    5 deleted, 0 failed, 1 survivor
+```
+
+**Not run:** `pnpm run lint` and `leak-test`. See §43.7 — this is an environment
+problem, not a code one, and it is the one thing still owed on this workstream.
+
+### 43.7 ⚠️ This machine cannot run pnpm
+
+`package.json` pins `pnpm@11.1.3`, which requires **Node ≥ 22.13**. This machine has
+**22.12.0**, so `pnpm` refuses to start and `node_modules` is stuck at an older install
+missing exactly five devDependencies: `eslint`, `eslint-config-next`, `@eslint/eslintrc`,
+`@opennextjs/cloudflare`, `wrangler`.
+
+Consequences: **`pnpm run lint` cannot run at all**, and `next build` fails type-checking
+`open-next.config.ts` alone. The build above was verified by parking that one file and
+restoring it byte-identical afterwards — the app code compiles and all 29 routes
+generate.
+
+**Fix: upgrade Node to ≥ 22.13, then `pnpm install`.** Then re-run lint against the
+287-warning baseline before the next commit.
+
+**No `resend` dependency was added,** deliberately — and this is why the work was not
+blocked on the above. Sending is one POST to `api.resend.com/emails`
+(`lib/email/client.ts`), `fetch` is native on Workers and Node 18+, and the bundle is
+already at 85% of the 3 MB cap (§41). An SDK would have spent headroom to save nothing.

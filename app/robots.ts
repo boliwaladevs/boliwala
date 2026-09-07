@@ -9,7 +9,15 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       // Authenticated and transactional surfaces. None of these are useful in
       // an index, and /auth/callback carries a one-time OAuth code.
-      disallow: ["/admin", "/profile", "/partner/dashboard", "/auth/", "/reset-password"],
+      disallow: [
+        "/admin",
+        "/profile",
+        "/partner/dashboard",
+        "/auth/",
+        "/reset-password",
+        "/forgot-password",
+        "/verify",
+      ],
     },
     sitemap: absoluteUrl("/sitemap.xml"),
   }
