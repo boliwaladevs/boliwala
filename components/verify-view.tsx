@@ -8,13 +8,26 @@ import { useToast } from "@/hooks/use-toast"
 import { attributeReferral } from "@/app/actions/referral"
 
 /**
+ * Supabase's email OTP length is a per-project setting (Authentication →
+ * Providers → Email), anywhere from 6 to 10 digits. This project issues 8.
+ *
+ * Nothing here may assume a particular length. The first version of this file
+ * hardcoded 6 and silently truncated an 8-digit code to its first six, so every
+ * verification failed and the user was told their code was wrong. The server is
+ * the only authority on whether a code is valid.
+ */
+const OTP_MIN = 6
+const OTP_MAX = 10
+
+/**
  * Where a new email account is verified.
  *
- * The welcome email carries both a link here and a six-digit code, and the user
+ * The welcome email carries both a link here and a numeric code, and the user
  * needs both: the link identifies which address is being verified, the code
  * proves they opened the mail. Supabase mints and expires the code — this only
  * presents it.
  */
+
 export function VerifyView() {
   const [email, setEmail] = useState("")
   const [token, setToken] = useState("")
@@ -99,7 +112,7 @@ export function VerifyView() {
 
         <h2 className="text-3xl font-bold text-foreground mb-2 font-display">Verify your email</h2>
         <p className="text-sm text-muted-foreground mb-8">
-          Enter the 6-digit code from your welcome email to activate your account.
+          Enter the code from your welcome email to activate your account.
         </p>
 
         <form className="flex flex-col gap-5" onSubmit={handleVerify}>
@@ -121,20 +134,26 @@ export function VerifyView() {
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="000000"
+              placeholder="Enter your code"
               value={token}
-              // Digits only, six of them: pasting the code out of an email
-              // routinely brings a space or a stray character with it.
-              onChange={(e) => setToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              // Digits only: pasting a code out of an email routinely brings a
+              // space or a stray character with it.
+              //
+              // The length is NOT fixed at 6. Supabase's OTP length is a project
+              // setting and this one issues 8 — a hardcoded slice(0, 6) silently
+              // truncated the last two digits and made verification impossible
+              // while looking like a wrong code. Accept the documented range and
+              // let the server decide what is valid.
+              onChange={(e) => setToken(e.target.value.replace(/\D/g, "").slice(0, OTP_MAX))}
               required
-              minLength={6}
-              maxLength={6}
-              className="h-14 px-4 rounded-xl border border-border bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-2xl font-bold text-center tracking-[0.5em]"
+              minLength={OTP_MIN}
+              maxLength={OTP_MAX}
+              className="h-14 px-4 rounded-xl border border-border bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-2xl font-bold text-center tracking-[0.3em] placeholder:text-base placeholder:tracking-normal placeholder:font-normal"
             />
           </div>
 
           <button
-            disabled={submitting || token.length !== 6}
+            disabled={submitting || token.length < OTP_MIN}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-12 rounded-xl mt-2 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5"
           >
             {submitting ? "Verifying…" : "Verify my email"}
