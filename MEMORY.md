@@ -1522,6 +1522,95 @@ already at 85% of the 3 MB cap (§41). An SDK would have spent headroom to save 
 
 ---
 
+## §44 — THE 8 SEPTEMBER BUILD FAILURE: A SECOND, UNCONFIGURED BUILD TRIGGER
+
+**`Error: supabaseUrl is required.` on `/partner/login`. It is not a code defect, it is
+not the free tier, and the Workers Paid upgrade has nothing to do with it.**
+
+### 44.1 What the log actually says
+
+Two lines in the failing log identify it, and neither is the error:
+
+```
+Executing user build command: pnpm run build          ← §30.2 recorded `pnpm exec opennextjs-cloudflare build`
+$ next build                                          ← so `.open-next/worker.js` is never produced either
+...
+Error occurred prerendering page "/partner/login".
+Error: supabaseUrl is required.
+```
+
+**The build command is wrong, and it is wrong in exactly the way it was before §29.3
+fixed it.** The production trigger's settings were verified by the user on 30 August and
+went green the same night (§30.2): build `pnpm exec opennextjs-cloudflare build`, deploy
+`pnpm exec opennextjs-cloudflare deploy`, root `/`, both `NEXT_PUBLIC_SUPABASE_*` build
+variables present. Nothing has changed them.
+
+**So this build did not run on the production trigger.** Workers Builds keeps build
+configuration **per trigger** — Cloudflare's own API reference says it in as many words:
+*"Environment variables are set per trigger, meaning you can have different values for
+production and preview builds."* The non-production-branch trigger was created with the
+detected defaults — `pnpm install --frozen-lockfile`, `pnpm run build`, **no build
+variables** — and has never been configured. `origin/main` was last pushed on 7 September
+at 13:12 UTC; this build ran on 8 September at 13:16 UTC, after
+`docs/memory-md-only-rule` was pushed.
+
+With no `NEXT_PUBLIC_SUPABASE_URL` in the environment, `lib/data/stats.ts` builds an
+anon-key client with `undefined` for the URL, and `@supabase/supabase-js` throws in its
+constructor. `/partner/login`, `/login`, `/signup` and `/about` all set
+`revalidate = 3600` and therefore all prerender; `/partner/login` is simply the one the
+static-generation workers reached first.
+
+### 44.2 The Workers Paid upgrade is unrelated — but it was still worth buying
+
+The $5/mo plan is a **deploy-time** ceiling, not a build-time one: it lifts the compressed
+Worker limit from 3 MB to 10 MB. §41 measured the bundle at **2599.55 KiB gzip, 85% of the
+free cap**, so §C item 1.2b was a real and imminent blocker — it was about to reject a
+*deploy*. It was never going to affect a build that dies in `next build`.
+
+### 44.3 What was fixed in code — and what it does not fix
+
+`next.config.mjs` now **throws at config load** if either `NEXT_PUBLIC_SUPABASE_URL` or
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is absent, and the
+`?? "https://localhost"` fallback on the `remotePatterns` hostname is gone with it.
+
+That fallback is the §27.6 defect: `NEXT_PUBLIC_*` values are **inlined at compile time**,
+so a missing one is baked into the bundle rather than being a runtime gap that heals. The
+fallback let the build go green and ship a site whose every listing image 400s. This is
+the third time the same class has cost a session — §27.6 (images), §36.1
+(`NEXT_PUBLIC_SITE_URL` and the localhost sitemap), and now §44. The build now names the
+missing variable in one line instead of dying twenty frames deep in minified vendor code.
+
+> **`NEXT_PUBLIC_SITE_URL` is deliberately *not* in the guard.** It has the same failure
+> mode (`lib/seo.ts:8` falls back to `http://localhost:3000`) and it is a fair candidate,
+> but adding it would fail the build on any trigger that lacks it. Decide it separately.
+
+**This does not make the failing build green.** No code change can: the two variables must
+exist at build time or the browser Supabase client ships broken, so making the build
+tolerate their absence would only trade a red build for a broken site. **The fix is
+dashboard-side and is the account owner's action** — set both build variables on the
+non-production trigger, and set its build command to `pnpm exec opennextjs-cloudflare
+build`; or turn non-production branch builds off, since nothing currently uses the preview
+URLs.
+
+### 44.4 §43.7 is closed, and the lint baseline moved
+
+**This machine runs Node v22.14.0 now**, above the 22.13 that `pnpm@11.1.3` demands. pnpm
+starts, `node_modules` is complete, and the two things §43.7 said could not run both ran.
+No file had to be parked to type-check `open-next.config.ts`.
+
+```
+npx tsc --noEmit     clean, exit 0
+pnpm run build       green, 29/29 static pages
+pnpm run lint        0 errors, 297 warnings
+```
+
+**The warning baseline is 297, not the 287 of §B.** The ten new ones predate this change —
+they arrived with §43, which shipped without lint for exactly the reason §43.7 records.
+`next.config.mjs` contributes none. Treat 297 as the number to hold, and reconcile the ten
+when someone next touches lint.
+
+---
+
 # §UNPUSHED — LOCAL WORK NOT YET IN GIT
 
 > **What this section is.** The git copy of `MEMORY.md` always wins over local unpushed
