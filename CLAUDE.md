@@ -1,12 +1,19 @@
 # CLAUDE.md
 
-> **🔄 UPDATE RULE (MANDATORY):** On every code change and commit, the following files
-> MUST be updated to reflect the current state:
-> - `MEMORY.md` — update the relevant sprint section, add new sections as needed
-> - `project_calendar.html` — mark completed sprints, update timelines
-> - `SPRINT_CALENDAR.md` — mark completed tasks `[x]`, update statuses and dates
+> **🔄 UPDATE RULE (MANDATORY):** **`MEMORY.md` is the only file that gets updated.**
 >
-> This rule is non-negotiable. No commit goes out without these three files in sync.
+> - Every code change and commit updates `MEMORY.md` — and nothing else.
+> - **Frozen — read, never write:** `project_calendar.html`, `SPRINT_CALENDAR.md`,
+>   `client_requirement.md`, `immediate_plan.md`, `summary.md`, `blockers_client_facing.md`.
+>   They are historical records. Do not mark tasks done, refresh dates, or correct facts in
+>   them; if they contradict `MEMORY.md`, `MEMORY.md` is right.
+> - **On conflict, the git `MEMORY.md` always wins over local unpushed work.** Take
+>   `origin/main`'s copy whole — no hand-merging, no picking hunks — and re-add the local
+>   unpushed work as an entry in the **§UNPUSHED footer section** at the bottom of the file.
+>   That footer is the only place unpushed state lives; an entry moves into the body (and
+>   out of the footer) once it is pushed.
+>
+> This rule is non-negotiable.
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 

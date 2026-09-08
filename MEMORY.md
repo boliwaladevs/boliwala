@@ -1519,3 +1519,92 @@ generate.
 blocked on the above. Sending is one POST to `api.resend.com/emails`
 (`lib/email/client.ts`), `fetch` is native on Workers and Node 18+, and the bundle is
 already at 85% of the 3 MB cap (§41). An SDK would have spent headroom to save nothing.
+
+---
+
+# §UNPUSHED — LOCAL WORK NOT YET IN GIT
+
+> **What this section is.** The git copy of `MEMORY.md` always wins over local unpushed
+> work: on a pull conflict, `origin/main`'s file is taken whole and the local work is
+> re-added here rather than hand-merged into the body. Everything below is true and
+> **not yet reflected in the body of this file** — where the two disagree, this footer is
+> newer. An entry moves up into the body, and out of here, once it has been pushed.
+> `MEMORY.md` is also the **only** file that gets updated; the calendars,
+> `client_requirement.md`, `immediate_plan.md`, `summary.md` and
+> `blockers_client_facing.md` are frozen records and are deliberately left stale.
+
+## U1 — THE ANNUAL PRICE, ANSWERED: ₹999 (2 September 2026)
+
+*Written 2 Sep against the pre-auth-rework tree; never committed. Recovered here on
+8 Sep after the pull that brought in §43 (the auth rework), which took the §43 number and
+does not mention any of this.*
+
+**§C item 1.8 is closed.** The client confirmed the annual membership is **₹999**, not the
+₹2,999 the live settings row held, and the row was changed the same day.
+
+```sql
+update settings set value = '999'::jsonb,
+                    "updatedAt" = now() at time zone 'utc',
+                    "updatedBy" = '3905231a-e0d1-448f-bcd3-fadfe861d225'
+where key = 'annual_price';        -- 2999 -> 999, one row
+```
+
+**Why this was safe, and why it would not have been later.** `partner_commissions` was
+**empty** when the change was made — confirmed by `count(*)`, not by a planner estimate
+(§E). Because §39.7 stores `ratePct`, `grossAmount` and `commissionAmount` **on the
+commission row**, a price change never reaches a commission already earned. So had a real
+partner earned against ₹2,999 first, that ₹300 would have stayed ₹300 forever and the
+partner ledger would have carried two prices side by side. Changing it before the first
+real referral is what kept the ledger single-valued.
+
+**What moved with it.** Nothing in code: `grep` finds **no hardcoded 2999 anywhere** in
+`app/`, `components/`, `lib/`, `scripts/` or `supabase/`. Three places read the key —
+`lib/access/settings.ts:16` (whose fallback was **already `999`**), `lib/data/admin.ts:674`
+and `scripts/access-matrix-test.mjs:53` — so the pricing page, the partner dashboard and
+the commission arithmetic all follow the row. **A 10% subscription commission is now
+₹99.** No deploy is needed; the value is read at request time.
+
+**Done by SQL, not through admin → Settings**, so `updatedBy` was set by hand to the
+superadmin profile. `updatePricingSettings()` (`lib/data/admin.ts:741`) writes no
+`admin_audit_log` row for pricing — only `updateCommissionSettings()` does, per spec
+§5.10 — so **no audit entry exists for this change either way**, and this section is the
+record of it.
+
+**Still open, asked at the same time:** confirm the **service package price** (live
+₹9,999, matching the spec) and the **success fee** (live 1%, matching the spec). Both look
+right; neither has been confirmed. The 15% package commission is computed from the first.
+
+**No application code was changed,** so the §B baselines stand as recorded in §40.3.
+
+### U1.1 — Four places in the body of this file are stale because of U1
+
+The git copy still describes the price as an open question. Read them with this section
+in hand; they are **not** to be edited in place until U1 is pushed.
+
+| Body location | What it still says | What is actually true |
+|---|---|---|
+| §C, row **1.8** | "Confirm the annual membership price — live ₹2,999 vs spec ₹999 — Outstanding" | **Answered 2 Sep: ₹999**, set live. Row closed. |
+| §39.7, the warning box after the end-to-end run | "worth a five-minute check … change it in admin → Settings if ₹999 is intended" | Already changed. The box explains why that run earned **₹300**; the same run today would earn **₹99**. |
+| §40.5, numbered item **3** | "Check `annual_price`" | **Done 2 Sep.** |
+| §42.7, the client-owes list | "The annual price question, promoted from a footnote to a numbered blocker" | Promoted, then **answered**. |
+
+### U1.2 — Frozen files that were mid-edit when the freeze came in
+
+These edits existed uncommitted on 8 Sep and were **reverted to `origin/main`**, because
+`MEMORY.md` is now the only file that gets updated. Their substance is U1 above; nothing
+else was in them.
+
+- `SPRINT_CALENDAR.md` — the `annual_price` checkbox ticked `[x]` with the ₹999 result.
+- `project_calendar.html` — the ₹2,999-vs-₹999 question struck from "what the client owes"
+  and replaced with the answered note.
+- `client_requirement.md` — §1.8 rewritten as answered.
+- `immediate_plan.md` — the blocker table row flipped to **ANSWERED — ₹999**.
+
+The pre-pull stash (`stash@{0}`, *"pre-pull local changes 2026-09-08"*) still holds all
+five files as they were, if the exact wording is ever wanted back.
+
+### U1.3 — Untracked local files, not part of any of the above
+
+`client_requirement.html`, `intermediate_plan.md`, `screener.html` — present in the
+working tree, never committed, untouched by the pull or the revert. Unreviewed; listed
+here only so they are not mistaken for missing work.
