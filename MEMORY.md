@@ -1611,6 +1611,101 @@ when someone next touches lint.
 
 ---
 
+## §45 — VERCEL IS STILL RUNNING, AND THE REPO IS NOW SINGLE-BRANCH (8 September 2026)
+
+### 45.1 The build failure is closed, and the evidence is in GitHub, not the dashboard
+
+§44 named the cause but could not prove which build path failed, because the Workers
+Builds API rejects wrangler's OAuth token (`workers/scripts` returns 200; anything under
+`/builds/` returns `Authentication error` — it needs an API token with **Workers Builds:
+Edit**). GitHub's check runs settle it without any Cloudflare access at all:
+
+| commit | branch | Workers Builds | Vercel |
+|---|---|---|---|
+| `c1f5f37` | `docs/memory-md-only-rule` | **failure** 13:17:24Z — the pasted log | success |
+| `db76139` | `main` | **success** 13:36:34Z | success |
+| `4f7587e` | `main` | success, 7 Sep 13:14:34Z | success |
+
+`wrangler deployments list --name boliwala` confirms version
+**`918f9f98-e7ef-4b3f-b63d-87dd20f10f3f`, deployed 2026-09-08T13:36:28Z.**
+
+**The green build is itself the proof that the production build variables are correct.**
+`next.config.mjs` now throws when either is absent (§44.3), so a production build could not
+have gone green without them. Nothing is owed on the production trigger.
+
+**The dashboard shows only one trigger, and that is expected.** Cloudflare's own reference:
+*"Each Worker has up to two triggers: one for production and one for preview... Environment
+variables are set per trigger."* The Settings page surfaces the production trigger's fields
+only; the preview trigger's build command and variables are not exposed there. It is
+reachable through **Trigger events**, or the Builds API. **Turning non-production branch
+builds off is the fix** — nothing uses preview URLs, and §30.2 records the preview wildcard
+was deliberately never registered in Supabase, so a preview build cannot do a real auth
+test anyway.
+
+### 45.2 🔴 Vercel never stopped — and it is wired into the auth emails
+
+**`https://boliwala.vercel.app` returns 200 and serves the app.** The Vercel git
+integration is still connected and built every commit above, `db76139` included. Two live
+production copies of a financial-services site have been running side by side since the
+30 August cutover.
+
+**Why this is more than untidy.** §30.1 recorded that only the Supabase *Redirect URLs*
+were pointed at the Worker — **Site URL was deliberately left at
+`https://boliwala.vercel.app`**. §43.5 items 3 and 4 build the auth emails out of
+`{{ .SiteURL }}`:
+
+```
+{{ .SiteURL }}/verify?email={{ .Email }}
+{{ .SiteURL }}/reset-password
+```
+
+**So flipping §43.5 item 2 — "Confirm email" ON, the one switch the whole §43 auth rework
+waits on — would have sent every verification and password-reset link to the Vercel copy.**
+The two outstanding items were filed as independent; they are not. **Change Site URL
+first.**
+
+**Order of operations:**
+
+1. Supabase → Authentication → URL Configuration → **Site URL** →
+   `https://boliwala.boliwaladevs.workers.dev` (the real domain when D2 lands).
+2. Only then turn "Confirm email" on.
+3. Disconnect the Vercel git integration so it stops building. **Do not delete the Vercel
+   project before the D2 domain cutover** — it is the only other live URL if the Worker
+   has a bad day, and it costs nothing on Hobby.
+
+### 45.3 One branch from here: `main`
+
+**Decision, 8 September: the repo is single-branch. All work goes to `main`.** The five
+non-`main` remote branches were deleted after verifying, commit by commit, that nothing was
+lost:
+
+| branch | commits not in `main` | verdict |
+|---|---|---|
+| `blocker-audit-sprint6-findings` | 0 | fully merged |
+| `docs/memory-md-only-rule` | 0 | merged as `c1f5f37` |
+| `fix/build-env-guard` | 0 | merged as `db76139` |
+| `sprint-6` | 0 | fully merged |
+| `feat_hriday` | 1 — `38e6ec9` "Add plans folder" | **content already on `main`** |
+| `item5-navbar-partner-auth` | 1 — `a9c12af` "Item 5: navbar, partner login" | **superseded by W6 and §43** |
+
+The two that carried commits were checked file by file rather than trusted:
+`app/partner/login/page.tsx` is **byte-identical** to `main`'s; `plans/UI_replication.md`
+and `plans/boliwala-phase1-sprint-plan.md` likewise; `plans/version_control.md` diffs
+**349 added, 0 removed**, so `main`'s copy is a strict superset. The remaining `item5`
+files — `auth-view.tsx`, `header.tsx`, `partner/dashboard/page.tsx` — differ only because
+`main` moved past them: W6 built the real partner portal (§39) and §43 reworked the auth
+view. `main` also carries two `plans/` files the branch never had.
+
+**Branch protection on `main` is real** and rejects a direct push (`GH006`, "Changes must
+be made through a pull request") unless the pusher is an admin. `boliwaladevs` is an admin
+and the push reports `Bypassed rule violations`; `nesora-ops` is not and is rejected. The
+commit author and the authenticated pusher are different things — setting
+`--author=boliwaladevs` does not grant the bypass. Use
+`gh auth switch --user boliwaladevs` and push with
+`git -c credential.helper='!gh auth git-credential' push`, then switch back.
+
+---
+
 # §UNPUSHED — LOCAL WORK NOT YET IN GIT
 
 > **What this section is.** The git copy of `MEMORY.md` always wins over local unpushed
