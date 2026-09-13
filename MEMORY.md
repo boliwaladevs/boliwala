@@ -1706,6 +1706,171 @@ commit author and the authenticated pusher are different things — setting
 
 ---
 
+## §46 — USER-FACING VISUAL REFRESH: THE "MARKETPLACE" DIRECTION IS BUILT (13 September 2026)
+
+*Written 13 Sep against `3f853f6` and pushed as `be080a3`. The handoff bundle it
+implements — `Boliwala UI Visual Refresh/design_handoff_visual_refresh/` — is committed
+alongside it; the `.zip` it came out of was left untracked as a duplicate.*
+
+### 46.1 — What this was
+
+An approved visual refresh of the **user-facing** UI, option 2 of three explored
+("Marketplace"). Handoff bundle: `README.md` (the spec), `Option 2 - Marketplace.dc.html`
+(the approved prototype), `Boliwala Current.dc.html` (before/after reference),
+`boliwala-tokens.css` / `.json` (authoritative token values), two SVGs, a brand sheet.
+
+**Visual layer only.** No route, filter, form field, validation, server action, data
+fetch or string was changed. Four screens were in scope — homepage, `/search`,
+`/listing/[slug]`, `/profile`. The admin side was not touched.
+
+### 46.2 — Foundations
+
+**`app/globals.css`** — the oklch "Hously" palette is gone. The file now declares the
+handoff's primitive tokens first (`--paper --surface --ink --ink2 --line --brand
+--brand-soft --on-brand --gold --gold-soft --pos --pos-soft --slot --danger
+--danger-line`, plus `--pos-line`, `--gold-line`, `--slot-hatch` for tinted hairlines and
+the placeholder hatch), and the shadcn names every component already consumes
+(`--background --card --primary --border --muted …`) are now **aliases of those
+primitives**. `.dark` therefore overrides only the primitive block. `--radius` moved
+`0.25rem → 0.75rem` to match the 12px field radius, which softens every `components/ui`
+primitive globally.
+
+New Tailwind utilities registered in `@theme inline`: `bg-paper` / `text-ink2` /
+`border-line` / `bg-brand-soft` etc., `rounded-pill|panel|card|block|field`,
+`shadow-card|panel|sticky`, plus a `slot-fill` utility for the hatched photo
+placeholders and a `:focus-visible` 2px `--brand` ring in `@layer base`.
+
+**`app/layout.tsx`** — **Figtree** (UI) and **Source Serif 4** (display) via
+`next/font/google`, replacing `Plus_Jakarta_Sans`. `Geist_Mono` was removed: it was
+imported without a `variable` and never applied, so `font-mono` was already falling back
+to the system stack.
+
+**`components/logo.tsx`** — Source Serif 4 wordmark, `-0.02em`, 23px (20px below `sm` so
+the mobile header stays one 72px row). Tagline 8.5px / 0.2em caps in `--ink2`. Tile glow
+`0 6px 14px -6px rgba(217,119,6,0.6)`. The gradient tile and `#3E2400` gavel are
+unchanged. The "wala" accent is now theme-aware: `#D97706` light, `#FFC981` dark.
+
+### 46.3 — Three judgement calls worth knowing about
+
+**1. `font-display` was deliberately left a no-op.** Tailwind v4 has no `--font-display`,
+so the ~40 `font-display` classes across `admin-view.tsx`, `about-view.tsx` and others
+currently render in the body font — verified in the browser. Defining it as Source Serif 4
+would have turned every admin heading serif, breaking "admin stays as-is". Source Serif 4
+is therefore mapped onto **`--font-serif`**, and the refreshed components use
+`font-serif`. Do not define `--font-display` without re-checking admin.
+
+**2. The homepage keeps every search field the prototype drops.** The approved design
+shows a compact four-item hero card (Location, Lender, Reserve price, Search). Today's
+`SearchSection` renders Keyword, the six Property Type radio cards, the three Possession
+radios and Reset as well, on both the homepage and `/search`. The "every field must still
+exist" constraint outranked the prototype, so **one** `SearchSection` is used in both
+places, styled to the spec's *Browse filter panel*, and on the homepage it is composed as
+`Hero`'s child so it still overlaps the hero by `-34px`. The card is taller than the
+prototype's. Deleting the extra fields from the homepage is a one-line change if the
+client prefers the prototype exactly.
+
+**3. The prototype's alerts block has a dark-mode contrast bug; ours does not.** The
+prototype paints that panel `var(--ink)` with `color:#fff`. In dark, `--ink` is the cream
+`#F3EDE5`, so white type on it measures ~1.1:1. `components/alerts-section.tsx` uses
+`bg-ink dark:bg-paper` — dark in both themes, 15:1 either way.
+
+### 46.4 — What was NOT built, and why
+
+Three things in the spec were skipped as out of scope for a visual pass. None were asked
+about, so all three are open questions for the client:
+
+- **Hero quick-filter pills.** New links with invented labels (the prototype uses
+  `{{ quickFilters }}` placeholders). New IA + new copy.
+- **A homepage "Live auctions" grid of three cards.** Needs new data fetching on the
+  homepage; `AuctionsByCity` occupies that slot today and was restyled instead.
+- **The dashboard's "My account" eyebrow and "Browse auctions" button.** New copy, and
+  `AccountHeader` already carries a "Browse Properties" link.
+
+Also left alone on purpose: `components/call-to-action.tsx` still points "Browse
+Properties" at **`#projects`**, a dead anchor with no matching section. It is a
+pre-existing bug; changing the destination is a route change, not a visual one.
+
+### 46.5 — Per-file record
+
+| File | What happened |
+|---|---|
+| `app/globals.css`, `app/layout.tsx`, `components/logo.tsx` | Foundations, above |
+| `components/photo-slot.tsx` | **New.** The one reusable labelled photo placeholder — `label`, `ratio`, `align` props. Swaps to `<Image>` later with no relayout |
+| `components/header.tsx` | Solid `--paper`, 1px bottom hairline, 72px min-height, pill Log In / Sign Up, hamburger below `lg`. **No longer fixed and no longer overlays.** The scroll listener, `isDarkBg` and `forceWhite` logo are gone; the Supabase session/role effect is untouched |
+| `components/footer.tsx` | `--paper`, `auto-fit minmax(200px,1fr)`, 10.5px/0.12em caps headings |
+| `components/hero.tsx` | The **200vh sticky parallax is gone** — no more `requestAnimationFrame` loop, no `hously-*.webp`. Now a 22px-radius 440px hero over a labelled slot with the spec's scrim, and the four stats moved out into the spec's stat strip. Accepts `children` so `SearchSection` can overlap it |
+| `components/search-section.tsx` | The spec's filter panel. All fields kept; `id="search"` retained for the footer anchor. Coloured field icons dropped |
+| `components/trust-banner.tsx`, `philosophy.tsx`, `alerts-section.tsx`, `call-to-action.tsx`, `auctions-by-city.tsx` | Restyled to spec. `philosophy` lost its IntersectionObserver reveal, and `philosophy`/`alerts` no longer use `HighlightedText` (still used by out-of-scope `about-view.tsx`) |
+| `components/property-grid.tsx` | **The card, rebuilt to spec:** 16/10 slot with four overlays, Source Serif 4 27px price, the divided Auction/EMD figure pair, 38px Save/View pills. Grid is `auto-fill minmax(280px,1fr)`. The grid/list toggle survives. A `<button>` nested inside an `<a>` (invalid HTML) was replaced with a stretched-link on the title |
+| `components/property-results.tsx` | Sidebar, chips, count line, pagination to spec. Every filter group, count and the price form are unchanged |
+| `components/listing-view.tsx` | Gallery slots, chip row, **four key-figure tiles** (new, spec'd; they restate figures already in the tables), five detail panels, `--goldSoft` disclaimer, sticky bid panel at `top: 60px`. All five panels and every gated row kept |
+| `components/profile-view.tsx` | Page header, sidebar, four tabs. Every control kept: frequency select, pause/resume, delete, the four-stage tracker, PAN/Aadhaar with their helper text, change password, DELETE-gated account deletion |
+| `components/account-header.tsx`, `search-alert-banner.tsx`, `search-sort-select.tsx` | Retokenised |
+| `app/page.tsx` | `<SearchSection>` is now a child of `<Hero>`; the section list is otherwise identical |
+| `app/search/page.tsx`, `app/listing/[slug]/page.tsx` | `pt-24 md:pt-28` removed — it compensated for the overlaying header |
+| `components/about-view.tsx`, `legal-page.tsx`, `partner-view.tsx`, `services-view.tsx`, `app/contact`, `app/faq`, `app/pricing` | **Out of scope, one mechanical edit each:** `pt-32 → pt-10`. That padding was header-overlay compensation and became a 128px void once the header stopped overlaying |
+
+### 46.6 — Verified
+
+- `npx tsc --noEmit` over the app is **clean**. The only error in the repo is the
+  pre-existing `open-next.config.ts` → `@opennextjs/cloudflare` missing module.
+- `next build` **compiles successfully**; it then fails typechecking on that same
+  pre-existing file.
+- No horizontal overflow at **360 / 768 / 1280**, measured with
+  `document.documentElement.scrollWidth` and a per-element right-edge scan, on the
+  homepage, `/search` and `/listing/[slug]`.
+- Every page still renders 200: `/ /search /listing/… /services /about /partner /contact
+  /faq /pricing /terms`.
+- Both themes checked by toggling `.dark` on `<html>`.
+
+### 46.7 — Two things left open
+
+**1. There is no dark-mode toggle, and the spec does not design one.** `ThemeProvider`
+existed but was **mounted nowhere**, so `.dark` was unreachable. It is now mounted in
+`app/layout.tsx` as `attribute="class" defaultTheme="light" enableSystem={false}` — zero
+behaviour change for users today, but the mechanism is live and testable. Whether the
+product wants a visible toggle is a client decision.
+
+**2. One token pair in the light theme misses 4.5:1.** Measured from the handoff's own
+authoritative values: **`--gold` on `--goldSoft` is 4.03:1** and `--gold` on `--paper` is
+4.49:1. The README asserts these pass. The tokens were **left exactly as delivered** —
+they are the approved palette, and changing them is a design decision rather than an
+implementation one. It affects small gold-on-goldSoft text: the trust-banner numerals,
+the `philosophy` process tags, the listing "Auction: date" chip and its "Important"
+disclaimer heading, and the dashboard's "In Progress" pill and stage labels. Darkening
+light `--gold` from `#9A6F2A` to roughly `#8A631F` clears it. Every other pair passes in
+both themes; dark is comfortable throughout (`--gold` on `--goldSoft` is 7.31:1 there).
+
+Two smaller deviations, both contrast fixes: the dashboard's `#25D366` WhatsApp pill now
+carries dark type instead of white (white on that green is 1.9:1), and the "Delete my
+account" button keeps the **fixed** `#B3261E` the spec names rather than `--danger`,
+because `--danger` in dark is a light salmon that cannot carry white type.
+
+### 46.8 — `npm run lint` still cannot run here, and now neither can `pnpm install`
+
+Lint needs a Node upgrade, and it is worse than a lint problem now: `node_modules` is a
+**pnpm** store, and `pnpm@11.1.3` refuses to run on the installed **Node v22.12.0** (it
+wants ≥ v22.13). Falling back to `npm install` fails two ways — `@opennextjs/cloudflare@1.20.6`
+peer-requires `next >=15.5.24 <16 || >=16.3.3` against this repo's `next@16.0.10`, and npm
+then errors outright reading the pnpm-shaped tree. **Nothing was installed**; the tree was
+left exactly as found. Upgrading Node past v22.13 and running `pnpm install` should fix
+lint, the missing `@opennextjs/cloudflare` types and the failing build gate in one go.
+
+### 46.9 — The dashboard was not seen rendered
+
+`/profile` redirects to `/login` when signed out, and signing in means typing a password,
+which is not something to do on the user's behalf. `components/profile-view.tsx`
+typechecks and every handler is byte-for-byte the original, but **all four tabs are
+unverified visually**. Worth a look while signed in before this ships.
+
+### 46.10 — Three images are now unused
+
+`public/images/hously-background.webp`, `hously-foreground.webp` and `exterior.webp` were
+only ever used by the parallax hero and `philosophy.tsx`. Both now use labelled slots.
+The handoff says to flag them rather than delete them, so they are still in the tree.
+
+---
+
 # §UNPUSHED — LOCAL WORK NOT YET IN GIT
 
 > **What this section is.** The git copy of `MEMORY.md` always wins over local unpushed
@@ -1792,168 +1957,3 @@ five files as they were, if the exact wording is ever wanted back.
 `client_requirement.html`, `intermediate_plan.md`, `screener.html` — present in the
 working tree, never committed, untouched by the pull or the revert. Unreviewed; listed
 here only so they are not mistaken for missing work.
-
----
-
-## U2 — USER-FACING VISUAL REFRESH: THE "MARKETPLACE" DIRECTION IS BUILT (13 September 2026)
-
-*Written 13 Sep against the tree at `3f853f6`. Uncommitted. The handoff bundle it
-implements — `Boliwala UI Visual Refresh/design_handoff_visual_refresh/` — is itself
-untracked, along with the `.zip` it came out of.*
-
-### U2.1 — What this was
-
-An approved visual refresh of the **user-facing** UI, option 2 of three explored
-("Marketplace"). Handoff bundle: `README.md` (the spec), `Option 2 - Marketplace.dc.html`
-(the approved prototype), `Boliwala Current.dc.html` (before/after reference),
-`boliwala-tokens.css` / `.json` (authoritative token values), two SVGs, a brand sheet.
-
-**Visual layer only.** No route, filter, form field, validation, server action, data
-fetch or string was changed. Four screens were in scope — homepage, `/search`,
-`/listing/[slug]`, `/profile`. The admin side was not touched.
-
-### U2.2 — Foundations
-
-**`app/globals.css`** — the oklch "Hously" palette is gone. The file now declares the
-handoff's primitive tokens first (`--paper --surface --ink --ink2 --line --brand
---brand-soft --on-brand --gold --gold-soft --pos --pos-soft --slot --danger
---danger-line`, plus `--pos-line`, `--gold-line`, `--slot-hatch` for tinted hairlines and
-the placeholder hatch), and the shadcn names every component already consumes
-(`--background --card --primary --border --muted …`) are now **aliases of those
-primitives**. `.dark` therefore overrides only the primitive block. `--radius` moved
-`0.25rem → 0.75rem` to match the 12px field radius, which softens every `components/ui`
-primitive globally.
-
-New Tailwind utilities registered in `@theme inline`: `bg-paper` / `text-ink2` /
-`border-line` / `bg-brand-soft` etc., `rounded-pill|panel|card|block|field`,
-`shadow-card|panel|sticky`, plus a `slot-fill` utility for the hatched photo
-placeholders and a `:focus-visible` 2px `--brand` ring in `@layer base`.
-
-**`app/layout.tsx`** — **Figtree** (UI) and **Source Serif 4** (display) via
-`next/font/google`, replacing `Plus_Jakarta_Sans`. `Geist_Mono` was removed: it was
-imported without a `variable` and never applied, so `font-mono` was already falling back
-to the system stack.
-
-**`components/logo.tsx`** — Source Serif 4 wordmark, `-0.02em`, 23px (20px below `sm` so
-the mobile header stays one 72px row). Tagline 8.5px / 0.2em caps in `--ink2`. Tile glow
-`0 6px 14px -6px rgba(217,119,6,0.6)`. The gradient tile and `#3E2400` gavel are
-unchanged. The "wala" accent is now theme-aware: `#D97706` light, `#FFC981` dark.
-
-### U2.3 — Three judgement calls worth knowing about
-
-**1. `font-display` was deliberately left a no-op.** Tailwind v4 has no `--font-display`,
-so the ~40 `font-display` classes across `admin-view.tsx`, `about-view.tsx` and others
-currently render in the body font — verified in the browser. Defining it as Source Serif 4
-would have turned every admin heading serif, breaking "admin stays as-is". Source Serif 4
-is therefore mapped onto **`--font-serif`**, and the refreshed components use
-`font-serif`. Do not define `--font-display` without re-checking admin.
-
-**2. The homepage keeps every search field the prototype drops.** The approved design
-shows a compact four-item hero card (Location, Lender, Reserve price, Search). Today's
-`SearchSection` renders Keyword, the six Property Type radio cards, the three Possession
-radios and Reset as well, on both the homepage and `/search`. The "every field must still
-exist" constraint outranked the prototype, so **one** `SearchSection` is used in both
-places, styled to the spec's *Browse filter panel*, and on the homepage it is composed as
-`Hero`'s child so it still overlaps the hero by `-34px`. The card is taller than the
-prototype's. Deleting the extra fields from the homepage is a one-line change if the
-client prefers the prototype exactly.
-
-**3. The prototype's alerts block has a dark-mode contrast bug; ours does not.** The
-prototype paints that panel `var(--ink)` with `color:#fff`. In dark, `--ink` is the cream
-`#F3EDE5`, so white type on it measures ~1.1:1. `components/alerts-section.tsx` uses
-`bg-ink dark:bg-paper` — dark in both themes, 15:1 either way.
-
-### U2.4 — What was NOT built, and why
-
-Three things in the spec were skipped as out of scope for a visual pass. None were asked
-about, so all three are open questions for the client:
-
-- **Hero quick-filter pills.** New links with invented labels (the prototype uses
-  `{{ quickFilters }}` placeholders). New IA + new copy.
-- **A homepage "Live auctions" grid of three cards.** Needs new data fetching on the
-  homepage; `AuctionsByCity` occupies that slot today and was restyled instead.
-- **The dashboard's "My account" eyebrow and "Browse auctions" button.** New copy, and
-  `AccountHeader` already carries a "Browse Properties" link.
-
-Also left alone on purpose: `components/call-to-action.tsx` still points "Browse
-Properties" at **`#projects`**, a dead anchor with no matching section. It is a
-pre-existing bug; changing the destination is a route change, not a visual one.
-
-### U2.5 — Per-file record
-
-| File | What happened |
-|---|---|
-| `app/globals.css`, `app/layout.tsx`, `components/logo.tsx` | Foundations, above |
-| `components/photo-slot.tsx` | **New.** The one reusable labelled photo placeholder — `label`, `ratio`, `align` props. Swaps to `<Image>` later with no relayout |
-| `components/header.tsx` | Solid `--paper`, 1px bottom hairline, 72px min-height, pill Log In / Sign Up, hamburger below `lg`. **No longer fixed and no longer overlays.** The scroll listener, `isDarkBg` and `forceWhite` logo are gone; the Supabase session/role effect is untouched |
-| `components/footer.tsx` | `--paper`, `auto-fit minmax(200px,1fr)`, 10.5px/0.12em caps headings |
-| `components/hero.tsx` | The **200vh sticky parallax is gone** — no more `requestAnimationFrame` loop, no `hously-*.webp`. Now a 22px-radius 440px hero over a labelled slot with the spec's scrim, and the four stats moved out into the spec's stat strip. Accepts `children` so `SearchSection` can overlap it |
-| `components/search-section.tsx` | The spec's filter panel. All fields kept; `id="search"` retained for the footer anchor. Coloured field icons dropped |
-| `components/trust-banner.tsx`, `philosophy.tsx`, `alerts-section.tsx`, `call-to-action.tsx`, `auctions-by-city.tsx` | Restyled to spec. `philosophy` lost its IntersectionObserver reveal, and `philosophy`/`alerts` no longer use `HighlightedText` (still used by out-of-scope `about-view.tsx`) |
-| `components/property-grid.tsx` | **The card, rebuilt to spec:** 16/10 slot with four overlays, Source Serif 4 27px price, the divided Auction/EMD figure pair, 38px Save/View pills. Grid is `auto-fill minmax(280px,1fr)`. The grid/list toggle survives. A `<button>` nested inside an `<a>` (invalid HTML) was replaced with a stretched-link on the title |
-| `components/property-results.tsx` | Sidebar, chips, count line, pagination to spec. Every filter group, count and the price form are unchanged |
-| `components/listing-view.tsx` | Gallery slots, chip row, **four key-figure tiles** (new, spec'd; they restate figures already in the tables), five detail panels, `--goldSoft` disclaimer, sticky bid panel at `top: 60px`. All five panels and every gated row kept |
-| `components/profile-view.tsx` | Page header, sidebar, four tabs. Every control kept: frequency select, pause/resume, delete, the four-stage tracker, PAN/Aadhaar with their helper text, change password, DELETE-gated account deletion |
-| `components/account-header.tsx`, `search-alert-banner.tsx`, `search-sort-select.tsx` | Retokenised |
-| `app/page.tsx` | `<SearchSection>` is now a child of `<Hero>`; the section list is otherwise identical |
-| `app/search/page.tsx`, `app/listing/[slug]/page.tsx` | `pt-24 md:pt-28` removed — it compensated for the overlaying header |
-| `components/about-view.tsx`, `legal-page.tsx`, `partner-view.tsx`, `services-view.tsx`, `app/contact`, `app/faq`, `app/pricing` | **Out of scope, one mechanical edit each:** `pt-32 → pt-10`. That padding was header-overlay compensation and became a 128px void once the header stopped overlaying |
-
-### U2.6 — Verified
-
-- `npx tsc --noEmit` over the app is **clean**. The only error in the repo is the
-  pre-existing `open-next.config.ts` → `@opennextjs/cloudflare` missing module.
-- `next build` **compiles successfully**; it then fails typechecking on that same
-  pre-existing file.
-- No horizontal overflow at **360 / 768 / 1280**, measured with
-  `document.documentElement.scrollWidth` and a per-element right-edge scan, on the
-  homepage, `/search` and `/listing/[slug]`.
-- Every page still renders 200: `/ /search /listing/… /services /about /partner /contact
-  /faq /pricing /terms`.
-- Both themes checked by toggling `.dark` on `<html>`.
-
-### U2.7 — Two things left open
-
-**1. There is no dark-mode toggle, and the spec does not design one.** `ThemeProvider`
-existed but was **mounted nowhere**, so `.dark` was unreachable. It is now mounted in
-`app/layout.tsx` as `attribute="class" defaultTheme="light" enableSystem={false}` — zero
-behaviour change for users today, but the mechanism is live and testable. Whether the
-product wants a visible toggle is a client decision.
-
-**2. One token pair in the light theme misses 4.5:1.** Measured from the handoff's own
-authoritative values: **`--gold` on `--goldSoft` is 4.03:1** and `--gold` on `--paper` is
-4.49:1. The README asserts these pass. The tokens were **left exactly as delivered** —
-they are the approved palette, and changing them is a design decision rather than an
-implementation one. It affects small gold-on-goldSoft text: the trust-banner numerals,
-the `philosophy` process tags, the listing "Auction: date" chip and its "Important"
-disclaimer heading, and the dashboard's "In Progress" pill and stage labels. Darkening
-light `--gold` from `#9A6F2A` to roughly `#8A631F` clears it. Every other pair passes in
-both themes; dark is comfortable throughout (`--gold` on `--goldSoft` is 7.31:1 there).
-
-Two smaller deviations, both contrast fixes: the dashboard's `#25D366` WhatsApp pill now
-carries dark type instead of white (white on that green is 1.9:1), and the "Delete my
-account" button keeps the **fixed** `#B3261E` the spec names rather than `--danger`,
-because `--danger` in dark is a light salmon that cannot carry white type.
-
-### U2.8 — `npm run lint` still cannot run here, and now neither can `pnpm install`
-
-Lint needs a Node upgrade, and it is worse than a lint problem now: `node_modules` is a
-**pnpm** store, and `pnpm@11.1.3` refuses to run on the installed **Node v22.12.0** (it
-wants ≥ v22.13). Falling back to `npm install` fails two ways — `@opennextjs/cloudflare@1.20.6`
-peer-requires `next >=15.5.24 <16 || >=16.3.3` against this repo's `next@16.0.10`, and npm
-then errors outright reading the pnpm-shaped tree. **Nothing was installed**; the tree was
-left exactly as found. Upgrading Node past v22.13 and running `pnpm install` should fix
-lint, the missing `@opennextjs/cloudflare` types and the failing build gate in one go.
-
-### U2.9 — The dashboard was not seen rendered
-
-`/profile` redirects to `/login` when signed out, and signing in means typing a password,
-which is not something to do on the user's behalf. `components/profile-view.tsx`
-typechecks and every handler is byte-for-byte the original, but **all four tabs are
-unverified visually**. Worth a look while signed in before this ships.
-
-### U2.10 — Three images are now unused
-
-`public/images/hously-background.webp`, `hously-foreground.webp` and `exterior.webp` were
-only ever used by the parallax hero and `philosophy.tsx`. Both now use labelled slots.
-The handoff says to flag them rather than delete them, so they are still in the tree.
