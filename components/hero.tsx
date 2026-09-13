@@ -16,8 +16,13 @@ export function Hero({ stats, children }: { stats: SiteStats; children?: React.R
           label="Hero photograph — city skyline or auctioned property"
           align="top-left"
           className="flex min-h-[440px] items-end rounded-[22px]"
+          // Below sm the headline fills the block and this placeholder caption
+          // collides with the badge. It disappears entirely once a real photo lands.
+          labelClassName="hidden sm:block"
         >
-          <div className="relative w-full bg-[linear-gradient(to_top,rgba(24,20,16,0.88),rgba(24,20,16,0.55)_55%,transparent)] px-7 pb-7 pt-10">
+          {/* Bottom padding must clear the search card's -34px overlap, or the
+              card clips the paragraph's descenders. */}
+          <div className="relative w-full bg-[linear-gradient(to_top,rgba(24,20,16,0.88),rgba(24,20,16,0.55)_55%,transparent)] px-7 pb-16 pt-10">
             <div className="max-w-[640px]">
               <div className="mb-4 inline-flex items-center gap-[7px] rounded-pill border border-white/25 bg-white/15 px-3.5 py-1.5 backdrop-blur-[8px]">
                 <span className="rounded-[4px] bg-white px-1.5 py-0.5 text-[10px] font-extrabold text-[#22201D]">IN</span>

@@ -10,12 +10,14 @@ export function PhotoSlot({
   ratio,
   align = "center",
   className,
+  labelClassName,
   children,
 }: {
   label: string
   ratio?: string
   align?: "center" | "top-left"
   className?: string
+  labelClassName?: string
   children?: React.ReactNode
 }) {
   return (
@@ -27,6 +29,7 @@ export function PhotoSlot({
         className={cn(
           "absolute z-[1] rounded-pill bg-paper px-[11px] py-[5px] text-center text-[10px] font-semibold uppercase leading-none tracking-[0.1em] text-ink2",
           align === "center" ? "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" : "left-[18px] top-[18px]",
+          labelClassName,
         )}
       >
         {label}
