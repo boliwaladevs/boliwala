@@ -1,0 +1,195 @@
+{
+  "name": "Boliwala — Marketplace theme",
+  "source": "Option 2 - Marketplace.dc.html",
+  "tagline": "We Know Auctions!",
+  "color": {
+    "light": {
+      "paper": "#FFFFFF",
+      "surface": "#FBF7F1",
+      "ink": "#22201D",
+      "ink2": "#6E675E",
+      "line": "#E7DFD3",
+      "brand": "#A8442A",
+      "brandSoft": "#FBEFE9",
+      "gold": "#9A6F2A",
+      "goldSoft": "#FAF2E2",
+      "pos": "#2F6B4F",
+      "posSoft": "#E9F2EC",
+      "slot": "#EFE7DB",
+      "onBrand": "#FFFFFF",
+      "danger": "#B3261E",
+      "dangerLine": "rgba(179,38,30,0.35)"
+    },
+    "dark": {
+      "paper": "#1C1917",
+      "surface": "#141110",
+      "ink": "#F3EDE5",
+      "ink2": "#A89E92",
+      "line": "#332C26",
+      "brand": "#E08B6D",
+      "brandSoft": "#2B1D17",
+      "gold": "#D8A860",
+      "goldSoft": "#2A2113",
+      "pos": "#6FBF95",
+      "posSoft": "#16251D",
+      "slot": "#262019",
+      "onBrand": "#22201D",
+      "danger": "#F2857C",
+      "dangerLine": "rgba(242,133,124,0.4)"
+    },
+    "notes": {
+      "paper": "Card and panel surfaces",
+      "surface": "Page background; inset field fills",
+      "ink": "Primary text",
+      "ink2": "Secondary text, labels, meta",
+      "line": "Borders, dividers, rules",
+      "brand": "Primary action, prices, active filters",
+      "brandSoft": "Active filter chips, deadline block",
+      "gold": "Process tags, in-progress states",
+      "goldSoft": "Tag and step backgrounds",
+      "pos": "Physical possession, verified, success",
+      "posSoft": "Possession panel, completed steps",
+      "slot": "Photo placeholder fill",
+      "onBrand": "Text/icon colour on a brand fill",
+      "danger": "Destructive text and borders",
+      "dangerLine": "Destructive container borders"
+    }
+  },
+  "brandConstants": {
+    "logoTileGradient": [
+      "#FFC981",
+      "#D97706"
+    ],
+    "logoMarkInk": "#3E2400",
+    "wordmarkAccent": "#D97706"
+  },
+  "typography": {
+    "ui": {
+      "family": "Figtree",
+      "weights": [
+        400,
+        500,
+        600,
+        700,
+        800
+      ],
+      "source": "Google Fonts"
+    },
+    "display": {
+      "family": "Source Serif 4",
+      "weights": [
+        400,
+        500,
+        600,
+        700
+      ],
+      "source": "Google Fonts",
+      "usage": "Headlines, prices, key figures"
+    },
+    "scale": [
+      {
+        "role": "Page title (display)",
+        "size": 40,
+        "weight": 600,
+        "tracking": "-0.03em",
+        "family": "display"
+      },
+      {
+        "role": "Hero headline (display)",
+        "size": 50,
+        "weight": 600,
+        "tracking": "-0.025em",
+        "family": "display"
+      },
+      {
+        "role": "Section heading (display)",
+        "size": 32,
+        "weight": 600,
+        "tracking": "-0.02em",
+        "family": "display"
+      },
+      {
+        "role": "Panel heading (display)",
+        "size": 26,
+        "weight": 600,
+        "tracking": "-0.02em",
+        "family": "display"
+      },
+      {
+        "role": "Price, large (display)",
+        "size": 28,
+        "weight": 600,
+        "tracking": "-0.02em",
+        "family": "display"
+      },
+      {
+        "role": "Card title",
+        "size": 15.5,
+        "weight": 600,
+        "family": "ui"
+      },
+      {
+        "role": "Body",
+        "size": 14.5,
+        "weight": 400,
+        "lineHeight": 1.6,
+        "family": "ui"
+      },
+      {
+        "role": "Meta / secondary",
+        "size": 13.5,
+        "weight": 400,
+        "family": "ui"
+      },
+      {
+        "role": "Field label",
+        "size": 11,
+        "weight": 800,
+        "tracking": "0.1em",
+        "transform": "uppercase",
+        "family": "ui"
+      },
+      {
+        "role": "Chip / badge",
+        "size": 10.5,
+        "weight": 700,
+        "tracking": "0.06em",
+        "transform": "uppercase",
+        "family": "ui"
+      }
+    ]
+  },
+  "radii": {
+    "pill": 999,
+    "panel": 20,
+    "card": 18,
+    "block": 16,
+    "field": 12
+  },
+  "elevation": {
+    "card": "0 10px 26px -22px rgba(34,32,29,0.5)",
+    "panel": "0 12px 30px -26px rgba(34,32,29,0.45)",
+    "sticky": "0 18px 40px -30px rgba(34,32,29,0.55)"
+  },
+  "layout": {
+    "maxWidth": 1240,
+    "gutter": 20,
+    "sectionGap": 24,
+    "gridGap": 18
+  },
+  "controls": {
+    "lg": 48,
+    "md": 46,
+    "sm": 38,
+    "xs": 36,
+    "minTapTarget": 44
+  },
+  "rules": [
+    "Figures use tabular numerals so columns of price and EMD align.",
+    "Text on a brand fill uses --onBrand, never a hardcoded #fff — the dark salmon needs dark ink.",
+    "Destructive UI uses --danger / --dangerLine, never a hardcoded red.",
+    "Photo placeholders use --slot with a 115deg stripe and a monospace-cased caption naming the shot.",
+    "Possession is colour-coded: physical uses --pos, symbolic stays neutral.",
+    "Every screen is fluid: max-width, wrapping flex/grid tracks, no fixed widths."
+  ]
+}

@@ -29,7 +29,7 @@ export default async function PricingPage() {
       <Header />
 
       {/* Hero Section */}
-      <section className="pt-32 pb-16 px-4 max-w-4xl mx-auto text-center">
+      <section className="pt-10 pb-16 px-4 max-w-4xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-500 font-bold text-xs px-3 py-1.5 rounded-full uppercase tracking-wider mb-6">
           <Check className="w-3.5 h-3.5" />
           Simple, transparent pricing

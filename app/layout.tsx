@@ -1,18 +1,23 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google"
+import { Figtree, Source_Serif_4 } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { SmoothScrolling } from "@/components/smooth-scrolling"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, absoluteUrl } from "@/lib/seo"
 
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
-
-const plusJakartaSans = Plus_Jakarta_Sans({
+const figtree = Figtree({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-plus-jakarta-sans",
+  variable: "--font-figtree",
+})
+
+const sourceSerif4 = Source_Serif_4({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-source-serif-4",
 })
 
 const DEFAULT_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`
@@ -56,12 +61,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en-IN" className={plusJakartaSans.variable} suppressHydrationWarning>
+    <html lang="en-IN" className={`${figtree.variable} ${sourceSerif4.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <SmoothScrolling>
-          {children}
-        </SmoothScrolling>
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+          <SmoothScrolling>
+            {children}
+          </SmoothScrolling>
+          <Toaster />
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

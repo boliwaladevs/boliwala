@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bookmark, Bell, Briefcase, User, LogOut, MapPin, Scale, MessageCircle, FileText, CheckCircle2, CircleDashed, Trash2, KeyRound, AlertTriangle } from "lucide-react"
+import { Bookmark, Bell, Briefcase, User, LogOut, MessageCircle, FileText, Trash2 } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { PhotoSlot } from "@/components/photo-slot"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { toggleShortlist } from "@/app/actions/shortlist"
@@ -43,6 +45,22 @@ function normaliseAadhaar(value: string): string {
 function formatAadhaarForDisplay(value: string): string {
   return value.replace(/(\d{4})(?=\d)/g, "$1 ").trim()
 }
+
+const PANEL = "rounded-panel border border-line bg-paper p-6 shadow-card"
+const FIELD_LABEL = "text-[11px] font-extrabold uppercase tracking-[0.1em] text-ink2"
+const FIELD =
+  "h-12 rounded-field border border-line bg-surface px-4 text-sm text-ink outline-none transition-colors placeholder:text-ink2/70 focus:border-brand"
+const PRIMARY_BTN =
+  "flex h-12 items-center justify-center rounded-pill bg-brand px-8 text-[14.5px] font-bold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-60"
+const OUTLINE_PILL =
+  "inline-flex h-9 items-center justify-center rounded-pill border border-line bg-paper px-4 text-[13px] font-semibold text-ink transition-colors hover:bg-surface"
+
+const SERVICE_STAGES = [
+  { label: "Due Diligence", status: "Completed", state: "done" as const },
+  { label: "Bid Mgmt", status: "In Progress", state: "current" as const },
+  { label: "Possession", status: "Pending", state: "pending" as const },
+  { label: "Loan", status: "Pending", state: "pending" as const },
+]
 
 export function ProfileView({
   profile,
@@ -230,163 +248,151 @@ export function ProfileView({
   }
 
   return (
-    <div className="w-full flex flex-col pb-20 bg-background min-h-screen">
-      
-      {/* HERO SECTION */}
-      <section className="bg-secondary/30 py-12 mb-8 border-b border-border">
-        <div className="container mx-auto px-6">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight font-display">
-            Welcome back, <span className="text-blue-600">{firstName}!</span>
+    <div className="flex min-h-screen w-full flex-col bg-background pb-14">
+
+      {/* PAGE HEADER */}
+      <section className="mb-8 border-b border-line bg-paper py-9">
+        <div className="mx-auto max-w-[1240px] px-5">
+          <h1 className="font-serif text-[30px] font-semibold tracking-[-0.02em] text-ink md:text-[40px]">
+            Welcome back, <span className="text-brand">{firstName}!</span>
           </h1>
         </div>
       </section>
 
       {/* DASHBOARD LAYOUT */}
-      <section className="container mx-auto px-6">
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          
+      <section className="mx-auto w-full max-w-[1240px] px-5">
+        <div className="flex flex-wrap items-start gap-6">
+
           {/* SIDEBAR */}
-          <div className="w-full lg:w-[280px] bg-background border border-border rounded-2xl shadow-sm overflow-hidden shrink-0">
+          <div className="w-full min-w-[260px] flex-[1_1_260px] overflow-hidden rounded-panel border border-line bg-paper shadow-card lg:max-w-[300px]">
             {/* User Info Header */}
-            <div className="p-6 border-b border-border flex items-center gap-4 bg-secondary/20">
-              <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold font-display shrink-0">
+            <div className="flex items-center gap-3.5 border-b border-line p-5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand font-serif text-[21px] font-semibold text-on-brand">
                 {initial}
               </div>
-              <div className="overflow-hidden">
-                <div className="font-bold text-foreground truncate">{displayName}</div>
-                <div className="text-xs text-muted-foreground truncate">{profile.email}</div>
+              <div className="min-w-0">
+                <div className="truncate text-[15.5px] font-bold text-ink">{displayName}</div>
+                <div className="truncate text-[12.5px] text-ink2">{profile.email}</div>
               </div>
             </div>
 
-            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Credits</span>
-              <span className="text-lg font-extrabold text-blue-600 font-display">{profile.creditsBalance}</span>
+            <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+              <span className={FIELD_LABEL}>Credits</span>
+              <span className="font-serif text-[22px] font-semibold tabular-nums text-brand">{profile.creditsBalance}</span>
             </div>
-            <div className="px-6 pb-4 text-xs text-muted-foreground">Member since {memberSince}</div>
+            <div className="px-5 py-3 text-[12.5px] text-ink2">Member since {memberSince}</div>
 
             {/* Navigation */}
-            <div className="p-2 flex flex-col gap-1">
-              <button 
-                onClick={() => setActiveTab("saved")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                  activeTab === "saved" 
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400" 
-                    : "text-foreground/80 hover:bg-secondary/50"
-                }`}
-              >
-                <Bookmark className="w-4 h-4" />
-                Saved Properties ({savedListings.length})
-              </button>
-              
-              <button 
-                onClick={() => setActiveTab("alerts")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                  activeTab === "alerts" 
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400" 
-                    : "text-foreground/80 hover:bg-secondary/50"
-                }`}
-              >
-                <Bell className="w-4 h-4" />
-                My Alerts ({alertRows.filter((a) => a.isActive).length})
-              </button>
-
-              <button 
-                onClick={() => setActiveTab("services")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                  activeTab === "services" 
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400" 
-                    : "text-foreground/80 hover:bg-secondary/50"
-                }`}
-              >
-                <Briefcase className="w-4 h-4" />
-                Service Requests (1)
-              </button>
-
-              <button 
-                onClick={() => setActiveTab("info")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                  activeTab === "info" 
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400" 
-                    : "text-foreground/80 hover:bg-secondary/50"
-                }`}
-              >
-                <User className="w-4 h-4" />
-                Account Info
-              </button>
+            <div className="flex flex-col gap-1 p-2">
+              {([
+                { id: "saved", icon: Bookmark, label: `Saved Properties (${savedListings.length})` },
+                { id: "alerts", icon: Bell, label: `My Alerts (${alertRows.filter((a) => a.isActive).length})` },
+                { id: "services", icon: Briefcase, label: "Service Requests (1)" },
+                { id: "info", icon: User, label: "Account Info" },
+              ] as const).map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-[14px] px-4 py-3.5 text-sm font-semibold transition-colors",
+                      activeTab === item.id ? "bg-brand-soft text-brand" : "text-ink hover:bg-surface",
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </button>
+                )
+              })}
             </div>
 
-            <div className="p-4 border-t border-border mt-2">
-              <button onClick={handleLogOut} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
-                <LogOut className="w-4 h-4" />
+            <div className="border-t border-line p-3">
+              <button
+                onClick={handleLogOut}
+                className="flex min-h-11 w-full items-center gap-3 rounded-[14px] px-4 text-sm font-bold text-danger transition-colors hover:bg-surface"
+              >
+                <LogOut className="h-4 w-4" />
                 Log Out
               </button>
             </div>
           </div>
 
           {/* MAIN AREA */}
-          <div className="flex-1 w-full min-w-0">
+          <div className="w-full min-w-0 flex-[999_1_380px]">
             
             {/* SAVED PROPERTIES TAB */}
             {activeTab === "saved" && (
               <div className="animate-in fade-in duration-300">
-                <div className="flex items-center justify-between mb-6">
+                <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground font-display">Saved Properties</h2>
-                    <p className="text-sm text-muted-foreground mt-1">Properties you're tracking for auction.</p>
+                    <h2 className="font-serif text-[26px] font-semibold tracking-[-0.02em] text-ink">Saved Properties</h2>
+                    <p className="mt-1 text-[13.5px] text-ink2">Properties you're tracking for auction.</p>
                   </div>
-                  <Link href="/search" className="text-sm font-bold text-blue-600 hover:text-blue-700 hidden sm:block">
+                  <Link href="/search" className="text-sm font-bold text-brand hover:underline">
                     Browse More &rarr;
                   </Link>
                 </div>
-                
+
                 {savedListings.length === 0 ? (
-                  <div className="bg-background rounded-2xl border border-border p-10 text-center text-muted-foreground">
-                    <Bookmark className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                  <div className="rounded-panel border border-line bg-paper p-10 text-center text-ink2">
+                    <Bookmark className="mx-auto mb-3 h-8 w-8 opacity-40" />
                     No saved properties yet. Browse auctions and tap Save to track them here.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid gap-[18px] [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
                     {savedListings.map((listing) => (
-                      <div key={listing.id} className="bg-background rounded-2xl border border-border overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
-                        <div className="relative h-48 bg-secondary/50">
-                          <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-xs font-bold px-3 py-1.5 rounded-lg text-slate-800 shadow-sm flex items-center gap-2">
-                            <span>{listing.lender.shortName}</span>
-                          </div>
-                          <div className="absolute top-3 right-3 bg-red-100 text-red-700 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                      <article
+                        key={listing.id}
+                        className="relative flex flex-col overflow-hidden rounded-card border border-line bg-paper shadow-card transition-shadow hover:shadow-panel"
+                      >
+                        <PhotoSlot label="Property photo" ratio="16 / 10">
+                          <span className="absolute left-3 top-3 rounded-pill bg-[rgba(24,20,16,0.78)] px-[11px] py-[5px] text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-white backdrop-blur-[6px]">
+                            {listing.lender.shortName}
+                          </span>
+                          <span className="absolute right-3 top-3 rounded-pill bg-brand-soft px-[11px] py-[5px] text-[10.5px] font-bold tabular-nums text-brand">
                             {formatDateShort(listing.auctionDate)}
-                          </div>
-                          <div className="absolute bottom-3 right-3 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
+                          </span>
+                          <span className="absolute bottom-3 left-3 rounded-pill bg-[rgba(255,255,255,0.92)] px-[11px] py-[5px] text-[10.5px] font-bold text-[#22201D]">
                             {listing.possessionType === "physical" ? "Physical Possession" : "Symbolic Possession"}
+                          </span>
+                        </PhotoSlot>
+
+                        <div className="px-[18px] pb-4 pt-4">
+                          <div className="font-serif text-[27px] font-semibold leading-[1.15] tracking-[-0.02em] text-ink">
+                            {formatINR(listing.reservePrice)}
                           </div>
-                          <div className="w-full h-full flex items-center justify-center text-4xl">🏢</div>
+                          <div className="mb-2.5 text-xs text-ink2">Reserve Price</div>
+                          <h3 className="mb-[3px] text-[15.5px] font-semibold leading-[1.35] text-ink">
+                            <Link href={`/listing/${listing.slug}`} className="after:absolute after:inset-0 after:content-['']">
+                              {listing.title}
+                            </Link>
+                          </h3>
+                          <div className="text-[13.5px] text-ink2">{listing.locality}, {listing.city}</div>
                         </div>
-                        <div className="p-5 flex-1 flex flex-col">
-                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Reserve Price</div>
-                          <div className="text-2xl font-bold text-blue-600 font-display mb-3">{formatINR(listing.reservePrice)}</div>
-                          <div className="font-bold text-foreground text-sm line-clamp-1 mb-1">{listing.title}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-1.5 mb-4">
-                            <MapPin className="w-3.5 h-3.5 shrink-0" />
-                            <span className="truncate">{listing.locality}, {listing.city}</span>
+
+                        <div className="relative z-[1] mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-line px-[18px] py-3">
+                          <div className="text-[13px] text-ink2">
+                            EMD: <strong className="font-bold tabular-nums text-ink">{formatINR(listing.emdAmount)}</strong>
                           </div>
-                          <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                            <div className="text-sm text-muted-foreground">
-                              EMD: <strong className="text-foreground">{formatINR(listing.emdAmount)}</strong>
-                            </div>
-                            <div className="flex gap-2">
-                              <Link href={`/listing/${listing.slug}`} className="bg-secondary hover:bg-secondary/80 text-foreground text-xs font-bold py-2 px-4 rounded-lg transition-colors">
-                                View
-                              </Link>
-                              <button
-                                onClick={() => handleRemoveShortlist(listing.id)}
-                                className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 p-2 rounded-lg transition-colors"
-                                title="Remove"
-                              >
-                                <Bookmark className="w-4 h-4 fill-current" />
-                              </button>
-                            </div>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/listing/${listing.slug}`}
+                              className="flex h-9 items-center justify-center rounded-pill bg-brand px-4 text-[13px] font-semibold text-on-brand transition-opacity hover:opacity-90"
+                            >
+                              View
+                            </Link>
+                            <button
+                              onClick={() => handleRemoveShortlist(listing.id)}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-soft text-brand transition-opacity hover:opacity-80"
+                              title="Remove"
+                              aria-label="Remove from saved"
+                            >
+                              <Bookmark className="h-4 w-4 fill-current" />
+                            </button>
                           </div>
                         </div>
-                      </div>
+                      </article>
                     ))}
                   </div>
                 )}
@@ -396,24 +402,30 @@ export function ProfileView({
             {/* ALERTS TAB */}
             {activeTab === "alerts" && (
               <div className="animate-in fade-in duration-300">
-                <div className="flex items-center justify-between mb-6">
+                <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground font-display">Your Property Alerts</h2>
-                    <p className="text-sm text-muted-foreground mt-1">You&apos;ll be emailed when new matching properties are listed.</p>
+                    <h2 className="font-serif text-[26px] font-semibold tracking-[-0.02em] text-ink">Your Property Alerts</h2>
+                    <p className="mt-1 text-[13.5px] text-ink2">You&apos;ll be emailed when new matching properties are listed.</p>
                   </div>
-                  <Link href="/search" className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl transition-colors hidden sm:block">
+                  <Link
+                    href="/search"
+                    className="inline-flex h-11 items-center rounded-pill bg-brand px-5 text-sm font-bold text-on-brand transition-opacity hover:opacity-90"
+                  >
                     + Create from a search
                   </Link>
                 </div>
 
                 {alertRows.length === 0 ? (
-                  <div className="bg-background rounded-2xl border border-border shadow-sm p-10 text-center">
-                    <Bell className="w-8 h-8 mx-auto mb-3 opacity-40" />
-                    <h3 className="font-bold text-foreground mb-1">No alerts yet</h3>
-                    <p className="text-sm text-muted-foreground mb-5">
+                  <div className="rounded-panel border border-line bg-paper p-10 text-center shadow-card">
+                    <Bell className="mx-auto mb-3 h-8 w-8 opacity-40" />
+                    <h3 className="mb-1 font-bold text-ink">No alerts yet</h3>
+                    <p className="mb-5 text-sm text-ink2">
                       Run a search, then use &ldquo;Get email alerts for this search&rdquo; to be told when new properties match.
                     </p>
-                    <Link href="/search" className="inline-block text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-xl transition-colors">
+                    <Link
+                      href="/search"
+                      className="inline-flex h-11 items-center rounded-pill bg-brand px-5 text-sm font-bold text-on-brand transition-opacity hover:opacity-90"
+                    >
                       Search properties
                     </Link>
                   </div>
@@ -424,19 +436,18 @@ export function ProfileView({
                       return (
                         <div
                           key={alert.id}
-                          className={`bg-background rounded-2xl border border-border p-6 shadow-sm flex flex-col sm:flex-row gap-6 justify-between items-start sm:items-center transition-opacity ${
-                            alert.isActive ? "" : "opacity-60"
-                          }`}
+                          className={cn(
+                            "flex flex-wrap items-start justify-between gap-5 rounded-card border border-line bg-paper p-5 transition-opacity sm:items-center",
+                            alert.isActive ? "" : "opacity-[0.62]",
+                          )}
                         >
-                          <div className="flex items-start gap-4 min-w-0">
-                            <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
-                              <Bell className="w-5 h-5" />
+                          <div className="flex min-w-0 flex-[1_1_240px] items-start gap-3.5">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold-soft text-gold">
+                              <Bell className="h-5 w-5" />
                             </div>
                             <div className="min-w-0">
-                              <h3 className="font-bold text-foreground text-base mb-1 truncate">
-                                {chips.join(" • ")}
-                              </h3>
-                              <p className="text-sm text-muted-foreground mb-3">
+                              <h3 className="mb-1 truncate text-base font-bold text-ink">{chips.join(" • ")}</h3>
+                              <p className="mb-3 text-[13.5px] text-ink2">
                                 {alert.frequency === "daily"
                                   ? "Daily digest"
                                   : alert.frequency === "weekly"
@@ -448,14 +459,17 @@ export function ProfileView({
                               </p>
                               <div className="flex flex-wrap gap-2">
                                 {chips.map((chip) => (
-                                  <span key={chip} className="text-[10px] font-bold uppercase tracking-wider bg-secondary/50 px-2 py-1 rounded text-muted-foreground">
+                                  <span
+                                    key={chip}
+                                    className="rounded-pill bg-surface px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-ink2"
+                                  >
                                     {chip}
                                   </span>
                                 ))}
                               </div>
                             </div>
                           </div>
-                          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto border-t border-border sm:border-0 pt-4 sm:pt-0 shrink-0">
+                          <div className="flex w-full shrink-0 flex-wrap items-center gap-2 border-t border-line pt-4 sm:w-auto sm:border-0 sm:pt-0">
                             <label className="sr-only" htmlFor={`freq-${alert.id}`}>
                               How often to send this alert
                             </label>
@@ -463,34 +477,32 @@ export function ProfileView({
                               id={`freq-${alert.id}`}
                               value={alert.frequency}
                               onChange={(e) => handleChangeFrequency(alert.id, e.target.value)}
-                              className="text-xs font-bold border border-border px-3 py-2 rounded-lg bg-background hover:bg-secondary/50 transition-colors cursor-pointer"
+                              className="h-9 cursor-pointer rounded-pill border border-line bg-paper px-3 text-[13px] font-semibold text-ink outline-none transition-colors hover:bg-surface focus:border-brand"
                             >
                               <option value="instant">Instant</option>
                               <option value="daily">Daily digest</option>
                               <option value="weekly">Weekly</option>
                             </select>
-                            <Link
-                              href={searchHrefFromAlertFilters(alert.filters)}
-                              className="text-xs font-bold border border-border px-4 py-2 rounded-lg hover:bg-secondary/50 transition-colors"
-                            >
+                            <Link href={searchHrefFromAlertFilters(alert.filters)} className={OUTLINE_PILL}>
                               View matches
                             </Link>
                             <button
                               onClick={() => handleToggleAlert(alert.id, !alert.isActive)}
-                              className={`text-xs font-bold px-4 py-2 rounded-lg border transition-colors ${
+                              className={cn(
+                                "inline-flex h-9 items-center justify-center rounded-pill border px-4 text-[13px] font-semibold transition-colors",
                                 alert.isActive
-                                  ? "text-amber-700 border-amber-200 hover:bg-amber-50"
-                                  : "text-emerald-700 border-emerald-200 hover:bg-emerald-50"
-                              }`}
+                                  ? "border-gold-line bg-gold-soft text-gold"
+                                  : "border-pos-line bg-pos-soft text-pos",
+                              )}
                             >
                               {alert.isActive ? "Pause" : "Resume"}
                             </button>
                             <button
                               onClick={() => handleDeleteAlert(alert.id)}
                               aria-label="Delete this alert"
-                              className="text-xs font-bold px-3 py-2 rounded-lg border text-red-600 border-red-200 hover:bg-red-50 transition-colors"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-danger-line text-danger transition-colors hover:bg-surface"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </div>
@@ -504,53 +516,65 @@ export function ProfileView({
             {/* SERVICES TAB */}
             {activeTab === "services" && (
               <div className="animate-in fade-in duration-300">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-foreground font-display">My Service Requests</h2>
-                  <p className="text-sm text-muted-foreground mt-1">Track the progress of your purchased Boliwala packages.</p>
+                <div className="mb-5">
+                  <h2 className="font-serif text-[26px] font-semibold tracking-[-0.02em] text-ink">My Service Requests</h2>
+                  <p className="mt-1 text-[13.5px] text-ink2">Track the progress of your purchased Boliwala packages.</p>
                 </div>
 
-                <div className="bg-background rounded-2xl border border-border shadow-sm p-6 sm:p-8">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div className="rounded-panel border border-line bg-paper p-5 shadow-card sm:p-[26px]">
+                  <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <h3 className="text-lg font-bold text-foreground">End-to-End Package — Flat 303, Vithai Apt, Airoli</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Purchased 30 Jun 2026 • ₹19,999 paid (Razorpay)</p>
+                      <h3 className="text-lg font-bold text-ink">End-to-End Package — Flat 303, Vithai Apt, Airoli</h3>
+                      <p className="mt-1 text-[13.5px] text-ink2">Purchased 30 Jun 2026 • ₹19,999 paid (Razorpay)</p>
                     </div>
-                    <span className="bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shrink-0">
+                    <span className="shrink-0 rounded-pill bg-gold-soft px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-gold">
                       In Progress
                     </span>
                   </div>
 
                   {/* Progress Tracker */}
-                  <div className="flex flex-col sm:flex-row border border-border rounded-xl overflow-hidden mb-8">
-                    <div className="flex-1 p-4 text-center border-b sm:border-b-0 sm:border-r border-border bg-emerald-50 dark:bg-emerald-900/10">
-                      <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
-                      <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Due Diligence</div>
-                      <div className="text-xs text-muted-foreground mt-1">Completed</div>
-                    </div>
-                    <div className="flex-1 p-4 text-center border-b sm:border-b-0 sm:border-r border-border bg-amber-50 dark:bg-amber-900/10">
-                      <Scale className="w-6 h-6 text-amber-600 mx-auto mb-2" />
-                      <div className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Bid Mgmt</div>
-                      <div className="text-xs text-muted-foreground mt-1">In Progress</div>
-                    </div>
-                    <div className="flex-1 p-4 text-center border-b sm:border-b-0 sm:border-r border-border">
-                      <CircleDashed className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                      <div className="text-[11px] font-bold text-foreground uppercase tracking-wider">Possession</div>
-                      <div className="text-xs text-muted-foreground mt-1">Pending</div>
-                    </div>
-                    <div className="flex-1 p-4 text-center">
-                      <CircleDashed className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                      <div className="text-[11px] font-bold text-foreground uppercase tracking-wider">Loan</div>
-                      <div className="text-xs text-muted-foreground mt-1">Pending</div>
-                    </div>
+                  <div className="mb-6 flex flex-wrap overflow-hidden rounded-block border border-line">
+                    {SERVICE_STAGES.map((stage, i) => (
+                      <div
+                        key={stage.label}
+                        className={cn(
+                          "flex-[1_1_130px] p-4 text-center",
+                          i < SERVICE_STAGES.length - 1 && "border-b border-r border-line sm:border-b-0",
+                          stage.state === "done" && "bg-pos-soft",
+                          stage.state === "current" && "bg-gold-soft",
+                          stage.state === "pending" && "bg-paper",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "mx-auto mb-2 block h-[22px] w-[22px] rounded-full",
+                            stage.state === "done" && "bg-pos",
+                            stage.state === "current" && "bg-gold",
+                            stage.state === "pending" && "border-2 border-dashed border-ink2",
+                          )}
+                        />
+                        <div
+                          className={cn(
+                            "text-[11.5px] font-extrabold uppercase tracking-[0.08em]",
+                            stage.state === "done" && "text-pos",
+                            stage.state === "current" && "text-gold",
+                            stage.state === "pending" && "text-ink",
+                          )}
+                        >
+                          {stage.label}
+                        </div>
+                        <div className="mt-1 text-[12.5px] text-ink2">{stage.status}</div>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="flex flex-wrap gap-4">
-                    <button className="flex items-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white text-sm font-bold py-2.5 px-6 rounded-xl transition-colors shadow-sm">
-                      <MessageCircle className="w-4 h-4" />
+                  <div className="flex flex-wrap gap-3">
+                    <button className="flex h-11 items-center gap-2 rounded-pill bg-[#25D366] px-6 text-sm font-bold text-[#0B2E19] transition-opacity hover:opacity-90">
+                      <MessageCircle className="h-4 w-4" />
                       WhatsApp Team
                     </button>
-                    <button className="flex items-center gap-2 bg-secondary/50 hover:bg-secondary text-foreground text-sm font-bold py-2.5 px-6 rounded-xl transition-colors border border-border">
-                      <FileText className="w-4 h-4" />
+                    <button className="flex h-11 items-center gap-2 rounded-pill border border-line bg-surface px-6 text-sm font-bold text-ink transition-colors hover:bg-paper">
+                      <FileText className="h-4 w-4" />
                       View Due Diligence Report
                     </button>
                   </div>
@@ -561,44 +585,44 @@ export function ProfileView({
             {/* ACCOUNT INFO TAB */}
             {activeTab === "info" && (
               <div className="animate-in fade-in duration-300">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-foreground font-display">Account Information</h2>
-                  <p className="text-sm text-muted-foreground mt-1">Manage your personal details and settings.</p>
+                <div className="mb-5">
+                  <h2 className="font-serif text-[26px] font-semibold tracking-[-0.02em] text-ink">Account Information</h2>
+                  <p className="mt-1 text-[13.5px] text-ink2">Manage your personal details and settings.</p>
                 </div>
 
-                <div className="bg-background rounded-2xl border border-border shadow-sm p-6 sm:p-8">
-                  <form className="flex flex-col gap-6" onSubmit={handleSaveDetails}>
+                <div className={`${PANEL} sm:p-[26px]`}>
+                  <form className="flex flex-col gap-5" onSubmit={handleSaveDetails}>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid gap-5 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
                       <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Full Name</label>
-                        <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                        <label className={FIELD_LABEL} htmlFor="full-name">Full Name</label>
+                        <input id="full-name" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className={FIELD} />
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Email Address</label>
-                        <input type="email" defaultValue={profile.email} disabled className="h-12 px-4 rounded-xl border border-border bg-secondary/10 text-muted-foreground outline-none text-sm cursor-not-allowed" />
-                        <span className="text-xs text-muted-foreground">Contact support to change email.</span>
+                        <label className={FIELD_LABEL} htmlFor="email-address">Email Address</label>
+                        <input id="email-address" type="email" defaultValue={profile.email} disabled className={`${FIELD} cursor-not-allowed text-ink2`} />
+                        <span className="text-xs text-ink2">Contact support to change email.</span>
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Phone Number</label>
-                        <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                        <label className={FIELD_LABEL} htmlFor="phone-number">Phone Number</label>
+                        <input id="phone-number" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" className={FIELD} />
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">City</label>
-                        <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Mumbai" className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm" />
+                        <label className={FIELD_LABEL} htmlFor="city">City</label>
+                        <input id="city" type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Mumbai" className={FIELD} />
                       </div>
                     </div>
-                    
-                    <div className="border-t border-border pt-6 mt-2">
-                      <h3 className="font-bold text-foreground mb-4">KYC Details (Optional)</h3>
-                      <p className="text-sm text-muted-foreground mb-6">Providing these helps speed up your service onboarding.</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <div className="mt-1 border-t border-line pt-5">
+                      <h3 className="mb-2 font-serif text-xl font-semibold text-ink">KYC Details (Optional)</h3>
+                      <p className="mb-5 text-[13.5px] text-ink2">Providing these helps speed up your service onboarding.</p>
+
+                      <div className="grid gap-5 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
                         <div className="flex flex-col gap-2">
-                          <label htmlFor="pan" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">PAN Number</label>
+                          <label htmlFor="pan" className={FIELD_LABEL}>PAN Number</label>
                           <input
                             id="pan"
                             type="text"
@@ -607,11 +631,11 @@ export function ProfileView({
                             maxLength={10}
                             autoComplete="off"
                             placeholder="ABCDE1234F"
-                            className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm uppercase"
+                            className={`${FIELD} uppercase`}
                           />
                         </div>
                         <div className="flex flex-col gap-2">
-                          <label htmlFor="aadhaar" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Aadhaar Number</label>
+                          <label htmlFor="aadhaar" className={FIELD_LABEL}>Aadhaar Number</label>
                           <input
                             id="aadhaar"
                             type="text"
@@ -620,17 +644,17 @@ export function ProfileView({
                             onChange={(e) => setAadhaarNumber(formatAadhaarForDisplay(normaliseAadhaar(e.target.value)))}
                             autoComplete="off"
                             placeholder="1234 5678 9012"
-                            className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm"
+                            className={`${FIELD} tabular-nums`}
                           />
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-4">
+                      <p className="mt-4 text-xs text-ink2">
                         Both are optional and are only visible to you. Leave them blank if you would rather not share them.
                       </p>
                     </div>
 
-                    <div className="border-t border-border pt-6 mt-2 flex justify-end">
-                      <button disabled={savingDetails} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-12 px-8 rounded-xl transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5">
+                    <div className="mt-1 flex justify-end border-t border-line pt-5">
+                      <button disabled={savingDetails} className={PRIMARY_BTN}>
                         {savingDetails ? "Saving…" : "Save Changes"}
                       </button>
                     </div>
@@ -638,19 +662,16 @@ export function ProfileView({
                 </div>
 
                 {/* CHANGE PASSWORD */}
-                <div className="bg-background rounded-2xl border border-border shadow-sm p-6 md:p-8 mt-6">
-                  <div className="flex items-center gap-3 mb-1">
-                    <KeyRound className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-lg font-bold text-foreground font-display">Change password</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-6">
+                <div className={`${PANEL} mt-5 sm:p-[26px]`}>
+                  <h3 className="mb-2 font-serif text-xl font-semibold text-ink">Change password</h3>
+                  <p className="mb-5 text-[13.5px] text-ink2">
                     You&apos;ll be asked for your current password first.
                   </p>
 
                   <form className="flex flex-col gap-5" onSubmit={handleChangePassword}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="grid gap-5 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
                       <div className="flex flex-col gap-2">
-                        <label htmlFor="current-password" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <label htmlFor="current-password" className={FIELD_LABEL}>
                           Current password
                         </label>
                         <input
@@ -660,11 +681,11 @@ export function ProfileView({
                           onChange={(e) => setCurrentPassword(e.target.value)}
                           required
                           autoComplete="current-password"
-                          className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm"
+                          className={FIELD}
                         />
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label htmlFor="new-password" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <label htmlFor="new-password" className={FIELD_LABEL}>
                           New password
                         </label>
                         <input
@@ -675,16 +696,13 @@ export function ProfileView({
                           required
                           minLength={6}
                           autoComplete="new-password"
-                          className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all text-sm"
+                          className={FIELD}
                         />
                       </div>
                     </div>
 
                     <div className="flex justify-end">
-                      <button
-                        disabled={changingPassword}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-12 px-8 rounded-xl transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:-translate-y-0.5"
-                      >
+                      <button disabled={changingPassword} className={PRIMARY_BTN}>
                         {changingPassword ? "Changing…" : "Change password"}
                       </button>
                     </div>
@@ -692,23 +710,20 @@ export function ProfileView({
                 </div>
 
                 {/* DELETE ACCOUNT */}
-                <div className="bg-background rounded-2xl border border-red-200 dark:border-red-900/50 shadow-sm p-6 md:p-8 mt-6">
-                  <div className="flex items-center gap-3 mb-1">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                    <h3 className="text-lg font-bold text-foreground font-display">Delete account</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">
+                <div className="mt-5 rounded-panel border border-danger-line bg-paper p-6 shadow-card sm:p-[26px]">
+                  <h3 className="mb-2 font-serif text-xl font-semibold text-danger">Delete account</h3>
+                  <p className="mb-2 text-[13.5px] text-ink2">
                     This permanently removes your account, saved properties, alerts, unlocked
                     details, credit history and any personal details you have entered.
                   </p>
-                  <p className="text-sm font-semibold text-red-600 mb-6">
+                  <p className="mb-5 text-[13.5px] font-bold text-danger">
                     This cannot be undone, and your remaining {profile.creditsBalance} credit
                     {profile.creditsBalance === 1 ? "" : "s"} will be lost.
                   </p>
 
-                  <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                    <div className="flex flex-col gap-2 flex-1">
-                      <label htmlFor="delete-confirm" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                    <div className="flex flex-1 flex-col gap-2">
+                      <label htmlFor="delete-confirm" className={FIELD_LABEL}>
                         Type DELETE to confirm
                       </label>
                       <input
@@ -718,14 +733,14 @@ export function ProfileView({
                         onChange={(e) => setDeleteConfirm(e.target.value)}
                         autoComplete="off"
                         placeholder="DELETE"
-                        className="h-12 px-4 rounded-xl border border-border bg-secondary/30 focus:bg-background focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all text-sm"
+                        className={FIELD}
                       />
                     </div>
                     <button
                       type="button"
                       onClick={handleDeleteAccount}
                       disabled={deleteConfirm !== "DELETE" || deletingAccount}
-                      className="bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold h-12 px-8 rounded-xl transition-all"
+                      className="flex h-12 items-center justify-center rounded-pill bg-[#B3261E] px-8 text-[14.5px] font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {deletingAccount ? "Deleting…" : "Delete my account"}
                     </button>

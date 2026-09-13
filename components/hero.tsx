@@ -1,142 +1,56 @@
-"use client"
-
-import { useEffect, useRef } from "react"
-import Image from "next/image"
-import { ArrowDown } from "lucide-react"
+import { PhotoSlot } from "@/components/photo-slot"
 import { displayCount, type SiteStats } from "@/lib/stats"
 
-export function Hero({ stats }: { stats: SiteStats }) {
-  const contentRef = useRef<HTMLDivElement>(null)
-  const heroRef = useRef<HTMLDivElement>(null)
-  const backgroundRef = useRef<HTMLDivElement>(null)
-  const foregroundRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    let animationFrameId: number;
-
-    const renderLoop = () => {
-      // With Lenis, window.scrollY is automatically smooth.
-      // We calculate progress based on how far we've scrolled down the first 100vh.
-      const scrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
-      
-      // Progress from 0 to 1 over the first 100vh
-      const progress = Math.max(0, Math.min(1, scrollY / (windowHeight || 800)));
-      
-      if (contentRef.current) {
-        const translateY = -(progress * 300)
-        const opacity = Math.max(0, 1 - progress * 2)
-        contentRef.current.style.transform = `translateY(${translateY}px)`
-        contentRef.current.style.opacity = opacity.toString()
-      }
-      
-      if (backgroundRef.current) {
-        backgroundRef.current.style.transform = `translateY(0px)`
-      }
-
-      if (foregroundRef.current) {
-        const translateY = 100 - (progress * 100)
-        foregroundRef.current.style.transform = `translateY(${translateY}%)`
-      }
-
-      animationFrameId = requestAnimationFrame(renderLoop);
-    };
-
-    animationFrameId = requestAnimationFrame(renderLoop);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId)
-    }
-  }, []) 
+export function Hero({ stats, children }: { stats: SiteStats; children?: React.ReactNode }) {
+  const statCards = [
+    { value: displayCount(stats.liveAuctions), label: "Live Auctions" },
+    { value: displayCount(stats.cities), label: "Cities" },
+    { value: displayCount(stats.lenders), label: "Lenders" },
+    { value: "₹0", label: "To Browse" },
+  ]
 
   return (
-    <div className="h-[200vh] relative w-full" ref={heroRef}>
-      <section id="hero" className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden bg-[#0A0F1C]">
-        <div 
-          ref={backgroundRef} 
-          className="absolute inset-0 z-0 will-change-transform"
-          style={{ transform: "translateY(0px)" }}
+    <section id="hero" className="px-5 pt-5">
+      <div className="mx-auto max-w-[1240px]">
+        <PhotoSlot
+          label="Hero photograph — city skyline or auctioned property"
+          align="top-left"
+          className="flex min-h-[440px] items-end rounded-[22px]"
         >
-          <Image
-            src="/images/hously-background.webp"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-center opacity-80"
-          />
-        </div>
+          <div className="relative w-full bg-[linear-gradient(to_top,rgba(24,20,16,0.88),rgba(24,20,16,0.55)_55%,transparent)] px-7 pb-7 pt-10">
+            <div className="max-w-[640px]">
+              <div className="mb-4 inline-flex items-center gap-[7px] rounded-pill border border-white/25 bg-white/15 px-3.5 py-1.5 backdrop-blur-[8px]">
+                <span className="rounded-[4px] bg-white px-1.5 py-0.5 text-[10px] font-extrabold text-[#22201D]">IN</span>
+                <span className="text-[11.5px] font-semibold uppercase tracking-[0.1em] text-white">
+                  {"India's bank auction property platform"}
+                </span>
+              </div>
 
-        <div
-          ref={contentRef}
-          className="container mx-auto px-6 md:px-12 lg:pt-0 relative z-10 pb-0 pl-1 pr-1 pt-8 md:pt-0"
-          style={{
-            willChange: "transform, opacity",
-            transform: "translateY(0px)",
-            opacity: 1,
-          }}
-        >
-          <div className="mb-16 md:mb-20 max-w-5xl mx-auto flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-8">
-              <span className="text-[10px] font-bold bg-white text-[#0A0F1C] px-1.5 py-0.5 rounded-sm">IN</span>
-              <span className="text-xs tracking-[0.15em] uppercase text-white font-semibold">{"INDIA'S BANK AUCTION PROPERTY PLATFORM"}</span>
-            </div>
+              <h1 className="mb-3.5 font-serif text-[34px] font-semibold leading-[1.05] tracking-[-0.025em] text-white sm:text-[42px] lg:text-[50px]">
+                {"Find Bank Auction Properties at"}
+                <span className="text-[var(--logo-tile-from)]">{" 30–40% Below Market"}</span>
+              </h1>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-balance text-center text-white mb-6 tracking-tight leading-[1.1] drop-shadow-lg">
-              {"Find Bank Auction Properties at"}
-              <span className="text-orange-300">{" 30–40% Below Market"}</span>
-            </h1>
-            
-            <p className="text-base md:text-xl text-white/90 text-center max-w-3xl mb-12 font-light leading-relaxed drop-shadow-md">
-              {"India's only dedicated platform for SARFAESI bank auction properties —"}
-              <br className="hidden md:block" />
-              {"with free listings, alerts, and full end-to-end bidding support."}
-            </p>
-
-            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 text-white/90 drop-shadow-md">
-              <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white mb-2">{displayCount(stats.liveAuctions)}</span>
-                <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">Live Auctions</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white mb-2">{displayCount(stats.cities)}</span>
-                <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">Cities</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white mb-2">{displayCount(stats.lenders)}</span>
-                <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">Lenders</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-3xl md:text-4xl font-bold text-white mb-2">₹0</span>
-                <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/70">To Browse</span>
-              </div>
+              <p className="max-w-[52ch] text-[15px] leading-[1.55] text-white/85 sm:text-[16.5px]">
+                {"India's only dedicated platform for SARFAESI bank auction properties — with free listings, alerts, and full end-to-end bidding support."}
+              </p>
             </div>
           </div>
-        </div>
+        </PhotoSlot>
 
-        <div 
-          ref={foregroundRef}
-          className="absolute inset-x-0 bottom-0 z-20 pointer-events-none will-change-transform flex items-end justify-center overflow-visible"
-          style={{ transform: "translateY(100%)" }}
-        >
-          <Image
-            src="/images/hously-foreground.webp"
-            alt=""
-            width={2750}
-            height={1536}
-            // Not `priority`: at scroll 0 this layer is translated fully below
-            // the fold and only slides up as you scroll, so preloading it would
-            // compete with the background, which is the actual LCP element.
-            loading="lazy"
-            sizes="100vw"
-            className="w-full h-auto object-contain object-bottom min-w-full"
-          />
-        </div>
+        {/* The search panel overlaps the hero, so it sits inside this container
+            rather than as a sibling section. */}
+        {children && <div className="relative z-[5] -mt-[34px] px-0 sm:px-5">{children}</div>}
 
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce z-30 pointer-events-none">
-          <ArrowDown className="w-5 h-5 text-white/50" />
+        <div className="mt-[34px] grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
+          {statCards.map((stat) => (
+            <div key={stat.label} className="rounded-block border border-line bg-paper px-5 py-[18px]">
+              <div className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] text-ink">{stat.value}</div>
+              <div className="mt-2 text-xs font-semibold uppercase tracking-[0.1em] text-ink2">{stat.label}</div>
+            </div>
+          ))}
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   )
 }

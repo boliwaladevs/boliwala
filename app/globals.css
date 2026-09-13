@@ -3,81 +3,132 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Hously architecture color palette - warm neutrals with charcoal accents */
+/* Boliwala Marketplace palette — warm paper neutrals with a terracotta brand.
+   Primitive tokens come first; the shadcn/Tailwind names below are aliases of
+   them, so `.dark` only has to override this one block. */
 :root {
-  --background: oklch(0.97 0.005 85);
-  --foreground: oklch(0.18 0.01 75);
-  --card: oklch(0.98 0.004 85);
-  --card-foreground: oklch(0.18 0.01 75);
-  --popover: oklch(0.98 0.004 85);
-  --popover-foreground: oklch(0.18 0.01 75);
-  --primary: oklch(0.2 0.01 75);
-  --primary-foreground: oklch(0.97 0.005 85);
-  --secondary: oklch(0.92 0.008 80);
-  --secondary-foreground: oklch(0.25 0.01 75);
-  --muted: oklch(0.9 0.01 80);
-  --muted-foreground: oklch(0.45 0.015 75);
-  --accent: oklch(0.7 0.03 70);
-  --accent-foreground: oklch(0.18 0.01 75);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.88 0.01 80);
-  --input: oklch(0.88 0.01 80);
-  --ring: oklch(0.55 0.02 75);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.25rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --paper: #ffffff;
+  --surface: #fbf7f1;
+  --ink: #22201d;
+  --ink2: #6e675e;
+  --line: #e7dfd3;
+  --brand: #a8442a;
+  --brand-soft: #fbefe9;
+  --on-brand: #ffffff;
+  --gold: #9a6f2a;
+  --gold-soft: #faf2e2;
+  --pos: #2f6b4f;
+  --pos-soft: #e9f2ec;
+  --slot: #efe7db;
+  --danger: #b3261e;
+  --danger-line: rgba(179, 38, 30, 0.35);
+  /* Tinted hairlines for the possession / disclaimer blocks. */
+  --pos-line: rgba(47, 107, 79, 0.22);
+  --gold-line: rgba(154, 111, 42, 0.28);
+  /* Diagonal hatch for labelled photo placeholders. */
+  --slot-hatch: rgba(34, 32, 29, 0.05);
+
+  /* Brand constants — identical in both themes. */
+  --logo-tile-from: #ffc981;
+  --logo-tile-to: #d97706;
+  --logo-mark-ink: #3e2400;
+  --logo-wordmark-accent: #d97706;
+
+  /* shadcn/ui aliases: names components already consume, new values. */
+  --background: var(--surface);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --secondary: var(--surface);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface);
+  --muted-foreground: var(--ink2);
+  --accent: var(--brand-soft);
+  --accent-foreground: var(--brand);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--brand);
+  --chart-1: var(--brand);
+  --chart-2: var(--pos);
+  --chart-3: var(--gold);
+  --chart-4: var(--ink2);
+  --chart-5: var(--slot);
+  --radius: 0.75rem;
+  --sidebar: var(--paper);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--on-brand);
+  --sidebar-accent: var(--brand-soft);
+  --sidebar-accent-foreground: var(--brand);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--brand);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --paper: #1c1917;
+  --surface: #141110;
+  --ink: #f3ede5;
+  --ink2: #a89e92;
+  --line: #332c26;
+  --brand: #e08b6d;
+  --brand-soft: #2b1d17;
+  --on-brand: #22201d;
+  --gold: #d8a860;
+  --gold-soft: #2a2113;
+  --pos: #6fbf95;
+  --pos-soft: #16251d;
+  --slot: #262019;
+  --danger: #f2857c;
+  --danger-line: rgba(242, 133, 124, 0.4);
+  --pos-line: rgba(111, 191, 149, 0.24);
+  --gold-line: rgba(216, 168, 96, 0.3);
+  --slot-hatch: rgba(243, 237, 229, 0.05);
+
+  --destructive-foreground: var(--on-brand);
 }
 
 @theme inline {
-  --font-sans: var(--font-plus-jakarta-sans), system-ui, sans-serif;
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --font-sans: var(--font-figtree), system-ui, sans-serif;
+  --font-serif: var(--font-source-serif-4), Georgia, serif;
+
+  /* Marketplace palette */
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-pos: var(--pos);
+  --color-pos-soft: var(--pos-soft);
+  --color-slot: var(--slot);
+  --color-danger: var(--danger);
+  --color-danger-line: var(--danger-line);
+  --color-pos-line: var(--pos-line);
+  --color-gold-line: var(--gold-line);
+
+  /* Radii */
+  --radius-pill: 999px;
+  --radius-panel: 20px;
+  --radius-card: 18px;
+  --radius-block: 16px;
+  --radius-field: 12px;
+
+  /* Elevation */
+  --shadow-card: 0 10px 26px -22px rgba(34, 32, 29, 0.5);
+  --shadow-panel: 0 12px 30px -26px rgba(34, 32, 29, 0.45);
+  --shadow-sticky: 0 18px 40px -30px rgba(34, 32, 29, 0.55);
+  --shadow-logo: 0 6px 14px -6px rgba(217, 119, 6, 0.6);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -122,10 +173,35 @@
   }
   body {
     @apply bg-background text-foreground;
+    text-wrap: pretty;
   }
   html {
     scroll-behavior: smooth;
   }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  /* Figures line up down a column of cards: price, EMD, area, dates, credits. */
+  .font-serif {
+    font-variant-numeric: tabular-nums;
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+}
+
+@utility slot-fill {
+  background-color: var(--slot);
+  background-image: repeating-linear-gradient(
+    115deg,
+    transparent,
+    transparent 11px,
+    var(--slot-hatch) 11px,
+    var(--slot-hatch) 22px
+  );
 }
 
 /* Adding stroke drawing animation for expertise icons */

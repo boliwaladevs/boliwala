@@ -63,8 +63,9 @@ export default async function Home() {
       <JsonLd data={organizationJsonLd} />
       <JsonLd data={websiteJsonLd} />
       <Header />
-      <Hero stats={stats} />
-      <SearchSection lenders={lenders ?? []} />
+      <Hero stats={stats}>
+        <SearchSection lenders={lenders ?? []} />
+      </Hero>
       <TrustBanner />
       <Philosophy />
       <AuctionsByCity />

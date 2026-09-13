@@ -47,13 +47,13 @@ export function SearchAlertBanner({
   }
 
   return (
-    <div className="bg-background border border-border rounded-xl shadow-sm p-5 md:p-6 mb-8 flex flex-col lg:flex-row items-start lg:items-center gap-5">
-      <div className="w-12 h-12 rounded-lg bg-orange-400/10 flex items-center justify-center shrink-0">
-        <Bell className="w-6 h-6 text-orange-400" />
+    <div className="mb-8 flex flex-col items-start gap-5 rounded-card border border-line bg-paper p-5 md:p-6 lg:flex-row lg:items-center">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold-soft">
+        <Bell className="h-5 w-5 text-gold" />
       </div>
       <div className="flex-1">
-        <h3 className="text-base font-semibold text-foreground mb-1">Get email alerts for this search</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="mb-1 text-base font-bold text-ink">Get email alerts for this search</h3>
+        <p className="text-[13.5px] text-ink2">
           {summary.length > 0
             ? `New properties matching ${summary.join(" · ")} will be emailed to you automatically.`
             : "New properties matching this search will be emailed to you automatically."}
@@ -61,12 +61,12 @@ export function SearchAlertBanner({
       </div>
 
       {saved ? (
-        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600 mt-4 lg:mt-0">
-          <Check className="w-4 h-4" />
+        <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-pos lg:mt-0">
+          <Check className="h-4 w-4" />
           Alert set
         </div>
       ) : (
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
+        <div className="mt-4 flex w-full flex-col items-center gap-3 sm:flex-row lg:mt-0 lg:w-auto">
           <label className="sr-only" htmlFor="alert-email">
             Email address for alerts
           </label>
@@ -76,7 +76,7 @@ export function SearchAlertBanner({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com"
-            className="h-10 px-4 border border-border rounded-md text-sm bg-background w-full sm:w-[220px] focus:outline-none focus:border-orange-400/50 placeholder:text-muted-foreground/60"
+            className="h-11 w-full rounded-field border border-line bg-surface px-4 text-sm text-ink outline-none transition-colors placeholder:text-ink2/70 focus:border-brand sm:w-[220px]"
           />
           <label className="sr-only" htmlFor="alert-frequency">
             Alert frequency
@@ -85,7 +85,7 @@ export function SearchAlertBanner({
             id="alert-frequency"
             value={frequency}
             onChange={(e) => setFrequency(e.target.value)}
-            className="h-10 px-3 border border-border rounded-md text-sm bg-background w-full sm:w-[130px] focus:outline-none focus:border-orange-400/50 appearance-none text-foreground/90"
+            className="h-11 w-full rounded-field border border-line bg-surface px-3 text-sm text-ink outline-none transition-colors focus:border-brand sm:w-[130px]"
           >
             <option value="instant">Instant</option>
             <option value="daily">Daily digest</option>
@@ -95,7 +95,7 @@ export function SearchAlertBanner({
             type="button"
             onClick={handleSave}
             disabled={pending}
-            className="h-10 px-5 bg-orange-400 hover:bg-orange-500 disabled:opacity-60 text-white border-none rounded-md text-sm font-semibold whitespace-nowrap w-full sm:w-auto transition-colors shadow-sm"
+            className="h-11 w-full whitespace-nowrap rounded-pill bg-brand px-5 text-sm font-bold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-60 sm:w-auto"
           >
             {pending ? "Saving…" : "Set Alert"}
           </button>

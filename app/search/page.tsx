@@ -32,8 +32,10 @@ export default async function SearchPage({
   return (
     <main className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
-      <div className="flex-1 pt-24 md:pt-28">
-        <SearchSection lenders={lenders ?? []} initialParams={params} />
+      <div className="flex-1">
+        <div className="mx-auto max-w-[1240px] px-5 pt-8">
+          <SearchSection lenders={lenders ?? []} initialParams={params} />
+        </div>
         {/* Rendered unconditionally: the filter sidebar lives inside
             PropertyResults, so gating this on "has the user searched yet"
             meant /search with no params — which is where "Browse More" and

@@ -17,14 +17,14 @@ import { Logo } from "@/components/logo"
  */
 export function AccountHeader() {
   return (
-    <header className="border-b border-border bg-background">
-      <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+    <header className="border-b border-line bg-paper">
+      <div className="mx-auto flex min-h-[72px] max-w-[1240px] flex-wrap items-center justify-between gap-4 px-5">
         <Link href="/" aria-label="Boliwala home">
           <Logo withTagline={false} />
         </Link>
         <Link
           href="/search"
-          className="text-sm font-semibold text-foreground/80 hover:text-blue-600 transition-colors"
+          className="inline-flex min-h-11 items-center rounded-pill border border-line px-4 text-sm font-semibold text-ink transition-colors hover:bg-surface"
         >
           Browse Properties
         </Link>
