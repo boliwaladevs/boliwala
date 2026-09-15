@@ -22,6 +22,7 @@ export const LENDER_TYPE_LABELS: Record<LenderType, string> = {
 export interface SearchFilters {
   q?: string
   location?: string
+  district?: string
   propertyType?: PropertyType
   possession?: PossessionType
   lenderIds: string[]
@@ -59,6 +60,7 @@ export function parseSearchFilters(searchParams: SearchParamsInput): SearchFilte
   return {
     q: first(searchParams.q)?.trim() || undefined,
     location: first(searchParams.location)?.trim() || undefined,
+    district: first(searchParams.district)?.trim() || undefined,
     propertyType: PROPERTY_TYPES.includes(propertyType as PropertyType) ? (propertyType as PropertyType) : undefined,
     possession: POSSESSION_TYPES.includes(possession as PossessionType) ? (possession as PossessionType) : undefined,
     lenderIds: all(searchParams.lender),
@@ -79,7 +81,8 @@ function sanitizeForFilter(text: string): string {
 
 const SEARCH_CARD_COLUMNS = `
   id, slug, title, "propertyType", "possessionType", status,
-  "addressLine", locality, city, state, "reservePrice", "emdAmount",
+  "addressLine", locality, city, district, state, "reservePrice", "emdAmount",
+  "previousReservePrice", "auctionRoundNo",
   "auctionDate", "areaSqft", "bedrooms", "viewCount",
   lender:lenders(id, name, "shortName", "logoUrl", "lenderType"),
   images:listing_images(url)
@@ -95,9 +98,12 @@ export interface SearchListing {
   addressLine: string
   locality: string
   city: string
+  district: string | null
   state: string
   reservePrice: number
   emdAmount: number
+  previousReservePrice: number | null
+  auctionRoundNo: number
   auctionDate: string
   areaSqft: number | null
   bedrooms: number | null
@@ -108,13 +114,24 @@ export interface SearchListing {
 
 /** Applies every filter except the lender filter — reused so the lender sidebar can show counts narrowed by the other active filters, without a lender selection narrowing its own counts to zero. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyNonLenderFilters(query: any, filters: SearchFilters) {
+function applyNonLenderFilters(query: any, filters: SearchFilters, opts: { skipDistrict?: boolean } = {}) {
   query = query.eq("status", "live")
 
   if (filters.location) {
     const text = sanitizeForFilter(filters.location)
-    if (text) query = query.or(`city.ilike.%${text}%,locality.ilike.%${text}%,state.ilike.%${text}%`)
+    // district is in here because a free-text search for "Raigad" or "Thane" is
+    // the natural way to look for Navi Mumbai stock, and neither is a city.
+    if (text)
+      query = query.or(
+        `city.ilike.%${text}%,locality.ilike.%${text}%,district.ilike.%${text}%,state.ilike.%${text}%`,
+      )
   }
+  // Exact match, unlike `location` above: this is the sidebar facet, whose
+  // values come from the district list itself rather than from typed text.
+  // Skipped when counting the district facet, so a selected district does not
+  // narrow its own count to the exclusion of every alternative — same reason
+  // the lender filter is applied separately from getLendersWithCounts().
+  if (filters.district && !opts.skipDistrict) query = query.eq("district", filters.district)
   if (filters.q) {
     const text = sanitizeForFilter(filters.q)
     if (text) query = query.or(`title.ilike.%${text}%,addressLine.ilike.%${text}%`)
@@ -227,11 +244,47 @@ export async function getLendersWithCounts(filters: SearchFilters): Promise<Lend
   }))
 }
 
+export interface DistrictWithCount {
+  district: string
+  count: number
+}
+
+/**
+ * Districts that actually have live listings, with counts narrowed by every
+ * active filter except district itself.
+ *
+ * Derived from the data rather than from a fixed list of Maharashtra's 36
+ * districts: an empty facet entry is a dead end for the user, and the ingest
+ * pipeline fills districts in one at a time. Rows with a null district (the
+ * geocoder could not resolve one) are simply absent rather than bucketed into
+ * an "Other" entry nobody would click.
+ */
+export async function getDistrictsWithCounts(filters: SearchFilters): Promise<DistrictWithCount[]> {
+  const supabase = await createClient()
+
+  let query = supabase.from("listings").select("district").not("district", "is", null)
+  query = applyNonLenderFilters(query, filters, { skipDistrict: true })
+  if (filters.lenderIds.length > 0) query = query.in("lenderId", filters.lenderIds)
+
+  const { data, error } = await query
+  if (error) throw error
+
+  const counts = new Map<string, number>()
+  for (const row of (data ?? []) as { district: string }[]) {
+    counts.set(row.district, (counts.get(row.district) ?? 0) + 1)
+  }
+
+  return [...counts.entries()]
+    .map(([district, count]) => ({ district, count }))
+    .sort((a, b) => b.count - a.count || a.district.localeCompare(b.district))
+}
+
 const FULL_LISTING_COLUMNS = `
   id, slug, title, "propertyType", "possessionType", status,
   lender:lenders(id, name, "shortName", "logoUrl"),
-  "addressLine", locality, city, state, pincode,
+  "addressLine", locality, city, district, state, pincode,
   "reservePrice", "emdAmount", "estimatedMarketValue",
+  "previousReservePrice", "auctionRoundNo", "noticePdfPath", "sourcePortal", "lastVerifiedAt",
   "auctionDate", "auctionTime", mode, "emdDeadline", "bidIncreaseAmount", "totalOutstandingDues",
   "noticeUrl", "areaSqft", bedrooms, "viewCount",
   "flatNumber", floor, "inspectionDatetime", "inspectionNotes",

@@ -142,7 +142,7 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
     <main className="min-h-screen bg-background text-foreground flex flex-col">
       <JsonLd data={jsonLd} />
       <Header />
-      <div className="flex-1">
+      <div className="flex-1 pt-24 md:pt-28">
         <ListingView
           listing={safeListing}
           access={{ state: access.state, creditBalance: access.creditBalance }}

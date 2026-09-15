@@ -62,7 +62,7 @@ export function ServicesView({ settings }: { settings: PricingSettings }) {
   }, [])
 
   return (
-    <div className="w-full flex flex-col pt-10 pb-0 bg-background min-h-screen">
+    <div className="w-full flex flex-col pt-32 pb-0 bg-background min-h-screen">
 
       {/* HERO SECTION */}
       <section className="container mx-auto px-6 md:px-12 text-center mb-24 md:mb-32">

@@ -3,14 +3,12 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Share2, Download, ChevronLeft, ChevronRight, Check, Lock, Eye, MessageSquare, Bookmark, Phone, FileText } from "lucide-react"
+import { Building2, Share2, Download, ChevronLeft, ChevronRight, Check, Search, Scale, Lock, MapPin, Eye, MessageSquare, Bookmark } from "lucide-react"
 import { toggleShortlist } from "@/app/actions/shortlist"
 import { unlockFieldGroup } from "@/app/actions/unlock"
 import { useToast } from "@/hooks/use-toast"
-import { cn } from "@/lib/utils"
 import { currentPath, withNext } from "@/lib/auth/next-param"
 import { formatDateLong, formatDateShort, formatINR, reservePricePerSqft } from "@/lib/format"
-import { PhotoSlot } from "@/components/photo-slot"
 import type { SafeListing } from "@/lib/access/redact"
 import type { AccessState, FieldGroup, GateDecision } from "@/lib/access/types"
 import type { PricingSettings } from "@/lib/access/types"
@@ -22,21 +20,6 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
   industrial: "Industrial",
   agricultural: "Agricultural",
   mixed_use: "Mixed Use",
-}
-
-const CHIP = "inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 py-1.5 text-[11.5px] font-bold"
-const OUTLINE_CHIP = `${CHIP} border border-line bg-paper text-ink2 transition-colors hover:bg-surface`
-const PANEL = "mb-4 overflow-hidden rounded-card border border-line bg-paper"
-const KEY_CELL = "w-[42%] px-5 py-3 align-top text-sm text-ink2"
-const VAL_CELL = "px-5 py-3 align-top text-sm font-semibold tabular-nums text-ink"
-
-function PanelHeader({ title, source }: { title: string; source: string }) {
-  return (
-    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-5 py-4">
-      <h2 className="font-serif text-[19px] font-semibold text-ink">{title}</h2>
-      <span className="text-[11.5px] text-ink2">{source}</span>
-    </div>
-  )
 }
 
 function UnlockCta({
@@ -56,16 +39,16 @@ function UnlockCta({
 
   if (decision.action === "signup") {
     return (
-      <Link href="/signup" className="inline-flex cursor-pointer items-center gap-1.5 font-semibold not-italic text-brand hover:underline">
-        <Lock className="h-3.5 w-3.5" /> Sign up to view
+      <Link href="/signup" className="text-orange-400 font-semibold cursor-pointer hover:underline not-italic inline-flex items-center gap-1.5">
+        <Lock className="w-3.5 h-3.5" /> Sign up to view
       </Link>
     )
   }
 
   if (decision.action === "upgrade") {
     return (
-      <Link href="/pricing" className="inline-flex cursor-pointer items-center gap-1.5 font-semibold not-italic text-brand hover:underline">
-        <Lock className="h-3.5 w-3.5" /> Need {decision.shortfall} more credit{decision.shortfall === 1 ? "" : "s"} — Upgrade
+      <Link href="/pricing" className="text-orange-400 font-semibold cursor-pointer hover:underline not-italic inline-flex items-center gap-1.5">
+        <Lock className="w-3.5 h-3.5" /> Need {decision.shortfall} more credit{decision.shortfall === 1 ? "" : "s"} — Upgrade
       </Link>
     )
   }
@@ -89,9 +72,9 @@ function UnlockCta({
           }
         })
       }
-      className="inline-flex cursor-pointer items-center gap-1.5 font-semibold not-italic text-brand hover:underline disabled:opacity-50"
+      className="text-orange-400 font-semibold cursor-pointer hover:underline not-italic inline-flex items-center gap-1.5 disabled:opacity-50"
     >
-      <Lock className="h-3.5 w-3.5" /> {isPending ? "Unlocking…" : `Unlock for ${decision.cost} credit${decision.cost === 1 ? "" : "s"}`}
+      <Lock className="w-3.5 h-3.5" /> {isPending ? "Unlocking…" : `Unlock for ${decision.cost} credit${decision.cost === 1 ? "" : "s"}`}
     </button>
   )
 }
@@ -142,157 +125,138 @@ export function ListingView({
   const inspection = listing.gated.inspection
   const officerContact = listing.gated.officer_contact
   const flatFloor = listing.gated.flat_floor
-  const perSqft = reservePricePerSqft(listing.reservePrice, listing.areaSqft)
-
-  const keyFigures = [
-    { label: "Reserve price", value: formatINR(listing.reservePrice), note: perSqft ?? "As per notice" },
-    { label: "EMD", value: formatINR(listing.emdAmount), note: `Due ${formatDateShort(listing.auctionDate)}` },
-    ...(listing.bidIncreaseAmount != null
-      ? [{ label: "Bid increment", value: formatINR(listing.bidIncreaseAmount), note: "Per bid" }]
-      : []),
-    ...(listing.totalOutstandingDues != null
-      ? [{ label: "Outstanding dues", value: formatINR(listing.totalOutstandingDues), note: "As per notice" }]
-      : []),
-  ]
 
   return (
-    <div className="mx-auto max-w-[1240px] px-5 py-8">
+    <div className="container mx-auto px-4 md:px-6 py-8">
       {/* Breadcrumb */}
-      <div className="mb-6 flex flex-wrap items-center gap-2 text-[13px] text-ink2">
-        <Link href="/" className="transition-colors hover:text-ink">Home</Link>
-        <span className="opacity-40">/</span>
-        <Link href={`/search?location=${encodeURIComponent(listing.city)}`} className="transition-colors hover:text-ink">{listing.city}</Link>
-        <span className="opacity-40">/</span>
-        <Link href={`/search?location=${encodeURIComponent(listing.locality)}`} className="transition-colors hover:text-ink">{listing.locality}</Link>
-        <span className="opacity-40">/</span>
-        <Link href={`/search?bank=${listing.lender.id}`} className="transition-colors hover:text-ink">{listing.lender.name}</Link>
-        <span className="opacity-40">/</span>
-        <span className="font-semibold text-ink">{listing.title}</span>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8 flex-wrap">
+        <Link href="/" className="hover:text-orange-400 transition-colors cursor-pointer">Home</Link>
+        <span className="text-border">›</span>
+        <Link href={`/search?location=${encodeURIComponent(listing.city)}`} className="hover:text-orange-400 transition-colors cursor-pointer">{listing.city}</Link>
+        <span className="text-border">›</span>
+        <Link href={`/search?location=${encodeURIComponent(listing.locality)}`} className="hover:text-orange-400 transition-colors cursor-pointer">{listing.locality}</Link>
+        <span className="text-border">›</span>
+        <Link href={`/search?bank=${listing.lender.id}`} className="hover:text-orange-400 transition-colors cursor-pointer">{listing.lender.name}</Link>
+        <span className="text-border">›</span>
+        <span className="text-foreground font-medium">{listing.title}</span>
       </div>
 
-      <div className="flex flex-wrap items-start gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 items-start">
         {/* LEFT COLUMN */}
-        <div className="min-w-0 flex-[999_1_380px]">
-          {/* Gallery */}
-          {images.length > 0 ? (
-            <div className="group relative mb-5 h-[300px] overflow-hidden rounded-card bg-slot md:h-[400px]">
-              <div className="absolute right-4 top-4 z-10 rounded-pill bg-[rgba(24,20,16,0.78)] px-3 py-1 text-sm font-semibold tabular-nums text-white backdrop-blur-[6px]">
-                <span>{currentSlide + 1}</span> / {totalSlides}
-              </div>
-              <div className="flex h-full transition-transform duration-500 ease-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-                {images.map((url, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={i} src={url} alt={`${listing.title} photo ${i + 1}`} className="h-full min-w-full object-cover" />
-                ))}
-              </div>
-              <button onClick={prevSlide} aria-label="Previous photo" className="absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-paper text-ink opacity-0 shadow-panel transition-opacity focus:opacity-100 group-hover:opacity-100">
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button onClick={nextSlide} aria-label="Next photo" className="absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-paper text-ink opacity-0 shadow-panel transition-opacity focus:opacity-100 group-hover:opacity-100">
-                <ChevronRight className="h-5 w-5" />
-              </button>
+        <div>
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <div className="inline-flex items-center gap-1.5 bg-secondary/50 border border-border rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground">
+              <Eye className="w-3.5 h-3.5" /> <span className="text-orange-400 font-bold">{listing.viewCount}</span> people viewed this
             </div>
-          ) : (
-            <div className="mb-5 grid gap-2.5 md:grid-cols-3">
-              <PhotoSlot label="Main property photograph" ratio="16 / 9" className="rounded-card md:col-span-2" />
-              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-1">
-                <PhotoSlot label="Interior" ratio="16 / 9" className="rounded-card" />
-                <PhotoSlot label="Sale notice scan" ratio="16 / 9" className="rounded-card" />
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className={`${CHIP} border border-line bg-paper text-ink2`}>
-              <Eye className="h-3.5 w-3.5" /> <span className="font-bold tabular-nums text-brand">{listing.viewCount}</span> people viewed this
-            </span>
             <button
               onClick={handleSave}
-              className={cn(OUTLINE_CHIP, saved && "border-brand bg-brand-soft text-brand hover:bg-brand-soft")}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors border ${saved ? "bg-orange-400/10 text-orange-400 border-orange-400/30" : "bg-background border-border hover:border-orange-400 hover:text-orange-400 text-muted-foreground"}`}
             >
-              <Bookmark className={cn("h-3.5 w-3.5", saved && "fill-current")} /> {saved ? "Saved" : "Save"}
+              <Bookmark className={`w-3.5 h-3.5 ${saved ? "fill-current" : ""}`} /> {saved ? "Saved" : "Save"}
             </button>
-            <button className={OUTLINE_CHIP}>
-              <Share2 className="h-3.5 w-3.5" /> Share
+            <button className="inline-flex items-center gap-1.5 bg-background border border-border hover:border-orange-400 hover:text-orange-400 rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors">
+              <Share2 className="w-3.5 h-3.5" /> Share
             </button>
             {listing.noticeUrl && (
-              <a href={listing.noticeUrl} target="_blank" rel="noopener noreferrer" className={OUTLINE_CHIP}>
-                <Download className="h-3.5 w-3.5" /> Download Notice
+              <a href={listing.noticeUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-background border border-border hover:border-orange-400 hover:text-orange-400 rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors">
+                <Download className="w-3.5 h-3.5" /> Download Notice
               </a>
             )}
           </div>
 
+          {/* Carousel */}
+          <div className="relative rounded-xl overflow-hidden h-[300px] md:h-[400px] mb-6 bg-slate-900 group">
+            {images.length > 0 ? (
+              <>
+                <div className="absolute top-4 right-4 bg-black/60 text-white text-sm font-semibold px-3 py-1 rounded-full backdrop-blur-sm z-10">
+                  <span>{currentSlide + 1}</span> / {totalSlides}
+                </div>
+                <div className="flex h-full transition-transform duration-500 ease-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                  {images.map((url, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={i} src={url} alt={`${listing.title} photo ${i + 1}`} className="min-w-full h-full object-cover" />
+                  ))}
+                </div>
+                <button onClick={prevSlide} className="absolute top-1/2 -translate-y-1/2 left-4 w-10 h-10 rounded-full bg-white/95 text-foreground flex items-center justify-center shadow-lg hover:bg-white hover:scale-105 transition-all z-10 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button onClick={nextSlide} className="absolute top-1/2 -translate-y-1/2 right-4 w-10 h-10 rounded-full bg-white/95 text-foreground flex items-center justify-center shadow-lg hover:bg-white hover:scale-105 transition-all z-10 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/60 bg-gradient-to-br from-secondary/80 to-secondary">
+                <Building2 className="w-16 h-16 mb-2" />
+                <span className="text-xs">No photos available yet</span>
+              </div>
+            )}
+          </div>
+
           {/* Tags */}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className={`${CHIP} bg-pos-soft text-pos`}>
-              <Check className="h-3.5 w-3.5" /> {listing.lender.name} — SARFAESI
+          <div className="flex items-center gap-2 flex-wrap mb-4">
+            <span className="inline-flex items-center gap-1.5 bg-emerald-100/80 text-emerald-700 border border-emerald-200 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-md">
+              <Check className="w-3.5 h-3.5" /> {listing.lender.name} — SARFAESI
             </span>
-            <span className={`${CHIP} bg-gold-soft text-gold`}>Auction: {formatDateShort(listing.auctionDate)}</span>
-            <span className={cn(CHIP, listing.possessionType === "physical" ? "bg-pos-soft text-pos" : "border border-line bg-paper text-ink2")}>
-              {listing.possessionType === "physical" ? "Physical Possession" : "Symbolic Possession"}
+            <span className="inline-flex items-center gap-1.5 bg-amber-100/80 text-amber-700 border border-amber-200 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-md">
+              📅 Auction: {formatDateShort(listing.auctionDate)}
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-secondary/80 text-muted-foreground border border-border text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-md">
+              {listing.possessionType === "physical" ? "🔑 Physical Possession" : "📝 Symbolic Possession"}
             </span>
           </div>
 
-          <h1 className="mb-2 font-serif text-[30px] font-semibold leading-[1.12] tracking-[-0.025em] text-ink md:text-[38px]">
-            {listing.title}
-          </h1>
-          <div className="mb-6 text-[15px] leading-relaxed text-ink2">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-3 leading-tight">{listing.title}</h1>
+          <div className="text-sm text-muted-foreground flex items-start gap-1.5 mb-8 leading-relaxed">
+            <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
             {listing.addressLine}, {listing.locality}, {listing.city}, {listing.state} – {listing.pincode}
           </div>
 
-          {/* Key figures */}
-          <div className="mb-6 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
-            {keyFigures.map((f) => (
-              <div key={f.label} className="rounded-block border border-line bg-paper px-[18px] py-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink2">{f.label}</div>
-                <div className="my-1 font-serif text-[23px] font-semibold tracking-[-0.02em] text-ink">{f.value}</div>
-                <div className="text-xs text-ink2">{f.note}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Property Details */}
-          <div className={PANEL}>
-            <PanelHeader title="Property Details" source={`Source: ${listing.lender.name} sale notice`} />
+          {/* Property Details Table */}
+          <div className="bg-background border border-border rounded-xl shadow-sm mb-6 overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-secondary/30">
+              <div className="w-9 h-9 rounded-md bg-blue-100 flex items-center justify-center shrink-0 text-blue-600"><Building2 className="w-5 h-5" /></div>
+              <h2 className="text-base font-bold text-foreground">Property Details</h2>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <tbody className="divide-y divide-line">
-                  <tr>
-                    <td className={KEY_CELL}>Property Type</td>
-                    <td className={VAL_CELL}>{PROPERTY_TYPE_LABELS[listing.propertyType]}</td>
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-border">
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground w-[40%] md:w-1/3">Property Type</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">{PROPERTY_TYPE_LABELS[listing.propertyType]}</td>
                   </tr>
-                  <tr>
-                    <td className={KEY_CELL}>Flat No. &amp; Floor</td>
-                    <td className={VAL_CELL}>
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground">Flat No. & Floor</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">
                       {flatFloor.decision.visible ? (
                         <span>{flatFloor.value?.flatNumber ?? "—"}{flatFloor.value?.floor ? `, Floor ${flatFloor.value.floor}` : ""}</span>
                       ) : (
-                        <UnlockCta listingId={listing.id} group="flat_floor" decision={flatFloor.decision} label="Flat number & floor" />
+                        <span className="inline-flex items-center gap-1.5 text-muted-foreground italic font-normal">
+                          <UnlockCta listingId={listing.id} group="flat_floor" decision={flatFloor.decision} label="Flat number & floor" />
+                        </span>
                       )}
                     </td>
                   </tr>
-                  <tr>
-                    <td className={KEY_CELL}>Locality</td>
-                    <td className={VAL_CELL}>{listing.locality}, {listing.city}</td>
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground">Locality</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">{listing.locality}, {listing.city}</td>
                   </tr>
-                  <tr>
-                    <td className={KEY_CELL}>District</td>
-                    <td className={VAL_CELL}>{listing.state} – {listing.pincode}</td>
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground">District</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">{listing.state} – {listing.pincode}</td>
                   </tr>
                   {listing.areaSqft && (
-                    <tr>
-                      <td className={KEY_CELL}>Area</td>
-                      <td className={VAL_CELL}>~{listing.areaSqft} sq.ft</td>
+                    <tr className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-6 py-3.5 text-muted-foreground">Area</td>
+                      <td className="px-6 py-3.5 font-medium text-foreground">~{listing.areaSqft} sq.ft</td>
                     </tr>
                   )}
-                  <tr>
-                    <td className={KEY_CELL}>Possession Type</td>
-                    <td className={VAL_CELL}>{listing.possessionType === "physical" ? "Physical Possession" : "Symbolic Possession"}</td>
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground">Possession Type</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">{listing.possessionType === "physical" ? "Physical Possession" : "Symbolic Possession"}</td>
                   </tr>
-                  <tr>
-                    <td className={KEY_CELL}>Property ID</td>
-                    <td className={VAL_CELL}>{listing.slug}</td>
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground">Property ID</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">{listing.slug}</td>
                   </tr>
                 </tbody>
               </table>
@@ -300,45 +264,48 @@ export function ListingView({
           </div>
 
           {/* Auction Information */}
-          <div className={PANEL}>
-            <PanelHeader title="Auction Information" source={`Source: ${listing.lender.name} sale notice`} />
+          <div className="bg-background border border-border rounded-xl shadow-sm mb-6 overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-secondary/30">
+              <div className="w-9 h-9 rounded-md bg-amber-100 flex items-center justify-center shrink-0 text-amber-600"><span className="text-xl">📅</span></div>
+              <h2 className="text-base font-bold text-foreground">Auction Information</h2>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <tbody className="divide-y divide-line">
-                  <tr>
-                    <td className={KEY_CELL}>Auction Date</td>
-                    <td className={VAL_CELL}>{formatDateLong(listing.auctionDate)}</td>
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-border">
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground w-[40%] md:w-1/3">Auction Date</td>
+                    <td className="px-6 py-3.5 font-bold text-foreground">{formatDateLong(listing.auctionDate)}</td>
                   </tr>
                   {listing.auctionTime && (
-                    <tr>
-                      <td className={KEY_CELL}>Auction Time</td>
-                      <td className={VAL_CELL}>{listing.auctionTime}</td>
+                    <tr className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-6 py-3.5 text-muted-foreground">Auction Time</td>
+                      <td className="px-6 py-3.5 font-medium text-foreground">{listing.auctionTime}</td>
                     </tr>
                   )}
                   {listing.mode && (
-                    <tr>
-                      <td className={KEY_CELL}>Mode</td>
-                      <td className={VAL_CELL}>{listing.mode}</td>
+                    <tr className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-6 py-3.5 text-muted-foreground">Mode</td>
+                      <td className="px-6 py-3.5 font-medium text-foreground">{listing.mode}</td>
                     </tr>
                   )}
-                  <tr>
-                    <td className={KEY_CELL}>Reserve Price</td>
-                    <td className={VAL_CELL}>{formatINR(listing.reservePrice)}</td>
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground">Reserve Price</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">{formatINR(listing.reservePrice)}</td>
                   </tr>
-                  <tr>
-                    <td className={KEY_CELL}>EMD Amount</td>
-                    <td className={VAL_CELL}>{formatINR(listing.emdAmount)}</td>
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground">EMD Amount</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">{formatINR(listing.emdAmount)}</td>
                   </tr>
                   {listing.bidIncreaseAmount != null && (
-                    <tr>
-                      <td className={KEY_CELL}>Bid Increase Amount</td>
-                      <td className={VAL_CELL}>{formatINR(listing.bidIncreaseAmount)}</td>
+                    <tr className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-6 py-3.5 text-muted-foreground">Bid Increase Amount</td>
+                      <td className="px-6 py-3.5 font-medium text-foreground">{formatINR(listing.bidIncreaseAmount)}</td>
                     </tr>
                   )}
                   {listing.totalOutstandingDues != null && (
-                    <tr>
-                      <td className={KEY_CELL}>Total Outstanding Dues</td>
-                      <td className={VAL_CELL}>{formatINR(listing.totalOutstandingDues)}</td>
+                    <tr className="hover:bg-secondary/20 transition-colors">
+                      <td className="px-6 py-3.5 text-muted-foreground">Total Outstanding Dues</td>
+                      <td className="px-6 py-3.5 font-medium text-foreground">{formatINR(listing.totalOutstandingDues)}</td>
                     </tr>
                   )}
                 </tbody>
@@ -347,78 +314,67 @@ export function ListingView({
           </div>
 
           {/* Inspection */}
-          <div className={PANEL}>
-            <PanelHeader title="Inspection" source={`Source: ${listing.lender.name} sale notice`} />
+          <div className="bg-background border border-border rounded-xl shadow-sm mb-6 overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-secondary/30">
+              <div className="w-9 h-9 rounded-md bg-secondary flex items-center justify-center shrink-0 text-muted-foreground"><Search className="w-5 h-5" /></div>
+              <h2 className="text-base font-bold text-foreground">Inspection</h2>
+            </div>
             {inspection.decision.visible ? (
-              <table className="w-full">
-                <tbody className="divide-y divide-line">
-                  <tr>
-                    <td className={KEY_CELL}>Date &amp; Time</td>
-                    <td className={VAL_CELL}>{inspection.value?.inspectionDatetime ? formatDateLong(inspection.value.inspectionDatetime) : "To be announced"}</td>
-                  </tr>
-                  {inspection.value?.inspectionNotes && (
-                    <tr>
-                      <td className={KEY_CELL}>Notes</td>
-                      <td className={VAL_CELL}>{inspection.value.inspectionNotes}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <div className="px-6 py-5 text-sm">
+                <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Date & Time</span><span className="font-medium text-foreground">{inspection.value?.inspectionDatetime ? formatDateLong(inspection.value.inspectionDatetime) : "To be announced"}</span></div>
+                {inspection.value?.inspectionNotes && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Notes</span><span className="font-medium text-foreground">{inspection.value.inspectionNotes}</span></div>}
+              </div>
             ) : (
-              <div className="px-5 py-8 text-center">
-                <Lock className="mx-auto mb-3 h-6 w-6 text-ink2" />
-                <p className="mb-4 text-sm text-ink2">Inspection date &amp; time are available after unlocking.</p>
+              <div className="px-6 py-8 text-center">
+                <Lock className="w-6 h-6 mx-auto mb-3 text-blue-600" />
+                <p className="text-sm text-muted-foreground mb-4">Inspection date & time are available after unlocking.</p>
                 <UnlockCta listingId={listing.id} group="inspection" decision={inspection.decision} label="Inspection date & time" />
               </div>
             )}
           </div>
 
           {/* Officer / Lender Contact */}
-          <div className={PANEL}>
-            <PanelHeader title="Authorised Officer & Lender Contact" source={`Source: ${listing.lender.name} sale notice`} />
+          <div className="bg-background border border-border rounded-xl shadow-sm mb-6 overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-secondary/30">
+              <div className="w-9 h-9 rounded-md bg-secondary flex items-center justify-center shrink-0 text-muted-foreground"><Search className="w-5 h-5" /></div>
+              <h2 className="text-base font-bold text-foreground">Authorised Officer & Lender Contact</h2>
+            </div>
             {officerContact.decision.visible ? (
-              <table className="w-full">
-                <tbody className="divide-y divide-line">
-                  {officerContact.value?.authorisedOfficerName && (
-                    <tr><td className={KEY_CELL}>Officer</td><td className={VAL_CELL}>{officerContact.value.authorisedOfficerName}</td></tr>
-                  )}
-                  {officerContact.value?.authorisedOfficerPhone && (
-                    <tr><td className={KEY_CELL}>Phone</td><td className={VAL_CELL}>{officerContact.value.authorisedOfficerPhone}</td></tr>
-                  )}
-                  {officerContact.value?.authorisedOfficerEmail && (
-                    <tr><td className={KEY_CELL}>Email</td><td className={VAL_CELL}>{officerContact.value.authorisedOfficerEmail}</td></tr>
-                  )}
-                  {officerContact.value?.bankContact && (
-                    <tr><td className={KEY_CELL}>Lender Contact</td><td className={VAL_CELL}>{officerContact.value.bankContact}</td></tr>
-                  )}
-                </tbody>
-              </table>
+              <div className="px-6 py-5 text-sm space-y-1.5">
+                {officerContact.value?.authorisedOfficerName && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Officer</span><span className="font-medium text-foreground">{officerContact.value.authorisedOfficerName}</span></div>}
+                {officerContact.value?.authorisedOfficerPhone && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Phone</span><span className="font-medium text-foreground">{officerContact.value.authorisedOfficerPhone}</span></div>}
+                {officerContact.value?.authorisedOfficerEmail && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Email</span><span className="font-medium text-foreground">{officerContact.value.authorisedOfficerEmail}</span></div>}
+                {officerContact.value?.bankContact && <div className="flex justify-between py-1.5"><span className="text-muted-foreground">Lender Contact</span><span className="font-medium text-foreground">{officerContact.value.bankContact}</span></div>}
+              </div>
             ) : (
-              <div className="px-5 py-8 text-center">
-                <Lock className="mx-auto mb-3 h-6 w-6 text-ink2" />
-                <p className="mb-4 text-sm text-ink2">The bank's authorised officer contact is available after unlocking.</p>
+              <div className="px-6 py-8 text-center">
+                <Lock className="w-6 h-6 mx-auto mb-3 text-blue-600" />
+                <p className="text-sm text-muted-foreground mb-4">The bank's authorised officer contact is available after unlocking.</p>
                 <UnlockCta listingId={listing.id} group="officer_contact" decision={officerContact.decision} label="Authorised officer & bank contact" />
               </div>
             )}
           </div>
 
           {/* Legal Status */}
-          <div className={PANEL}>
-            <PanelHeader title="Legal Status" source="Source: SARFAESI Act 2002" />
+          <div className="bg-background border border-border rounded-xl shadow-sm mb-6 overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-secondary/30">
+              <div className="w-9 h-9 rounded-md bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-600"><Scale className="w-5 h-5" /></div>
+              <h2 className="text-base font-bold text-foreground">Legal Status</h2>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <tbody className="divide-y divide-line">
-                  <tr>
-                    <td className={KEY_CELL}>Sale Under</td>
-                    <td className={VAL_CELL}>SARFAESI Act 2002 (Rule 6(2) &amp; 8(6))</td>
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-border">
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground w-[40%] md:w-1/3">Sale Under</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">SARFAESI Act 2002 (Rule 6(2) & 8(6))</td>
                   </tr>
-                  <tr>
-                    <td className={KEY_CELL}>Sale Basis</td>
-                    <td className={VAL_CELL}>&ldquo;As is where is&rdquo;, &ldquo;As is what is&rdquo;, &ldquo;Whatever there is&rdquo;</td>
+                  <tr className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-3.5 text-muted-foreground">Sale Basis</td>
+                    <td className="px-6 py-3.5 font-medium text-foreground">&ldquo;As is where is&rdquo;, &ldquo;As is what is&rdquo;, &ldquo;Whatever there is&rdquo;</td>
                   </tr>
-                  <tr className="bg-brand-soft">
-                    <td className="w-[42%] px-5 py-3 align-top text-sm font-semibold text-ink">Our Recommendation</td>
-                    <td className="px-5 py-3 align-top text-sm font-bold text-brand">Book Due Diligence before bidding</td>
+                  <tr className="bg-orange-400/10">
+                    <td className="px-6 py-3.5 text-foreground font-medium">Our Recommendation</td>
+                    <td className="px-6 py-3.5 font-bold text-orange-500">Book Due Diligence before bidding</td>
                   </tr>
                 </tbody>
               </table>
@@ -426,90 +382,95 @@ export function ListingView({
           </div>
 
           {/* Disclaimer */}
-          <div className="rounded-block border border-gold-line bg-gold-soft p-5">
-            <div className="mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.1em] text-gold">Important</div>
-            <p className="text-sm leading-[1.65] text-ink">
-              This property is sold on an <strong>&ldquo;As is where is&rdquo;, &ldquo;As is what is&rdquo;</strong> and <strong>&ldquo;Whatever there is&rdquo;</strong> basis. Intending bidders should make their own independent enquiries and verify the property, title, encumbrances, dues and statutory charges before bidding. Source: {listing.lender.name} E-Auction Sale Notice.
-            </p>
+          <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-5 text-sm text-amber-900/80 leading-relaxed">
+            <strong className="text-amber-600">⚠️ Important:</strong> This property is sold on an <strong>&ldquo;As is where is&rdquo;, &ldquo;As is what is&rdquo;</strong> and <strong>&ldquo;Whatever there is&rdquo;</strong> basis. Intending bidders should make their own independent enquiries and verify the property, title, encumbrances, dues and statutory charges before bidding. Source: {listing.lender.name} E-Auction Sale Notice.
           </div>
         </div>
 
-        {/* RIGHT COLUMN (Bid panel) */}
-        <div className="w-full min-w-[280px] flex-[1_1_300px] lg:max-w-[360px]">
-          <div className="rounded-panel border border-line bg-paper p-6 shadow-sticky lg:sticky lg:top-[60px]">
-            <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.1em] text-ink2">Reserve Price</span>
-            <div className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] text-ink">
+        {/* RIGHT COLUMN (Action Card) */}
+        <div>
+          <div className="bg-background border border-border rounded-xl shadow-md p-6 lg:sticky lg:top-24">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1 block">Reserve Price</span>
+            <div className={`text-3xl font-extrabold tracking-tight text-foreground ${reservePricePerSqft(listing.reservePrice, listing.areaSqft) ? "" : "mb-3"}`}>
               {formatINR(listing.reservePrice)}
             </div>
-            {perSqft && <div className="mt-1.5 text-sm text-ink2">{perSqft}</div>}
-
-            <div className="mt-4 border-t border-line pt-3 text-sm text-ink2">
-              EMD Required: <strong className="font-bold tabular-nums text-ink">{formatINR(listing.emdAmount)}</strong>
+            {reservePricePerSqft(listing.reservePrice, listing.areaSqft) && (
+              <div className="text-sm font-medium text-muted-foreground mb-3">{reservePricePerSqft(listing.reservePrice, listing.areaSqft)}</div>
+            )}
+            <div className="text-sm text-muted-foreground pt-3 border-t border-border mb-2">
+              EMD Required: <strong className="text-red-500 font-semibold">{formatINR(listing.emdAmount)}</strong>
             </div>
             {listing.bidIncreaseAmount != null && (
-              <div className="mb-3 text-xs text-ink2">Bid Increase Amount: {formatINR(listing.bidIncreaseAmount)}</div>
+              <div className="text-xs text-muted-foreground mb-5">Bid Increase Amount: {formatINR(listing.bidIncreaseAmount)}</div>
             )}
 
-            <div className="mt-3 rounded-[14px] bg-brand-soft p-3.5">
-              <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-brand">Auction</div>
-              <strong className="block text-[15.5px] font-bold text-ink">{formatDateLong(listing.auctionDate)}</strong>
-              <span className="text-xs text-ink2">{[listing.auctionTime, listing.mode].filter(Boolean).join(" · ")}</span>
+            <div className="bg-amber-100/50 border border-amber-200/50 rounded-lg p-3 flex items-center gap-3 mb-3">
+              <span className="text-2xl">📅</span>
+              <div>
+                <strong className="block text-sm font-bold text-amber-600">Auction: {formatDateLong(listing.auctionDate)}</strong>
+                <span className="text-xs text-muted-foreground">{listing.auctionTime ?? ""}{listing.mode ? ` · ${listing.mode}` : ""}</span>
+              </div>
             </div>
 
             {inspection.decision.visible && inspection.value?.inspectionDatetime && (
-              <div className="mt-2.5 rounded-[14px] bg-surface p-3.5">
-                <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-ink2">Inspection</div>
-                <strong className="block text-[15.5px] font-bold text-ink">{formatDateLong(inspection.value.inspectionDatetime)}</strong>
+              <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 flex items-center gap-3 mb-6">
+                <span className="text-xl text-blue-500"><Search className="w-6 h-6" /></span>
+                <div>
+                  <strong className="block text-sm font-bold text-blue-600">Inspection: {formatDateLong(inspection.value.inspectionDatetime)}</strong>
+                </div>
               </div>
             )}
 
-            <div className="mt-4 flex flex-col gap-2">
-              <Link href="/services" className="flex h-12 items-center justify-center rounded-pill bg-brand text-[14.5px] font-bold text-on-brand transition-opacity hover:opacity-90">
-                Hire Boliwala to Bid
-              </Link>
-              <button className="flex h-11 items-center justify-center gap-2 rounded-pill border border-line bg-surface text-sm font-semibold text-ink transition-colors hover:bg-paper">
-                <MessageSquare className="h-4 w-4" /> WhatsApp Us Now
-              </button>
-              <Link href={`/contact?listing=${listing.slug}`} className="flex h-11 items-center justify-center gap-2 rounded-pill border border-line bg-surface text-sm font-semibold text-ink transition-colors hover:bg-paper">
-                <Phone className="h-4 w-4" /> Request a Callback
-              </Link>
-              {listing.noticeUrl && (
-                <a href={listing.noticeUrl} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center justify-center gap-2 rounded-pill border border-line bg-surface text-sm font-semibold text-ink transition-colors hover:bg-paper">
-                  <FileText className="h-4 w-4" /> Download Auction Notice (PDF)
-                </a>
-              )}
-            </div>
+            <Link href="/services" className="w-full bg-orange-400 hover:bg-orange-500 text-white font-semibold py-3 rounded-md mb-2 transition-colors flex items-center justify-center">
+              🎯 Hire Boliwala to Bid
+            </Link>
+            <button className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-semibold py-3 rounded-md mb-2 flex items-center justify-center gap-2 transition-colors">
+              <MessageSquare className="w-4 h-4" /> WhatsApp Us Now
+            </button>
+            <Link href={`/contact?listing=${listing.slug}`} className="w-full bg-transparent border border-border hover:bg-secondary text-foreground font-medium py-3 rounded-md mb-2 flex items-center justify-center gap-2 transition-colors">
+              📞 Request a Callback
+            </Link>
+            {listing.noticeUrl && (
+              <a href={listing.noticeUrl} target="_blank" rel="noopener noreferrer" className="w-full bg-transparent border border-border hover:bg-secondary text-foreground font-medium py-3 rounded-md flex items-center justify-center gap-2 transition-colors">
+                📄 Download Auction Notice (PDF)
+              </a>
+            )}
 
-            <div className="mt-5 rounded-block bg-surface p-5">
-              <div className="mb-3 text-sm font-bold text-ink">Complete End-to-End Package</div>
-              <div className="mb-2 flex flex-wrap items-baseline gap-2">
-                <span className="font-serif text-[26px] font-semibold tracking-[-0.02em] text-brand">{formatINR(settings.servicePackagePrice)}</span>
-                <span className="text-sm font-semibold text-ink2">+</span>
-                <span className="font-serif text-lg font-semibold text-gold">{settings.successFeePct}%</span>
-                <span className="text-sm font-semibold text-ink2">success fee</span>
+            <div className="h-px bg-border my-6"></div>
+
+            <div className="bg-secondary/30 border border-border rounded-xl p-5 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">⭐</span>
+                <span className="text-sm font-bold text-foreground">Complete End-to-End Package</span>
               </div>
-              <div className="mb-4 inline-flex items-center gap-1.5 rounded-pill bg-pos-soft px-2.5 py-1 text-[11px] font-bold text-pos">
+              <div className="flex items-baseline gap-2 mb-2 flex-wrap">
+                <span className="text-2xl font-extrabold text-orange-400 tracking-tight">{formatINR(settings.servicePackagePrice)}</span>
+                <span className="text-sm font-semibold text-muted-foreground">+</span>
+                <span className="text-lg font-extrabold text-amber-500">{settings.successFeePct}%</span>
+                <span className="text-sm font-semibold text-muted-foreground">success fee</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full mb-4">
                 ✓ {settings.successFeePct}% charged only if you win
               </div>
               <ul className="space-y-1.5">
-                {["Due Diligence & Legal Search", "Auction Bid Management", "Possession Support", "Loan & Funding Assistance"].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-xs text-ink2">
-                    <span className="font-bold text-pos">✓</span> {item}
+                {["Due Diligence & Legal Search", "Auction Bid Management", "Possession Support", "Loan & Funding Assistance"].map((item, i) => (
+                  <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                    <span className="text-emerald-500 font-bold">✓</span> {item}
                   </li>
                 ))}
               </ul>
             </div>
 
-            <Link href="/services" className="mt-4 flex h-12 items-center justify-center rounded-pill bg-ink text-[14.5px] font-bold text-paper transition-opacity hover:opacity-90">
+            <Link href="/services" className="w-full bg-foreground text-background font-semibold py-3 rounded-md hover:bg-foreground/90 transition-colors mb-4 flex items-center justify-center">
               Get Started — {formatINR(settings.servicePackagePrice)}
             </Link>
 
-            <div className="mt-4 rounded-block bg-pos-soft p-3 text-xs font-medium text-pos">
-              All property details are free on Boliwala — no paywall, no hidden address.
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200/50 rounded-md p-3 text-xs text-emerald-700 font-medium mb-4">
+              <span className="text-lg">🆓</span> All property details are free on Boliwala — no paywall, no hidden address.
             </div>
 
-            <div className="mt-4 border-t border-line pt-4 text-[11px] leading-relaxed text-ink2">
-              <strong className="text-ink">Everything included.</strong> One flat fee of {formatINR(settings.servicePackagePrice)} engages our full team, plus a {settings.successFeePct}% success fee on the winning bid — charged only if you win.
+            <div className="text-[11px] text-muted-foreground leading-relaxed pt-4 border-t border-border">
+              <strong className="text-foreground">Everything included.</strong> One flat fee of {formatINR(settings.servicePackagePrice)} engages our full team, plus a {settings.successFeePct}% success fee on the winning bid — charged only if you win.
             </div>
           </div>
         </div>
@@ -517,44 +478,37 @@ export function ListingView({
 
       {/* SIMILAR AUCTIONS */}
       {similar.length > 0 && (
-        <div className="mt-14 border-t border-line pt-12">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+        <div className="mt-16 pt-16 border-t border-border">
+          <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
             <div>
-              <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.14em] text-brand">Same City</span>
-              <h2 className="font-serif text-[32px] font-semibold tracking-[-0.02em] text-ink">Other Auctions in {listing.city}</h2>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-orange-400 block mb-2">Same City</span>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">Other Auctions in {listing.city}</h2>
             </div>
-            <Link href={`/search?location=${encodeURIComponent(listing.city)}`} className="text-sm font-bold text-brand hover:underline">
+            <Link href={`/search?location=${encodeURIComponent(listing.city)}`} className="text-sm font-semibold text-orange-400 cursor-pointer hover:underline">
               View all {listing.city} auctions →
             </Link>
           </div>
 
-          <div className="grid gap-[18px] [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {similar.map((s) => (
-              <article key={s.id} className="relative flex flex-col overflow-hidden rounded-card border border-line bg-paper shadow-card transition-shadow hover:shadow-panel">
-                <PhotoSlot label="Property photo" ratio="16 / 10">
-                  <span className="absolute left-3 top-3 rounded-pill bg-[rgba(24,20,16,0.78)] px-[11px] py-[5px] text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-white backdrop-blur-[6px]">
-                    {s.lender.shortName}
-                  </span>
-                </PhotoSlot>
-                <div className="px-[18px] pb-4 pt-4">
-                  <div className="font-serif text-[27px] font-semibold leading-[1.15] tracking-[-0.02em] text-ink">{formatINR(s.reservePrice)}</div>
-                  <div className="mb-2.5 text-xs text-ink2">Reserve price</div>
-                  <h3 className="mb-[3px] text-[15.5px] font-semibold leading-[1.35] text-ink">
-                    <Link href={`/listing/${s.slug}`} className="after:absolute after:inset-0 after:content-['']">{s.title}</Link>
-                  </h3>
-                  <div className="text-[13.5px] text-ink2">{s.locality}, {s.city}</div>
+              <Link href={`/listing/${s.slug}`} key={s.id} className="bg-background border border-border rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:-translate-y-1 flex flex-col overflow-hidden">
+                <div className="h-40 bg-gradient-to-br from-secondary/80 to-secondary flex items-center justify-center relative">
+                  <Building2 className="w-12 h-12 text-muted-foreground/30" />
+                  <div className="absolute top-2.5 left-2.5 bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">{s.lender.shortName}</div>
+                  <div className="absolute bottom-2.5 left-2.5 bg-black/60 text-white text-[10px] font-semibold px-2 py-1 rounded backdrop-blur-sm">📅 {formatDateShort(s.auctionDate)}</div>
                 </div>
-                <div className="mt-auto grid grid-cols-2 border-t border-line">
-                  <div className="border-r border-line px-[18px] py-3">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink2">Auction</div>
-                    <div className="text-sm font-bold tabular-nums text-ink">{formatDateShort(s.auctionDate)}</div>
-                  </div>
-                  <div className="px-[18px] py-3">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink2">EMD</div>
-                    <div className="text-sm font-bold tabular-nums text-ink">{formatINR(s.emdAmount)}</div>
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="text-xl font-bold text-foreground tracking-tight">{formatINR(s.reservePrice)}</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Reserve Price</div>
+                  <div className="text-sm font-semibold text-foreground mb-1 leading-snug">{s.title}</div>
+                  <div className="text-xs text-muted-foreground mb-3">📍 {s.locality}, {s.city}</div>
+
+                  <div className="mt-auto pt-3 border-t border-border flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">EMD: <strong className="text-red-500">{formatINR(s.emdAmount)}</strong></span>
+                    <span className="bg-orange-400 hover:bg-orange-500 text-white font-semibold px-3 py-1.5 rounded-md text-xs transition-colors">View →</span>
                   </div>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         </div>

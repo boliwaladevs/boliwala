@@ -1,0 +1,13 @@
+portal,district,status,claimed_by,last_page,expected,collected,notes
+baanknet,Thane,todo,,,,,
+baanknet,Raigad,todo,,,,,
+ibapi,Thane,todo,,,,,
+ibapi,Raigad,todo,,,,,
+auctiontiger,Thane,todo,,,,,
+auctiontiger,Raigad,todo,,,,,
+mstc,Thane,todo,,,,,
+mstc,Raigad,todo,,,,,
+bankeauctions,Thane,todo,,,,,
+bankeauctions,Raigad,todo,,,,,
+coop,Thane,todo,,,,,Saraswat / Cosmos / TJSB / Abhyudaya / NKGSB / Bassein Catholic — direct from each bank's site
+coop,Raigad,todo,,,,,Same six; these never reach the aggregators (Rule 8(6) only compels two newspapers)

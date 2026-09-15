@@ -1,34 +1,71 @@
-import Link from "next/link"
+"use client"
+
+import { useEffect, useRef, useState } from "react"
 import { ArrowUpRight } from "lucide-react"
 
 export function CallToAction() {
-  return (
-    <section className="mx-auto max-w-[1240px] px-5 pb-14">
-      <div className="rounded-[22px] border border-line bg-paper px-6 py-14 text-center sm:px-12">
-        <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.14em] text-ink2">Get Started</p>
-        <h2 className="mx-auto mb-4 max-w-[20ch] font-serif text-[32px] font-semibold leading-[1.1] tracking-[-0.025em] text-ink md:text-[40px]">
-          Ready to find your next property?
-        </h2>
-        <p className="mx-auto mb-8 max-w-2xl text-base leading-relaxed text-ink2">
-          Create a free account to shortlist properties, set alerts, and unlock full auction details.
-        </p>
+  const [isVisible, setIsVisible] = useState(false)
+  const sectionRef = useRef<HTMLDivElement>(null)
 
-        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link
-            href="/signup"
-            className="group flex h-12 w-full items-center justify-center gap-2 rounded-pill bg-brand px-8 text-[14.5px] font-bold text-on-brand transition-opacity hover:opacity-90 sm:w-auto"
-          >
-            Create Free Account
-            <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </Link>
-          {/* Pre-existing dead anchor — there is no #projects section. Left as
-              found; changing the destination is not part of a visual pass. */}
-          <a
-            href="#projects"
-            className="flex h-12 w-full items-center justify-center rounded-pill border border-line px-8 text-[14.5px] font-semibold text-ink transition-colors hover:bg-surface sm:w-auto"
-          >
-            Browse Properties
-          </a>
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
+          setIsVisible(true)
+        } else if (!entry.isIntersecting) {
+          setIsVisible(false)
+        }
+      },
+      { threshold: [0, 0.2, 0.3] },
+    )
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <section className="py-24 md:py-32 bg-background">
+      <div className="container mx-auto px-6 md:px-12">
+        <div 
+          ref={sectionRef}
+          className={`relative overflow-hidden border border-border bg-secondary/30 px-6 py-20 sm:px-12 sm:py-24 text-center transition-all duration-1000 ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`}
+        >
+          {/* Subtle center highlight/glow to match the image's light gradient effect */}
+          <div 
+            className="absolute top-1/2 left-1/2 w-3/4 h-3/4 bg-background/50 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" 
+          />
+
+          <div className="relative z-10 flex flex-col items-center">
+            <p className="text-muted-foreground text-xs md:text-sm tracking-[0.3em] font-semibold uppercase mb-6">Get Started</p>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-medium text-foreground mb-6 tracking-tight text-balance">
+              Ready to find your next property?
+            </h2>
+            
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+              Create a free account to shortlist properties, set alerts, and unlock full auction details.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
+              <a 
+                href="/signup" 
+                className="w-full sm:w-auto bg-foreground text-background px-8 py-4 text-sm font-medium hover:bg-foreground/90 transition-colors flex items-center justify-center gap-2 group shadow-sm"
+              >
+                Create Free Account
+                <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              </a>
+              <a 
+                href="#projects" 
+                className="w-full sm:w-auto border border-border bg-transparent text-foreground px-8 py-4 text-sm font-medium hover:bg-secondary transition-colors shadow-sm"
+              >
+                Browse Properties
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -50,6 +50,14 @@ export interface Listing {
   images: string[]
   viewCount: number
 
+  /** Ingest-pipeline columns (migration 0020). Public — granted to anon. */
+  district: string | null
+  auctionRoundNo: number
+  previousReservePrice: number | null
+  noticePdfPath: string | null
+  sourcePortal: string | null
+  lastVerifiedAt: string | null
+
   flatNumber: string | null
   floor: string | null
   inspectionDatetime: string | null

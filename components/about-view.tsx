@@ -7,7 +7,7 @@ import { FAQ } from "@/components/faq"
 
 export function AboutView({ stats }: { stats: SiteStats }) {
   return (
-    <div className="w-full flex flex-col pt-10 pb-0 bg-background">
+    <div className="w-full flex flex-col pt-32 pb-0 bg-background">
       
       {/* HERO SECTION */}
       <section className="relative overflow-hidden bg-[#0A0F1C] py-20 md:py-32 rounded-3xl mx-4 md:mx-6 mb-8 mt-4 shadow-2xl">

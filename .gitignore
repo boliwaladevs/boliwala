@@ -34,3 +34,8 @@ cloudflare-env.d.ts
 
 # Ad-hoc bulk-upload test files made while trying the importer by hand.
 test-bulk-upload*.csv
+
+# Ingest pipeline working files — hundreds of MB of harvested PDFs and
+# intermediate JSONL. The ledger (scripts/ingest/ledger.csv) IS committed.
+scripts/ingest/raw/
+scripts/ingest/work/

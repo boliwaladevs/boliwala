@@ -57,6 +57,13 @@ export interface SafeListing {
   images: string[];
   viewCount: number;
 
+  district: string | null;
+  auctionRoundNo: number;
+  previousReservePrice: number | null;
+  noticePdfPath: string | null;
+  sourcePortal: string | null;
+  lastVerifiedAt: string | null;
+
   gated: {
     flat_floor: GatedValue<{ flatNumber: string | null; floor: string | null }>;
     inspection: GatedValue<{
@@ -104,6 +111,13 @@ export function redactListing(
     bedrooms: listing.bedrooms,
     images: listing.images,
     viewCount: listing.viewCount,
+
+    district: listing.district,
+    auctionRoundNo: listing.auctionRoundNo,
+    previousReservePrice: listing.previousReservePrice,
+    noticePdfPath: listing.noticePdfPath,
+    sourcePortal: listing.sourcePortal,
+    lastVerifiedAt: listing.lastVerifiedAt,
 
     gated: {
       flat_floor: gate("flat_floor", access, () => ({

@@ -43,7 +43,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground flex flex-col">
+    <main className="portal min-h-screen bg-background text-foreground flex flex-col">
       <AccountHeader />
       <div className="flex-1">
         <ProfileView

@@ -1957,3 +1957,275 @@ five files as they were, if the exact wording is ever wanted back.
 `client_requirement.html`, `intermediate_plan.md`, `screener.html` — present in the
 working tree, never committed, untouched by the pull or the revert. Unreviewed; listed
 here only so they are not mistaken for missing work.
+
+---
+
+## U2 — W-INGEST: THE MAHARASHTRA INGEST PIPELINE (12 September 2026)
+
+**The STOP is lifted, and not by the client.** §A records
+`=== STOP: CSV REQUIRED ===` and §C row 1.1 calls the sample inventory CSV "the #1
+blocker". The decision taken on 12 Sep is to **stop waiting for it and build the dataset
+ourselves** — every Maharashtra real-estate auction listing (SARFAESI / DRT / IBBI),
+roughly 8,000–12,000 statewide, against 22 rows today and a competitor
+(findauction.in) indexing ~96k.
+
+Vehicles and plant & machinery stay descoped (§D.2) and the pipeline **actively rejects**
+them rather than ignoring them — a raw district harvest is roughly a third cars and
+factory equipment.
+
+### U2.1 — Four decisions taken before any code
+
+| | |
+|---|---|
+| **Harvest** | Browser-assisted seed + portal e-mail alerts. **No crawler**: ibapi.in's robots.txt disallows automated access and baanknet.com actively blocks bots. |
+| **Labour** | **Shared — the user and Claude both drive browsers**, working off one committed ledger. |
+| **Storage** | Supabase **Free (1 GB)**. Notice PDFs mirrored for priority districts only; everything else keeps its source URL. Hard stop at 850 MB. |
+| **Publish** | Auto-publish above a confidence threshold (0.85); the doubtful tail lands `draft` + `qcStatus='needs_review'`. |
+
+### U2.2 — Migration `0020_ingest_pipeline.sql`, applied live
+
+**Next free migration number is now `0021`** (§A says 0020 — stale, see U2.7).
+
+**Twelve columns on `listings`.** The split is deliberate and load-bearing, because
+`listings` carries **column-level** SELECT grants (§0016): a column with no explicit
+`grant select` is invisible to the public site and fails as
+`permission denied for table listings` on the whole row, not as a null on one field.
+
+- **Public (granted to anon + authenticated):** `district`, `"auctionRoundNo"`,
+  `"previousReservePrice"`, `"noticePdfPath"`, `"sourcePortal"`, `"lastVerifiedAt"`.
+- **Private (deliberately NOT granted, service-role only):** `"sourceUrl"`, `"sourceRef"`,
+  `"dedupeHash"`, `"extractionConfidence"`, `"qcStatus"`, `"ingestedAt"`.
+
+`"lastVerifiedAt"` is public on purpose: every competitor claims "100% verified", and a
+real timestamp is the only version of that claim that can be substantiated.
+
+**Indexes — these had to land *before* the bulk import, not after.** `searchListings()`
+runs leading-wildcard `ilike` on `city`/`locality`/`state`/`title`/`addressLine`
+(`lib/data/listings.ts:116,120`), which cannot use a btree index. Free at 22 rows; the
+whole response time at 10,000.
+
+```
+pg_trgm installed (was available, not installed)
+listings_city_trgm · listings_locality_trgm · listings_title_trgm · listings_address_trgm   (GIN, gin_trgm_ops)
+listings_district_status_idx (district, status)
+listings_dedupe_hash_key UNIQUE ("dedupeHash")
+```
+
+`state` is left unindexed on purpose — it is "Maharashtra" on essentially every row, so a
+trigram index on it would be scanned in full for nothing.
+
+**New bucket `listing-docs`** — public, 10 MB limit, `application/pdf` only, no client
+write policy (service-role writes only, the `0008` pattern). 10 MB rather than
+`listing-images`' 5 MB because scanned Marathi co-operative-bank notices run large.
+
+### U2.3 — Two bugs found by the tests, both worth remembering
+
+**1. The unique index on `"dedupeHash"` must be TOTAL, not partial.** It was first written
+`where "dedupeHash" is not null`, which looks tidier and is correct SQL — and breaks the
+loader. PostgREST emits `on conflict ("dedupeHash")`, and Postgres cannot infer a
+*partial* index from that without the index predicate repeated in the statement, which
+PostgREST has no way to express; the upsert fails with *"no unique or exclusion constraint
+matching the ON CONFLICT specification"*. A total index is fine here because **Postgres
+treats NULLs as distinct**, so the 22 pre-pipeline rows with no hash coexist happily. The
+migration file was corrected and the index rebuilt.
+
+**2. Lender canonicalisation stripped the word "Branch" but left the branch name.**
+`"STATE BANK OF INDIA, KHARGHAR BRANCH"` became `"State Bank Of India, Kharghar"`, which
+then missed every alias lookup and created a **separate lender row per branch** — and,
+because the lender name feeds the dedupe hash, split one property into two listings. Fixed
+by stripping the whole comma-delimited branch segment and then walking trailing words off
+the name against the alias table. `scripts/ingest/lib/lenders.mjs` explains why
+`findLender()` from `bulk-upload-panel.tsx:140` is **not** reused: its substring match runs
+both ways, so "Bank of India" matches "Bank of Maharashtra" — harmless across 6 rows,
+silently destructive across 150.
+
+### U2.4 — The pipeline, `project/scripts/ingest/`
+
+Standalone Node ESM, run locally, **never imported by the app** — the Worker bundle is at
+85% of the 3 MB free cap (§41) and nothing here may enter it. Each stage reads a JSONL
+file and appends to another, keyed by `sourceFile`, so any stage resumes after a crash
+without recomputing or duplicating.
+
+| File | Does |
+|---|---|
+| `1-text.mjs` | PDF → text (`pdf-parse`). Flags likely scans as `needsOcr` instead of silently emitting empty text |
+| `2-extract.mjs` | text → JSON via **`claude-opus-5`**, `messages.parse()` + `zodOutputFormat`, prompt-cached system block, concurrency 8, retry on 429/5xx, per-run cost report |
+| `3-normalize.mjs` | rejection · lender canonicalisation · gazetteer · dates · required-field gate · dedupe hash. **Pure and offline**, so it is free to re-run while the gazetteer is tuned |
+| `4-load.mjs` | batched upsert (500) on `"dedupeHash"`, re-auction rounds, deterministic slugs |
+| `5-mirror-pdfs.mjs` | PDFs → `listing-docs`, priority districts, 850 MB stop. **The only file that knows where the bytes live** — the move to R2 changes this file and nothing else |
+| `qc.mjs` | review queue: extracted value printed beside the verbatim notice quote |
+| `lib/{schema,dedupe,gazetteer,lenders,io}.mjs` | the extraction contract, the hash, geography, lender names, stage plumbing |
+| `ledger.csv` + `ledger-check.mjs` | the shared harvest ledger, reconciled against files on disk |
+| `pipeline-test.mjs`, `gazetteer-test.mjs` | see U2.6 |
+
+`raw/` and `work/` are gitignored; **`ledger.csv` is committed** — it is how two operators
+avoid collecting the same district twice.
+
+**Three design decisions worth not re-litigating:**
+
+1. **The dedupe hash excludes the auction date.** A re-auction of the same property *must*
+   collide with the existing row so the loader bumps `"auctionRoundNo"` and carries the old
+   reserve into `"previousReservePrice"`. That collision is the feature — it is what
+   produces "4th round, 13% below the first", the badge findauction.in paywalls. Including
+   the date would turn every re-auction into a duplicate listing and destroy the price
+   history.
+2. **The hash also excludes area** — a deviation from the written plan. Area is the least
+   reliably extracted field on a notice (carpet vs built-up vs super built-up, sq.ft vs
+   sq.m, often only inside a schedule paragraph, frequently absent). Null in one harvest
+   and 720 in the next would give one property two hashes. The address already carries the
+   unit number, so area added instability without adding discrimination.
+3. **The loader does not use `bulkCommitListings()`** (`app/actions/admin-listings.ts:215`).
+   It is a row-by-row insert loop calling `generateUniqueSlug()`, which does one SELECT per
+   slug candidate — 10,000+ sequential round trips at this scale. Slugs are instead
+   `slugify(title-city-lenderShort)-<hash[0..6]>`: deterministic, collision-free, **zero
+   database round trips**.
+
+**`bulk_upload_batches` is now written to for the first time in the project's life.**
+`"adminId"` is NOT NULL with no default, so a run is attributed to the superadmin profile;
+if none is found the run is still recorded on stdout and the audit row is skipped **with a
+warning rather than silently**.
+
+### U2.5 — Two new devDependencies
+
+`@anthropic-ai/sdk@0.125.0` and `pdf-parse@2.4.5`, both **devDependencies** — same
+precedent as `pg`. Neither is imported by `app/`, `components/` or `lib/`, so neither
+reaches the Worker bundle.
+
+### U2.6 — Verification
+
+`scripts/ingest/pipeline-test.mjs` — **22 assertions, 22 passed.** It writes real rows to
+the real database and deletes exactly what it wrote in a `finally` block, keyed on the
+fixtures' hashes. It covers the things that are expensive to learn in production:
+
+- vehicles rejected as vehicles, not filed as property
+- a row missing an unsafe-to-derive field (EMD) **rejected rather than defaulted** — EMD is
+  conventionally 10% of the reserve, and computing it would be easy and wrong
+- Kharghar → **Raigad**, Vashi → **Thane**, both `city = "Navi Mumbai"`
+- the same property harvested from two portals collapses to one listing
+- **the loader is idempotent** — running it twice creates nothing new, and ids and slugs
+  are stable (shortlists, view history and indexed URLs survive a re-harvest)
+- a re-auction updates the round and carries the old reserve forward
+
+`scripts/ingest/gazetteer-test.mjs` — **10/10.** Includes the case that a bare
+"Navi Mumbai" with no node named resolves to **district null**, not "Mumbai City": the
+`mumbai` alias would otherwise file a Kharghar flat under south Mumbai.
+
+**The §B bar, re-run 12 Sep:**
+
+```
+npx tsc --noEmit                     clean
+pnpm run build                       29/29 static pages
+node scripts/grants-test.mjs         27/27 PASS
+access-matrix-test.mjs               49/49 + 17/17 + 15/15   (all three, none skipped)
+pnpm run lint                        0 errors, 297 warnings
+```
+
+> **§B's lint baseline of 287 warnings is stale and was already stale before this work.**
+> Measured 297 **both with and without** the four changed application files (checked by
+> stashing them and re-running). No file touched by U2 produces a lint warning.
+
+Trigram indexes confirmed usable — `explain` on `city ilike '%kharghar%'` gives
+`Bitmap Index Scan on listings_city_trgm`. At 22 rows the planner still prefers the
+district index for the real search query; that is a row-count artefact, not a fault, and
+needs re-checking once a district is loaded.
+
+**The database is back at exactly 22 listings / 6 lenders / 0 audit rows** — the state it
+was in before this session. An earlier failing test run left 2 orphan listings and 2
+malformed lender rows behind; both were found by querying for non-null `"dedupeHash"` and
+deleted by explicit id.
+
+### U2.7 — What in the body of this file is now stale
+
+Not to be edited in place until U2 is pushed.
+
+| Body location | What it says | What is true |
+|---|---|---|
+| §A, the STOP row | "`=== STOP: CSV REQUIRED ===` reached and respected. W-INGEST … not started" | **W-INGEST is built.** The stop was lifted deliberately: the dataset is being built in-house rather than waiting on the client's CSV |
+| §A, Database row | "Next free number is `0020`" | **`0021`.** 0020 is applied live |
+| §B | "0 errors, 287 warnings" | **297**, and already stale before this work — see U2.6 |
+| §C, row **1.1** | "One sample listings CSV — the #1 blocker" | No longer blocking. Still useful as a format reference; no longer on the critical path |
+| §C, row 1.2a | "A card on the Cloudflare account (R2) — blocks W5" | Still true, but **no longer blocks inventory**. Supabase Storage carries the notice PDFs to ~850 MB first |
+| §D, item **9** | "R2 for blobs. **Supabase Storage is retired**" | **Reversed for documents, by the user's decision on 12 Sep.** Supabase Storage is in use until it fills, then R2. `listing-docs` is live |
+| §D, item **6** | "The NBFC/ARC/HFC facet stays empty until W-INGEST creates lenders from the real file" | W-INGEST now creates and classifies lenders; the facet fills as districts load |
+
+### U2.8 — What happens next
+
+1. **Portal registrations + one dedicated alert mailbox, first** — BAANKNET, IBAPI, MSTC,
+   Auction Tiger, all Maharashtra districts. They take a day or two to start producing, and
+   they are what makes the daily refresh work with no crawler.
+2. **Timebox an hour to reconnaissance before downloading anything.** On each portal, watch
+   the network panel and check whether the result table is fed by a JSON/XHR endpoint. If
+   it is, that district skips the entire PDF → LLM path. findauction.in's image URLs
+   (`cdn.findauction.in/ibapi/cache/filedata/…`) show they mirror IBAPI wholesale, which
+   suggests a machine-readable surface exists. An hour here can save a week.
+3. **Harvest Thane + Raigad** into `raw/<portal>/<district>/`, both operators, claiming
+   rows in `ledger.csv`.
+4. **Run stage 2 with `--limit 10` first** and read `work/02-extracted.jsonl` against the
+   PDFs before turning it loose. The prompt is tuned by looking at what it got wrong.
+5. Then `3-normalize` → `4-load` → `qc.mjs`, and the District facet fills in on `/search`.
+
+**Not built, and deliberately:** OCR for scanned notices (stage 1 flags them as a visible
+backlog rather than dropping them), the newspaper/e-paper layer, and listing images —
+`components/property-grid.tsx:92` never renders an image, so images would have bought
+nothing today while eating the storage budget the PDFs need.
+
+---
+
+## U3 — BACK TO VERCEL; PULL OF `b6249b1` (14 September 2026)
+
+**Decision, 14 Sep (user): hosting goes back to Vercel. Reverses §D "Workers + R2 +
+Supabase, not Vercel".** Reason: Workers Paid bills pay-as-you-go past the $5 base with no
+hard cap; Vercel has spend caps. The old Vercel project had been **deleted** by the user,
+so a fresh project is created and every env var re-entered (list below). The §41 3 MB
+bundle ceiling no longer binds once off Workers.
+
+Production env vars the app code reads (verified by grep, 14 Sep):
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (build fails without
+both — `next.config.mjs`), `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`,
+`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `NEXT_PUBLIC_CONTACT_PHONE`,
+`NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CONTACT_EMAIL`. Everything else in
+`.env.local` is script-only or unused (`DIRECT_URL`, `DATABASE_URL`, `DB_PASS`,
+`SUPABASE_SECRET_KEY`, `SUPABASE_ANON_PUBLIC_KEY`, `SUPABASE_URL`,
+`SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_JWKS_URL`, `CRON_SECRET`, `GOOGLE_OAUTH_*`,
+`RAZORPAY_*`).
+
+**Pull of 14 Sep** (fast-forward `3f853f6..b6249b1`, the §46 visual refresh) conflicted with
+the stashed U2 work in two files: `MEMORY.md` (origin taken whole, U2 re-appended here) and
+`components/property-results.tsx` (upstream's restyled sidebar kept; the U2 District facet
+re-added between Lender and Possession using the new `CheckBox`/`ROW` styles). `tsc
+--noEmit` clean. Stash `pre-pull local changes 2026-09-14` left in place as a fallback.
+
+---
+
+## U4 — §46 VISUAL REFRESH ROLLED BACK EVERYWHERE EXCEPT THE USER DASHBOARD (15 September 2026)
+
+**Decision (user, 15 Sep): the Marketplace refresh stays on `/profile` only.** The
+marketing site, `/search` and `/listing/[slug]` go back to the pre-refresh UI. Asked
+explicitly; "dashboard only" was chosen over keeping search/listing too.
+
+- **Restored byte-for-byte from `3f853f6`** (the commit before `be080a3`): `app/page.tsx`,
+  `app/search`, `app/listing/[slug]`, `app/contact`, `app/faq`, `app/pricing`, `header`,
+  `footer`, `hero`, `search-section`, `trust-banner`, `philosophy`, `alerts-section`,
+  `call-to-action`, `auctions-by-city`, `property-grid`, `listing-view`,
+  `search-alert-banner`, `search-sort-select`, `logo`, `about-view`, `legal-page`,
+  `partner-view`, `services-view`. The parallax hero and its `hously-*.webp` are live again
+  (§46.10 no longer applies). `property-results.tsx` = `3f853f6` + the U2 District facet
+  in its original style. The `74f37cc`/`b6249b1` hero fixes are gone with the hero.
+- **Kept from §46:** `profile-view.tsx`, `account-header.tsx`, `photo-slot.tsx` (unchanged).
+- **`logo.tsx` is the OLD logo everywhere, dashboard included** — one wordmark site-wide.
+- **Scoping mechanism:** `app/globals.css` has the old oklch palette at `:root`/`.dark`, plus
+  the Marketplace primitives (`--paper --ink --brand …`). A **`.portal`** class re-aliases
+  the shadcn names (`--background --primary --radius …`) onto those primitives and sets
+  Figtree (also overriding `--font-plus-jakarta-sans` so explicit `font-sans` follows).
+  `app/profile/page.tsx`'s `<main>` carries `portal`. The §46 base rules (`text-wrap`,
+  tabular serif figures, brand `:focus-visible`) are prefixed `.portal`. `--logo-*` tokens
+  and `shadow-logo` were removed with the new logo. **Caveat:** anything portalled to
+  `<body>` (the toaster) renders outside `.portal`, in the old palette.
+- **`app/layout.tsx`** = `3f853f6` + Figtree and Source Serif 4 variables on `<html>`.
+  `ThemeProvider` is unmounted again, so `.dark` is unreachable, as before §46.
+- New-palette utility classes (`bg-paper`, `text-ink`, `rounded-card` …) now appear only in
+  the three dashboard files.
+- Verified 15 Sep: `tsc --noEmit` clean; homepage renders the old hero with no console or
+  server errors; `/search` 200. `/profile` still not seen signed-in (§46.9), so `.portal`
+  was checked with an injected probe element instead. Added `.claude/launch.json` (`next dev` via
+  `node`, since pnpm won't run on Node 22.12 — §46.8).
